@@ -109,7 +109,8 @@ Three attack scenarios — all blocked, $0.00 lost, agent quarantined.
 | Wallet address | `0x008ed50be2cd35f6333a37542a76a227e3b16acc` |
 | Chain | Base Sepolia (parametrized for Base mainnet) |
 | Demo command | `make demo` |
-| Dashboard | `make dashboard` (localhost:8080) |
+| Live dashboard | [verigate-dashboard-1031148889398.us-central1.run.app](https://verigate-dashboard-1031148889398.us-central1.run.app) |
+| Dashboard (local) | `make dashboard` (localhost:8080) |
 
 ## Architecture
 
