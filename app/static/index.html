@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verigate — AI Agent Payment Authorization</title>
+<style>
+:root {
+  --bg: #06060e;
+  --card: #0d0d1a;
+  --card-border: #1a1a30;
+  --text: #e0e0ef;
+  --text-muted: #6a6a8a;
+  --accent: #6c5ce7;
+  --accent-glow: rgba(108, 92, 231, 0.3);
+  --green: #00e676;
+  --green-glow: rgba(0, 230, 118, 0.2);
+  --red: #ff5252;
+  --red-glow: rgba(255, 82, 82, 0.2);
+  --gold: #ffd740;
+  --blue: #448aff;
+  --radius: 16px;
+  --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; overflow-x: hidden; }
+
+/* Background grid */
+body::before {
+  content: '';
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background-image: linear-gradient(rgba(108,92,231,0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(108,92,231,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none; z-index: 0;
+}
+
+/* Header */
+.header {
+  position: relative; z-index: 1;
+  padding: 40px 48px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--card-border);
+}
+.logo { display: flex; align-items: center; gap: 16px; }
+.logo-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), #a29bfe);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800; color: #fff;
+  box-shadow: 0 0 30px var(--accent-glow);
+}
+.logo h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+.logo .tag { font-size: 12px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+
+.actions { display: flex; gap: 12px; }
+.btn {
+  padding: 12px 28px; border: none; border-radius: 12px; font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #a29bfe);
+  color: #fff; box-shadow: 0 4px 20px var(--accent-glow);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-danger {
+  background: linear-gradient(135deg, #ff5252, #ff7979);
+  color: #fff; box-shadow: 0 4px 20px var(--red-glow);
+}
+.btn-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--red-glow); }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Main layout */
+.main { position: relative; z-index: 1; padding: 32px 48px; }
+
+/* Metrics strip */
+.metrics {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px;
+  margin-bottom: 32px;
+}
+.metric {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: var(--radius); padding: 20px;
+  transition: all 0.3s;
+}
+.metric:hover { border-color: var(--accent); }
+.metric .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; }
+.metric .value { font-size: 32px; font-weight: 800; margin-top: 8px; font-family: var(--mono); }
+.metric .value.green { color: var(--green); }
+.metric .value.red { color: var(--red); }
+.metric .value.gold { color: var(--gold); }
+.metric .value.blue { color: var(--blue); }
+.metric .value.accent { color: var(--accent); }
+
+/* Content grid */
+.content { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.content.full { grid-template-columns: 1fr; }
+
+/* Cards */
+.panel {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.panel-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--card-border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-header h2 { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
+.panel-body { padding: 20px; max-height: 500px; overflow-y: auto; }
+.panel-body::-webkit-scrollbar { width: 6px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 3px; }
+
+/* Step timeline */
+.step {
+  display: flex; gap: 16px; padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  animation: fadeSlideIn 0.4s ease-out;
+}
+.step:last-child { border-bottom: none; }
+.step-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+}
+.step-icon.running { background: rgba(108,92,231,0.2); color: var(--accent); animation: pulse 1.5s infinite; }
+.step-icon.complete { background: var(--green-glow); color: var(--green); }
+.step-icon.blocked { background: var(--red-glow); color: var(--red); }
+.step-content { flex: 1; min-width: 0; }
+.step-title { font-size: 13px; font-weight: 600; }
+.step-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.step-details { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-family: var(--mono); }
+.step-details a { color: var(--blue); text-decoration: none; }
+.step-details a:hover { text-decoration: underline; }
+
+/* Payment cards */
+.payment-card {
+  padding: 16px; margin-bottom: 12px;
+  border-radius: 12px; border: 1px solid var(--card-border);
+  animation: fadeSlideIn 0.5s ease-out;
+}
+.payment-card.approve { border-left: 3px solid var(--green); background: rgba(0,230,118,0.03); }
+.payment-card.deny { border-left: 3px solid var(--red); background: rgba(255,82,82,0.03); }
+.payment-card .payment-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.payment-card .amount { font-size: 20px; font-weight: 700; font-family: var(--mono); }
+.badge { padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+.badge.approve { background: var(--green-glow); color: var(--green); }
+.badge.deny { background: var(--red-glow); color: var(--red); }
+.badge.high { background: rgba(255,152,0,0.2); color: #ff9800; }
+.badge.critical { background: var(--red-glow); color: var(--red); }
+.payment-meta { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+.payment-meta a { color: var(--blue); }
+
+/* Attack animation */
+.attack-card {
+  padding: 16px; margin-bottom: 12px; border-radius: 12px;
+  border: 1px solid var(--red); background: rgba(255,82,82,0.05);
+  animation: attackFlash 0.6s ease-out;
+}
+.attack-card .attack-name { font-size: 14px; font-weight: 700; color: var(--red); }
+.attack-card .attack-payload { font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-top: 6px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; }
+
+/* Verification badges */
+.verify-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.verify-item {
+  padding: 12px; border-radius: 10px; border: 1px solid var(--card-border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.verify-item .check-label { font-size: 12px; font-weight: 500; }
+.verify-item .check-status { font-size: 11px; font-weight: 700; font-family: var(--mono); }
+.verify-item .check-status.pass { color: var(--green); }
+.verify-item .check-status.fail { color: var(--red); }
+
+/* Compliance report */
+.compliance-section { margin-bottom: 16px; }
+.compliance-section h3 { font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.compliance-section p { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+/* Welcome state */
+.welcome {
+  text-align: center; padding: 80px 0;
+  animation: fadeIn 0.8s ease-out;
+}
+.welcome h2 { font-size: 36px; font-weight: 800; margin-bottom: 16px; letter-spacing: -1px; }
+.welcome p { font-size: 16px; color: var(--text-muted); max-width: 600px; margin: 0 auto 32px; line-height: 1.6; }
+.welcome .hint { font-size: 13px; color: var(--text-muted); }
+
+/* Shield animation for welcome */
+.shield-anim {
+  width: 120px; height: 120px; margin: 0 auto 32px;
+  border-radius: 50%; border: 3px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px;
+  animation: shieldPulse 3s ease-in-out infinite;
+  box-shadow: 0 0 60px var(--accent-glow);
+}
+
+/* Animations */
+@keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes shieldPulse {
+  0%, 100% { box-shadow: 0 0 30px var(--accent-glow); transform: scale(1); }
+  50% { box-shadow: 0 0 60px var(--accent-glow), 0 0 100px rgba(108,92,231,0.1); transform: scale(1.05); }
+}
+@keyframes attackFlash {
+  0% { background: rgba(255,82,82,0.3); } 100% { background: rgba(255,82,82,0.05); }
+}
+
+/* Responsive */
+@media (max-width: 1200px) { .metrics { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px) {
+  .header { padding: 24px; flex-direction: column; gap: 16px; }
+  .main { padding: 24px; }
+  .content { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">V</div>
+    <div>
+      <h1>Verigate</h1>
+      <div class="tag">AI Agent Payment Authorization</div>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary" id="btn-golden" onclick="runGoldenPath()">Run Golden Path</button>
+    <button class="btn btn-danger" id="btn-rogue" onclick="runRoguePath()">Rogue Agent Demo</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Metrics -->
+  <div class="metrics" id="metrics" style="display: none;">
+    <div class="metric"><div class="label">USDC Governed</div><div class="value green" id="m-spend">$0.00</div></div>
+    <div class="metric"><div class="label">Protocol Fee</div><div class="value gold" id="m-fee">$0.0000</div></div>
+    <div class="metric"><div class="label">Approved</div><div class="value green" id="m-approved">0</div></div>
+    <div class="metric"><div class="label">Blocked</div><div class="value red" id="m-blocked">0</div></div>
+    <div class="metric"><div class="label">Isolations</div><div class="value red" id="m-isolations">0</div></div>
+    <div class="metric"><div class="label">Verification</div><div class="value accent" id="m-verify">---</div></div>
+  </div>
+
+  <!-- Welcome state -->
+  <div id="welcome" class="welcome">
+    <div class="shield-anim">&#x1F6E1;</div>
+    <h2>Deterministic Payment Authorization</h2>
+    <p>A Gemini-powered ops agent autonomously spends USDC via Circle Agent Stack. Verigate's zero-LLM gate authorizes every payment pre-settlement, signs cryptographic receipts, and contains rogue agents.</p>
+    <p class="hint">Click <strong>Run Golden Path</strong> to see the full flow, or <strong>Rogue Agent Demo</strong> to watch attacks get blocked in real-time.</p>
+  </div>
+
+  <!-- Live content -->
+  <div class="content" id="content" style="display: none;">
+    <!-- Left: Steps -->
+    <div class="panel">
+      <div class="panel-header"><h2>Execution Pipeline</h2><span id="pipeline-status" class="badge approve" style="display:none;">LIVE</span></div>
+      <div class="panel-body" id="steps"></div>
+    </div>
+    <!-- Right: Payments + Events -->
+    <div>
+      <div class="panel" style="margin-bottom: 24px;">
+        <div class="panel-header"><h2>Payment Stream</h2></div>
+        <div class="panel-body" id="payments"></div>
+      </div>
+      <div class="panel" id="attacks-panel" style="display: none; margin-bottom: 24px;">
+        <div class="panel-header"><h2>Attack Log</h2></div>
+        <div class="panel-body" id="attacks"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verification + Compliance (shown after completion) -->
+  <div class="content" id="results" style="display: none; margin-top: 24px;">
+    <div class="panel">
+      <div class="panel-header"><h2>Verification Report</h2></div>
+      <div class="panel-body" id="verification"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h2>Compliance Report (Gemini)</h2></div>
+      <div class="panel-body" id="compliance"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let approvedCount = 0, blockedCount = 0, totalSpend = 0, isolationCount = 0;
+
+function setRunning(running) {
+  document.getElementById('btn-golden').disabled = running;
+  document.getElementById('btn-rogue').disabled = running;
+  if (running) {
+    document.getElementById('pipeline-status').style.display = '';
+    document.getElementById('pipeline-status').textContent = 'LIVE';
+  }
+}
+
+function reset() {
+  approvedCount = 0; blockedCount = 0; totalSpend = 0; isolationCount = 0;
+  document.getElementById('steps').innerHTML = '';
+  document.getElementById('payments').innerHTML = '';
+  document.getElementById('attacks').innerHTML = '';
+  document.getElementById('verification').innerHTML = '';
+  document.getElementById('compliance').innerHTML = '';
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('metrics').style.display = '';
+  document.getElementById('content').style.display = '';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('attacks-panel').style.display = 'none';
+  updateMetrics();
+}
+
+function updateMetrics() {
+  document.getElementById('m-spend').textContent = '$' + totalSpend.toFixed(2);
+  document.getElementById('m-fee').textContent = '$' + (totalSpend * 0.0025).toFixed(4);
+  document.getElementById('m-approved').textContent = approvedCount;
+  document.getElementById('m-blocked').textContent = blockedCount;
+  document.getElementById('m-isolations').textContent = isolationCount;
+}
+
+function addStep(data) {
+  const el = document.getElementById('steps');
+  const existing = document.getElementById('step-' + data.id);
+
+  const iconClass = data.status === 'running' ? 'running' : data.status === 'blocked' ? 'blocked' : 'complete';
+  const iconText = data.status === 'running' ? '...' : data.status === 'blocked' ? '!!' : 'OK';
+
+  let detailsHtml = '';
+  if (data.details) {
+    if (data.details.explorer_url) {
+      detailsHtml += `<a href="${data.details.explorer_url}" target="_blank">View on Basescan &rarr;</a><br>`;
+    }
+    if (data.details.tx_hash) {
+      detailsHtml += `tx: ${data.details.tx_hash.substring(0, 20)}...<br>`;
+    }
+    if (data.details.overall) {
+      detailsHtml += `Overall: <span class="check-status ${data.details.overall.toLowerCase()}">${data.details.overall}</span>`;
+    }
+    if (data.details.usdc) {
+      detailsHtml += `Balance: ${data.details.usdc} USDC`;
+    }
+    if (data.details.service) {
+      detailsHtml += `Service: ${data.details.service}`;
+    }
+  }
+
+  const html = `
+    <div class="step" id="step-${data.id}">
+      <div class="step-icon ${iconClass}">${iconText}</div>
+      <div class="step-content">
+        <div class="step-title">${data.title}</div>
+        ${data.subtitle ? `<div class="step-subtitle">${data.subtitle}</div>` : ''}
+        ${detailsHtml ? `<div class="step-details">${detailsHtml}</div>` : ''}
+      </div>
+    </div>`;
+
+  if (existing) {
+    existing.outerHTML = html;
+  } else {
+    el.insertAdjacentHTML('beforeend', html);
+  }
+  el.scrollTop = el.scrollHeight;
+}
+
+function addPayment(data) {
+  const el = document.getElementById('payments');
+  const isApprove = data.decision === 'approve';
+
+  if (isApprove) { approvedCount++; totalSpend += parseFloat(data.amount) || 0; }
+  else { blockedCount++; }
+  updateMetrics();
+
+  let meta = '';
+  if (data.explorer_url) meta += `<a href="${data.explorer_url}" target="_blank">View on Basescan &rarr;</a><br>`;
+  if (data.receipt_hash) meta += `Receipt: ${data.receipt_hash}<br>`;
+  if (data.reasons) meta += `Reasons: ${data.reasons.join(', ')}`;
+
+  el.insertAdjacentHTML('beforeend', `
+    <div class="payment-card ${isApprove ? 'approve' : 'deny'}">
+      <div class="payment-header">
+        <div class="amount">${isApprove ? data.amount : data.amount || 'BLOCKED'}</div>
+        <span class="badge ${isApprove ? 'approve' : 'deny'}">${isApprove ? 'APPROVED' : 'DENIED'}</span>
+      </div>
+      <div class="payment-meta">${meta}</div>
+    </div>`);
+  el.scrollTop = el.scrollHeight;
+}
+
+function addAttack(data) {
+  document.getElementById('attacks-panel').style.display = '';
+  const el = document.getElementById('attacks');
+  el.insertAdjacentHTML('beforeend', `
+    <div class="attack-card">
+      <div class="attack-name">${data.index ? `#${data.index} ` : ''}${data.name || 'Prompt Injection'}</div>
+      <div style="font-size:12px;margin-top:4px;">${data.payee || ''} &mdash; ${data.amount || ''}</div>
+      <div class="attack-payload">${data.reason || data.payload || ''}</div>
+    </div>`);
+  el.scrollTop = el.scrollHeight;
+}
+
+function addBlocked(data) {
+  const el = document.getElementById('attacks');
+  el.insertAdjacentHTML('beforeend', `
+    <div style="padding:8px 16px;margin-bottom:8px;border-radius:8px;background:var(--green-glow);font-size:12px;animation:fadeSlideIn 0.4s;">
+      <strong style="color:var(--green);">BLOCKED</strong> &mdash; ${data.name} &mdash; ${data.reasons.join(', ')}
+    </div>`);
+  blockedCount++;
+  updateMetrics();
+}
+
+function addIsolation(data) {
+  isolationCount++;
+  updateMetrics();
+  const el = document.getElementById('attacks').parentElement || document.getElementById('payments');
+  el.insertAdjacentHTML('beforeend', `
+    <div style="padding:12px;margin-top:8px;border-radius:10px;border:1px solid var(--red);background:rgba(255,82,82,0.05);animation:fadeSlideIn 0.4s;">
+      <div style="font-size:12px;font-weight:700;color:var(--red);">ISOLATION: ${data.isolation_id || ''}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+        Severity: <span class="badge ${(data.severity||'').toLowerCase()}">${data.severity}</span> &mdash;
+        Actions: ${(data.actions || []).join(', ')}
+        ${data.agent_revoked ? '<br>Agent: <strong style="color:var(--red);">REVOKED</strong>' : ''}
+        ${data.wallet_frozen ? ' &mdash; Wallet: <strong style="color:var(--red);">FROZEN</strong>' : ''}
+      </div>
+    </div>`);
+}
+
+function showVerification(data) {
+  document.getElementById('results').style.display = '';
+  const el = document.getElementById('verification');
+  const checks = [
+    ['Ed25519 Signatures', data.signatures],
+    ['Hash Chain', data.hash_chain],
+    ['Merkle Root', data.merkle],
+    ['Anchor', data.anchor],
+  ];
+  el.innerHTML = '<div class="verify-grid">' + checks.map(([label, status]) => `
+    <div class="verify-item">
+      <span class="check-label">${label}</span>
+      <span class="check-status ${(status||'').toLowerCase()}">${status || 'N/A'}</span>
+    </div>`).join('') + '</div>' +
+    `<div style="text-align:center;margin-top:16px;">
+      <span style="font-size:24px;font-weight:800;color:${data.overall==='PASS'?'var(--green)':'var(--red)'};">${data.overall}</span>
+    </div>`;
+  document.getElementById('m-verify').textContent = data.overall;
+  document.getElementById('m-verify').className = 'value ' + (data.overall === 'PASS' ? 'green' : 'red');
+}
+
+function showCompliance(data) {
+  const el = document.getElementById('compliance');
+  let html = '';
+  if (data.summary) {
+    html += `<div class="compliance-section"><h3>Executive Summary</h3><p>${data.summary}</p></div>`;
+  }
+  if (data.eu_ai_act) {
+    html += '<div class="compliance-section"><h3>EU AI Act</h3>';
+    for (const [k, v] of Object.entries(data.eu_ai_act)) {
+      html += `<p><strong>${k.replace(/_/g, ' ')}:</strong> ${v}</p>`;
+    }
+    html += '</div>';
+  }
+  if (data.nist) {
+    html += '<div class="compliance-section"><h3>NIST AI RMF</h3>';
+    for (const [k, v] of Object.entries(data.nist)) {
+      html += `<p><strong>${k.toUpperCase()}:</strong> ${v}</p>`;
+    }
+    html += '</div>';
+  }
+  if (data.recommendations) {
+    html += '<div class="compliance-section"><h3>Recommendations</h3>';
+    data.recommendations.forEach((r, i) => { html += `<p>${i+1}. ${r}</p>`; });
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function showComplete(data) {
+  setRunning(false);
+  document.getElementById('pipeline-status').textContent = 'COMPLETE';
+  document.getElementById('pipeline-status').className = 'badge approve';
+}
+
+function connectSSE(url) {
+  reset();
+  setRunning(true);
+  const source = new EventSource(url);
+  source.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    switch (data.type) {
+      case 'step':
+        addStep(data);
+        if (data.details && data.details.signatures) showVerification(data.details);
+        if (data.details && data.details.summary) showCompliance(data.details);
+        break;
+      case 'payment': addPayment(data); break;
+      case 'attack': addAttack(data); break;
+      case 'blocked': addBlocked(data); break;
+      case 'isolation': addIsolation(data); break;
+      case 'severity': break;
+      case 'policy': break;
+      case 'complete': showComplete(data); source.close(); break;
+      case 'error':
+        setRunning(false);
+        document.getElementById('pipeline-status').textContent = 'ERROR';
+        document.getElementById('pipeline-status').className = 'badge deny';
+        source.close();
+        break;
+    }
+  };
+  source.onerror = () => { setRunning(false); source.close(); };
+}
+
+function runGoldenPath() { connectSSE('/api/run/golden-path'); }
+function runRoguePath() { connectSSE('/api/run/rogue-path'); }
+</script>
+</body>
+</html>
