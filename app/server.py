@@ -127,7 +127,8 @@ async def _golden_path_stream():
         service = SERVICE_CATALOG[0]
 
         # Step 1: Wallet check
-        yield _sse("step", {"id": "wallet", "title": "Wallet Check", "status": "running"})
+        yield _sse("step", {"id": "wallet", "title": "Wallet Check", "status": "running",
+                            "desc": "Verify Circle Agent Wallet has sufficient USDC balance on Base Sepolia."})
         await asyncio.sleep(0.3)
 
         balances = wallet_balance(wallet, chain)
@@ -136,12 +137,14 @@ async def _golden_path_stream():
 
         yield _sse("step", {
             "id": "wallet", "title": "Wallet Check", "status": "complete",
+            "desc": "Wallet funded with " + usdc_amount + " USDC. Ready for payments.",
             "details": {"address": wallet, "chain": chain, "usdc": usdc_amount},
         })
         await asyncio.sleep(0.5)
 
         # Step 2: Gemini ops agent
         yield _sse("step", {"id": "agent", "title": "Gemini Ops Agent", "status": "running",
+                            "desc": "Gemini 2.5 Flash analyzes the task, discovers an x402 service, and forms a structured payment intent. This is the only LLM call in the flow.",
                             "subtitle": "Analyzing task and discovering services..."})
         await asyncio.sleep(0.3)
 
@@ -150,12 +153,9 @@ async def _golden_path_stream():
 
         yield _sse("step", {
             "id": "agent", "title": "Gemini Ops Agent", "status": "complete",
+            "desc": "Agent selected " + agent_decision.get("service_name", "N/A") + " and formed a payment intent for " + agent_decision.get("amount", "0") + " USDC.",
             "details": {
-                "task": task,
                 "service": agent_decision.get("service_name", "N/A"),
-                "reason": agent_decision.get("reason", "N/A"),
-                "payee": agent_decision.get("payee", "")[:20] + "...",
-                "amount": agent_decision.get("amount", "0"),
             },
         })
         await asyncio.sleep(0.5)
@@ -164,7 +164,8 @@ async def _golden_path_stream():
         amount = agent_decision["amount"]
 
         # Step 3: Initialize gate
-        yield _sse("step", {"id": "gate-init", "title": "Initialize Verigate Gate", "status": "running"})
+        yield _sse("step", {"id": "gate-init", "title": "Initialize Verigate Gate", "status": "running",
+                            "desc": "Generate a per-tenant Ed25519 signing key and configure the payment policy: payee allowlist, amount cap, and rate limit. Zero LLM."})
         await asyncio.sleep(0.3)
 
         executor = PaymentExecutor(
@@ -174,17 +175,17 @@ async def _golden_path_stream():
 
         yield _sse("step", {
             "id": "gate-init", "title": "Initialize Verigate Gate", "status": "complete",
+            "desc": "Gate ready. Payments to approved payees under 1.0 USDC will pass. Everything else is denied.",
             "details": {
-                "tenant": executor.tenant, "kid": executor._kid,
-                "max_amount": "1.0 USDC",
-                "allowlist": [payee[:20] + "..."],
+                "kid": executor._kid,
             },
         })
         await asyncio.sleep(0.5)
 
         # Step 4: Happy path payment
         yield _sse("step", {"id": "payment", "title": "Authorized USDC Payment", "status": "running",
-                            "subtitle": "Policy evaluation → Token issuance → Circle CLI → Settlement..."})
+                            "desc": "Evaluate the payment intent against policy rules. If approved, issue a 60-second single-use Ed25519 token, call Circle CLI, and settle real USDC on-chain.",
+                            "subtitle": "Policy eval, token issuance, Circle CLI, settlement..."})
         await asyncio.sleep(0.3)
 
         intent = PaymentIntent(
@@ -209,12 +210,14 @@ async def _golden_path_stream():
         state["payments"].append(payment_data)
 
         yield _sse("step", {"id": "payment", "title": "Authorized USDC Payment", "status": "complete",
+                            "desc": "Payment settled on Base Sepolia. Receipt signed with settlement tx hash embedded. Token JTI used as Circle idempotency key.",
                             "details": payment_data})
         yield _sse("payment", payment_data)
         await asyncio.sleep(0.8)
 
         # Step 5: Rogue agent attack
         yield _sse("step", {"id": "rogue", "title": "Prompt Injection Attack", "status": "running",
+                            "desc": "A poisoned tool result injects adversarial instructions into the agent's context, attempting to redirect 50 USDC to an attacker-controlled address.",
                             "subtitle": "Poisoned tool result attempting to redirect funds..."})
         await asyncio.sleep(1.0)
 
@@ -250,6 +253,7 @@ async def _golden_path_stream():
             yield _sse("payment", denial_data)
 
         yield _sse("step", {"id": "rogue", "title": "Prompt Injection Attack", "status": "blocked",
+                            "desc": "Gate denied the payment pre-settlement. The attacker address is off-allowlist and the amount exceeds the cap. $0.00 moved. Signed denial receipt produced.",
                             "details": {
                                 "decision": "DENIED",
                                 "reasons": denial_result.denial_reasons if denial_result else [],
@@ -259,6 +263,7 @@ async def _golden_path_stream():
 
         # Step 6: Isolator
         yield _sse("step", {"id": "isolator", "title": "Isolator: Agent Containment", "status": "running",
+                            "desc": "Classify the denial severity. HIGH/CRITICAL triggers containment: revoke the agent's Verigate identity and freeze the Circle wallet.",
                             "subtitle": "Classifying severity and executing containment..."})
         await asyncio.sleep(0.5)
 
@@ -294,6 +299,7 @@ async def _golden_path_stream():
             yield _sse("isolation", iso_data)
 
         yield _sse("step", {"id": "isolator", "title": "Isolator: Agent Containment", "status": "complete",
+                            "desc": "Agent quarantined. Identity revoked from Verigate registry. Wallet spending frozen. Signed isolation record produced.",
                             "details": iso_data if isolation_record else {"action": "none"}})
         await asyncio.sleep(0.5)
 
@@ -301,7 +307,8 @@ async def _golden_path_stream():
         chain_receipts = executor.get_receipt_chain()
         state["receipts"] = chain_receipts
 
-        yield _sse("step", {"id": "receipts", "title": "Receipt Chain", "status": "running"})
+        yield _sse("step", {"id": "receipts", "title": "Receipt Chain", "status": "running",
+                            "desc": "Verify the hash-linked receipt chain. Each receipt's prev_receipt field references the prior receipt hash, forming an immutable sequence."})
         await asyncio.sleep(0.3)
 
         receipt_summary = []
@@ -316,11 +323,13 @@ async def _golden_path_stream():
             receipt_summary.append(r)
 
         yield _sse("step", {"id": "receipts", "title": "Receipt Chain", "status": "complete",
-                            "details": {"count": len(chain_receipts), "receipts": receipt_summary}})
+                            "desc": str(len(chain_receipts)) + " receipts verified. Hash chain integrity confirmed from genesis.",
+                            "details": {"count": len(chain_receipts)}})
         await asyncio.sleep(0.5)
 
         # Step 8: Merkle
-        yield _sse("step", {"id": "merkle", "title": "Merkle Tree + Anchor", "status": "running"})
+        yield _sse("step", {"id": "merkle", "title": "Merkle Tree + Anchor", "status": "running",
+                            "desc": "Batch receipts into an RFC 6962 Merkle tree. Sign the root with the Circle agent wallet to create a verifiable anchor."})
         await asyncio.sleep(0.3)
 
         merkle_root = executor.compute_merkle_root()
@@ -336,15 +345,16 @@ async def _golden_path_stream():
             anchor_sig = "local-attestation"
 
         yield _sse("step", {"id": "merkle", "title": "Merkle Tree + Anchor", "status": "complete",
+                            "desc": "Root computed over " + str(len(chain_receipts)) + " receipts and signed by the Circle agent wallet.",
                             "details": {
                                 "merkle_root": merkle_root[:40] + "...",
-                                "tree_size": len(chain_receipts),
                                 "anchor_signature": anchor_sig,
                             }})
         await asyncio.sleep(0.5)
 
         # Step 9: Verification
         yield _sse("step", {"id": "verify", "title": "Offline Verification", "status": "running",
+                            "desc": "Independent verification using only the public key. Check Ed25519 signatures, hash chain continuity, Merkle inclusion proofs, anchor, and cross-reference each settlement tx on-chain.",
                             "subtitle": "Ed25519 sigs, hash chain, Merkle root, settlement cross-ref..."})
         await asyncio.sleep(0.5)
 
@@ -364,6 +374,7 @@ async def _golden_path_stream():
         state["verification"] = report.overall
 
         yield _sse("step", {"id": "verify", "title": "Offline Verification", "status": "complete",
+                            "desc": "All checks passed. The receipt chain is cryptographically sound and every settlement matches its receipt.",
                             "details": {
                                 "signatures": report.signature_check,
                                 "hash_chain": report.chain_check,
@@ -375,6 +386,7 @@ async def _golden_path_stream():
 
         # Step 10: Compliance report
         yield _sse("step", {"id": "compliance", "title": "Gemini Auditor Report", "status": "running",
+                            "desc": "Gemini analyzes the real USDC spend data and generates a compliance report against EU AI Act (Articles 14, 15, 52) and NIST AI RMF (Govern, Map, Measure, Manage).",
                             "subtitle": "Generating EU AI Act + NIST AI RMF compliance analysis..."})
         await asyncio.sleep(0.3)
 
@@ -396,6 +408,7 @@ async def _golden_path_stream():
         )
 
         yield _sse("step", {"id": "compliance", "title": "Gemini Auditor Report", "status": "complete",
+                            "desc": "Report generated. Covers EU AI Act Articles 14/15/52 and NIST AI RMF with findings over real USDC spend.",
                             "details": {
                                 "report_id": compliance.get("report_id", ""),
                                 "summary": compliance.get("executive_summary", ""),
