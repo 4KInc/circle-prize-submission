@@ -11,3 +11,4 @@ build/
 *.pem
 *.key
 sk_live*
+.circle-cli/

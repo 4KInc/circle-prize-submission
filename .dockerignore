@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.env
+.pytest_cache/
+engine/.git/
+engine/.venv/
+engine/tests/
+engine/docs/
+engine/benchmarks/
+engine/examples/
+engine/demo/
+engine/demo-agent/
+engine/scripts/
