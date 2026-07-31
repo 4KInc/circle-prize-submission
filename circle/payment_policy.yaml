@@ -1,0 +1,25 @@
+# Payment policy for the golden path demo.
+# Deterministic, zero-LLM evaluation — controls which payments the ops agent can make.
+version: "payment-v1"
+rules:
+  - id: payment_actions
+    type: allowlist
+    config:
+      allowed_actions:
+        - pay
+        - transfer
+
+  - id: payment_scope
+    type: resource_scope
+    config:
+      # Payee addresses that are allowed to receive USDC.
+      # The golden-path service wallet is added at runtime.
+      allowed_resources: []
+      # Never send to known bad addresses.
+      denied_resources: []
+
+  - id: payment_rate
+    type: rate_limit
+    config:
+      max_actions: 5
+      window_seconds: 60
