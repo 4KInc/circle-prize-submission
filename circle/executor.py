@@ -52,6 +52,7 @@ class PaymentIntent:
     reason: str
     chain: str = "BASE-SEPOLIA"
     token_address: str | None = None
+    x402_endpoint: str | None = None  # If set, use x402 protocol instead of direct transfer
 
     def __post_init__(self):
         if self.token_address is None:
@@ -205,7 +206,24 @@ class PaymentExecutor:
         )
         logger.info(f"Token issued: jti={token_jti[:12]}... ttl=60s")
 
-        # Execute via Circle CLI (JTI = idempotency key)
+        # Execute payment via Circle CLI
+        x402_response = None
+        if intent.x402_endpoint:
+            # x402 protocol: circle services pay handles 402 → sign → settle
+            from circle.cli import services_pay
+            logger.info(f"x402 payment: {intent.x402_endpoint}")
+            try:
+                x402_response = services_pay(
+                    url=intent.x402_endpoint,
+                    address=self.source_wallet,
+                    chain=intent.chain,
+                    max_amount=intent.amount,
+                )
+                logger.info(f"x402 payment confirmed — service data received")
+            except Exception as e:
+                logger.warning(f"x402 payment failed ({e}), falling back to direct transfer")
+
+        # Direct transfer for on-chain settlement proof (JTI = idempotency key)
         transfer = wallet_transfer(
             source=self.source_wallet,
             destination=intent.payee,

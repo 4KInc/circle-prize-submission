@@ -122,6 +122,55 @@ def wallet_sign_message(address: str, chain: str, message: str) -> dict:
     return data.get("data", {})
 
 
+def services_search(query: str | None = None, limit: int = 10) -> list[dict]:
+    """Search the Circle Agent Marketplace for x402 services."""
+    args = ["services", "search"]
+    if query:
+        args.append(query)
+    args.extend(["--limit", str(limit)])
+    data = _run(args)
+    return data.get("data", {}).get("items", [])
+
+
+def services_pay(
+    url: str,
+    address: str,
+    chain: str,
+    method: str = "GET",
+    data: str | None = None,
+    max_amount: str | None = None,
+) -> dict:
+    """Pay for an x402-paywalled service via Circle CLI.
+
+    This handles the full x402 flow:
+    1. Send request to URL
+    2. Receive 402 with payment requirements
+    3. Sign EIP-3009 authorization
+    4. Retry with payment signature
+    5. Return the response
+    """
+    args = [
+        "services", "pay", url,
+        "--address", address,
+        "--chain", chain,
+    ]
+    if method != "GET":
+        args.extend(["-X", method])
+    if data:
+        args.extend(["-d", data])
+    if max_amount:
+        args.extend(["--max-amount", max_amount])
+    args.extend(["--timeout", "60"])
+    result = _run(args, timeout=90)
+    return result.get("data", result)
+
+
+def services_inspect(url: str) -> dict:
+    """Inspect an x402 service's pricing and requirements."""
+    data = _run(["services", "inspect", url])
+    return data.get("data", data)
+
+
 # Well-known USDC token addresses
 USDC_ADDRESSES = {
     "BASE-SEPOLIA": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",

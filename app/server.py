@@ -56,6 +56,10 @@ app = FastAPI(title="Verigate Live Dashboard", lifespan=lifespan)
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+# Mount x402-paywalled endpoint
+from app.x402 import router as x402_router
+app.include_router(x402_router)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -142,10 +146,25 @@ async def _golden_path_stream():
         })
         await asyncio.sleep(0.5)
 
-        # Step 2: Gemini ops agent
+        # Step 2: Marketplace discovery
+        yield _sse("step", {"id": "discover", "title": "Service Discovery", "status": "running",
+                            "desc": "Query Circle Agent Marketplace for x402-paywalled services. Merge with our own x402 endpoint to build the service catalog."})
+        await asyncio.sleep(0.3)
+
+        from circle.golden_path import discover_marketplace_services
+        discovered = discover_marketplace_services("market data")
+        marketplace_count = sum(1 for s in discovered if s.get("marketplace"))
+
+        yield _sse("step", {
+            "id": "discover", "title": "Service Discovery", "status": "complete",
+            "desc": f"Found {len(discovered)} services ({marketplace_count} from Circle Marketplace, 1 local x402 endpoint).",
+        })
+        await asyncio.sleep(0.5)
+
+        # Step 3: Gemini ops agent
         yield _sse("step", {"id": "agent", "title": "Gemini Ops Agent", "status": "running",
-                            "desc": "Gemini 2.5 Flash analyzes the task, discovers an x402 service, and forms a structured payment intent. This is the only LLM call in the flow.",
-                            "subtitle": "Analyzing task and discovering services..."})
+                            "desc": "Gemini 2.5 Flash analyzes the task, selects a service from the catalog, and forms a structured payment intent. This is the only LLM call in the flow.",
+                            "subtitle": "Analyzing task and selecting service..."})
         await asyncio.sleep(0.3)
 
         task = "Fetch the latest BTC/USDC price data for our portfolio dashboard. Use an external market data service if needed."
@@ -183,8 +202,22 @@ async def _golden_path_stream():
         await asyncio.sleep(0.5)
 
         # Step 4: Happy path payment
+        # Check if selected service is x402
+        x402_url = None
+        from circle.golden_path import SERVICE_CATALOG
+        for svc in SERVICE_CATALOG:
+            if svc["name"] == agent_decision.get("service_name") and svc.get("x402"):
+                x402_url = svc.get("endpoint")
+                break
+
+        payment_desc = "Evaluate the payment intent against policy rules. If approved, issue a 60-second single-use Ed25519 token"
+        if x402_url:
+            payment_desc += ", execute x402 payment via Circle CLI (402 challenge → EIP-3009 sign → settle)."
+        else:
+            payment_desc += ", call Circle CLI, and settle real USDC on-chain."
+
         yield _sse("step", {"id": "payment", "title": "Authorized USDC Payment", "status": "running",
-                            "desc": "Evaluate the payment intent against policy rules. If approved, issue a 60-second single-use Ed25519 token, call Circle CLI, and settle real USDC on-chain.",
+                            "desc": payment_desc,
                             "subtitle": "Policy eval, token issuance, Circle CLI, settlement..."})
         await asyncio.sleep(0.3)
 
@@ -192,6 +225,7 @@ async def _golden_path_stream():
             payee=payee, amount=amount,
             service=agent_decision["service_name"],
             reason=agent_decision["reason"], chain=chain,
+            x402_endpoint=x402_url,
         )
 
         yield _sse("policy", {"decision": "evaluating", "payee": payee[:20] + "...", "amount": amount})

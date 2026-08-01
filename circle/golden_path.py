@@ -29,20 +29,61 @@ logger = logging.getLogger("golden_path")
 for name in ("httpx", "httpcore", "urllib3", "google"):
     logging.getLogger(name).setLevel(logging.WARNING)
 
-# ─── Service catalog (simulates x402 service discovery) ──────────────
+# ─── x402 service endpoint ────────────────────────────────────────────
+# On Cloud Run, this is the deployed URL. Locally, it's localhost:8080.
+X402_ENDPOINT = os.environ.get(
+    "X402_ENDPOINT",
+    "https://verigate-dashboard-1031148889398.us-central1.run.app/x402/market-data",
+)
+
+# Payee address for the x402 service (our agent wallet for self-pay demo)
+SERVICE_PAYEE = os.environ.get(
+    "SERVICE_PAYEE_ADDRESS",
+    "0x008ed50be2cd35f6333a37542a76a227e3b16acc",
+)
+
 SERVICE_CATALOG = [
     {
-        "name": "market-data-service",
-        "description": "Real-time cryptocurrency market data and analytics",
-        "endpoint": "https://api.example.com/v1/market-data",
+        "name": "verigate-market-data",
+        "description": "Real-time BTC/USDC price data (x402-paywalled)",
+        "endpoint": X402_ENDPOINT,
         "price_usdc": "0.01",
-        "payee": os.environ.get(
-            "SERVICE_PAYEE_ADDRESS",
-            "0x" + "a1b2c3d4e5" * 4,  # deterministic default for reproducibility
-        ),
+        "payee": SERVICE_PAYEE,
         "chain": os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA"),
+        "x402": True,
     },
 ]
+
+
+def discover_marketplace_services(query: str = "market data") -> list[dict]:
+    """Discover services from the Circle Agent Marketplace.
+
+    Returns real marketplace services (mainnet) merged with our local
+    x402 service (testnet). The Gemini agent picks from this catalog.
+    """
+    services = list(SERVICE_CATALOG)  # Always include our x402 service
+
+    try:
+        from circle.cli import services_search
+        marketplace = services_search(query, limit=3)
+        for svc in marketplace:
+            meta = svc.get("metadata", {})
+            provider = meta.get("provider", {})
+            accepts = svc.get("accepts", [{}])
+            services.append({
+                "name": provider.get("name", "unknown"),
+                "description": meta.get("description", provider.get("description", "")),
+                "endpoint": svc.get("resource", ""),
+                "price_usdc": str(int(accepts[0].get("amount", "0")) / 1_000_000) if accepts else "?",
+                "payee": accepts[0].get("payTo", "") if accepts else "",
+                "chain": "BASE" if "8453" in accepts[0].get("network", "") else "BASE-SEPOLIA",
+                "x402": True,
+                "marketplace": True,
+            })
+    except Exception as e:
+        logger.warning(f"Marketplace discovery failed (non-fatal): {e}")
+
+    return services
 
 
 def run_gemini_ops_agent(task: str) -> dict:
@@ -69,7 +110,9 @@ def run_gemini_ops_agent(task: str) -> dict:
 
     client = genai.Client(api_key=api_key)
 
-    catalog_json = json.dumps(SERVICE_CATALOG, indent=2)
+    # Discover services from marketplace + local x402
+    available_services = discover_marketplace_services("market data")
+    catalog_json = json.dumps(available_services, indent=2)
     prompt = f"""You are an autonomous operations agent for a crypto analytics company.
 You have been given a task that may require purchasing an external service.
 
@@ -179,12 +222,22 @@ def run_golden_path():
 
     # ── Step 4: HAPPY PATH — execute gated payment ───────────────────
     print(f"\n[4/6] HAPPY PATH: Executing gated payment")
+
+    # Determine if this is an x402 service
+    x402_url = None
+    selected_name = agent_decision.get("service_name", "")
+    for svc in SERVICE_CATALOG:
+        if svc["name"] == selected_name and svc.get("x402"):
+            x402_url = svc.get("endpoint")
+            break
+
     intent = PaymentIntent(
         payee=payee,
         amount=amount,
         service=agent_decision["service_name"],
         reason=agent_decision["reason"],
         chain=chain,
+        x402_endpoint=x402_url,
     )
     print(f"      Payee:   {intent.payee[:20]}...")
     print(f"      Amount:  {intent.amount} USDC")
