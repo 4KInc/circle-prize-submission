@@ -201,21 +201,25 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
   <div class="glass overflow-hidden" id="agent-table">
     <table class="w-full text-xs">
       <thead><tr class="border-b border-v-border text-v-muted text-left">
-        <th class="px-4 py-2.5 font-semibold">Agent</th><th class="px-4 py-2.5 font-semibold">Role</th><th class="px-4 py-2.5 font-semibold">Key ID</th><th class="px-4 py-2.5 font-semibold">Artifacts</th><th class="px-4 py-2.5 font-semibold">Status</th>
+        <th class="px-4 py-2.5 font-semibold">Agent</th><th class="px-4 py-2.5 font-semibold">Role</th><th class="px-4 py-2.5 font-semibold">Signing Key (Ed25519)</th><th class="px-4 py-2.5 font-semibold">Artifacts</th><th class="px-4 py-2.5 font-semibold">Status</th>
       </tr></thead>
-      <tbody id="agent-rows">
-        <tr class="tbl-row"><td class="px-4 py-3 font-medium">Coordinator</td><td class="px-4 py-3 text-v-muted2">Service discovery</td><td class="px-4 py-3 font-mono text-v-muted">--</td><td class="px-4 py-3 font-mono">0</td><td class="px-4 py-3"><span class="text-v-muted">Idle</span></td></tr>
-        <tr class="tbl-row"><td class="px-4 py-3 font-medium">Gateway</td><td class="px-4 py-3 text-v-muted2">Policy eval + receipts</td><td class="px-4 py-3 font-mono text-v-muted">--</td><td class="px-4 py-3 font-mono">0</td><td class="px-4 py-3"><span class="text-v-muted">Idle</span></td></tr>
-        <tr class="tbl-row"><td class="px-4 py-3 font-medium">Auditor</td><td class="px-4 py-3 text-v-muted2">Compliance auditing</td><td class="px-4 py-3 font-mono text-v-muted">--</td><td class="px-4 py-3 font-mono">0</td><td class="px-4 py-3"><span class="text-v-muted">Idle</span></td></tr>
-        <tr class="tbl-row"><td class="px-4 py-3 font-medium">Investigator</td><td class="px-4 py-3 text-v-muted2">Incident analysis</td><td class="px-4 py-3 font-mono text-v-muted">--</td><td class="px-4 py-3 font-mono">0</td><td class="px-4 py-3"><span class="text-v-muted">Idle</span></td></tr>
-        <tr class="tbl-row"><td class="px-4 py-3 font-medium">Recommender</td><td class="px-4 py-3 text-v-muted2">Policy proposals</td><td class="px-4 py-3 font-mono text-v-muted">--</td><td class="px-4 py-3 font-mono">0</td><td class="px-4 py-3"><span class="text-v-muted">Idle</span></td></tr>
-        <tr class="tbl-row"><td class="px-4 py-3 font-medium">Isolator</td><td class="px-4 py-3 text-v-muted2">Agent containment</td><td class="px-4 py-3 font-mono text-v-muted">--</td><td class="px-4 py-3 font-mono">0</td><td class="px-4 py-3"><span class="text-v-muted">Idle</span></td></tr>
-      </tbody>
+      <tbody id="agent-rows"></tbody>
     </table>
   </div>
-  <div class="mt-4 glass p-4" id="agent-artifacts-panel" style="display:none">
-    <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-3">Signed Artifacts</div>
-    <div id="agent-artifacts" class="max-h-80 overflow-y-auto"></div>
+  <div class="mt-4 glass overflow-hidden" id="agent-artifacts-panel" style="display:none">
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-v-border">
+      <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Signed Artifacts</span>
+      <button class="text-[10px] font-mono text-v-blu hover:underline cursor-pointer bg-transparent border-none" onclick="exportArtifacts()">Export JSON</button>
+    </div>
+    <div id="agent-artifacts" class="max-h-[500px] overflow-y-auto"></div>
+  </div>
+  <!-- Artifact detail modal -->
+  <div id="artifact-detail" class="mt-4 glass overflow-hidden" style="display:none">
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-v-border">
+      <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider" id="detail-title">Artifact Detail</span>
+      <button class="text-[10px] text-v-muted hover:text-white cursor-pointer bg-transparent border-none" onclick="document.getElementById('artifact-detail').style.display='none'">Close</button>
+    </div>
+    <pre id="detail-json" class="p-4 text-[10px] font-mono text-v-muted2 overflow-auto max-h-80 whitespace-pre-wrap"></pre>
   </div>
 </div>
 
@@ -237,12 +241,14 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
   </div>
   <div class="grid grid-cols-2 gap-4 mt-4">
     <div class="glass p-4">
-      <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-2">Merkle Root</div>
-      <div class="font-mono text-[11px] text-v-muted2 break-all" id="merkle-display">--</div>
+      <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-1">Merkle Root</div>
+      <div class="text-[10px] text-v-muted mb-2">RFC 6962 tree over all receipt hashes in the batch</div>
+      <div class="font-mono text-[11px] text-v-grn break-all" id="merkle-display">--</div>
     </div>
     <div class="glass p-4">
-      <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-2">Anchor</div>
-      <div class="font-mono text-[11px] text-v-muted2 break-all" id="anchor-display">--</div>
+      <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-1">Wallet-Signed Anchor</div>
+      <div class="text-[10px] text-v-muted mb-2">Merkle root signed by the Circle Agent Wallet</div>
+      <div class="font-mono text-[11px] text-v-blu break-all" id="anchor-display">--</div>
     </div>
   </div>
 </div>
@@ -369,6 +375,7 @@ function updateAgent(d){
   const rows=document.getElementById('agent-rows').children;
   for(let r of rows){
     if(r.cells[0]?.textContent===d.name){
+      if(d.role)r.cells[1].innerHTML='<span class="text-v-muted2">'+d.role+'</span>';
       if(d.kid)r.cells[2].innerHTML='<span class="text-v-muted2 font-mono text-[10px]">'+d.kid+'</span>';
       if(d.artifacts!==undefined)r.cells[3].innerHTML='<span class="font-mono">'+d.artifacts+'</span>';
       r.cells[4].innerHTML='<span class="text-v-grn font-medium">'+d.status+'</span>';
@@ -441,6 +448,20 @@ function loadWallets(){
     el.innerHTML=h;
   }).catch(()=>{document.getElementById('wallet-cards').innerHTML='<div class="glass p-5 col-span-2 text-center text-v-red text-xs">Failed to fetch wallets.</div>'});
 }
+function exportArtifacts(){
+  fetch('/api/artifacts').then(r=>r.json()).then(d=>{
+    const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='verigate-artifacts-'+new Date().toISOString().slice(0,10)+'.json';
+    a.click();
+  });
+}
+function showArtifactDetail(artifact){
+  document.getElementById('artifact-detail').style.display='';
+  document.getElementById('detail-title').textContent=artifact.agent+' / '+artifact.artifact_type;
+  document.getElementById('detail-json').textContent=JSON.stringify(artifact,null,2);
+}
+
 // Auto-load data when switching tabs
 const origGo=go;
 go=function(view){origGo(view);if(view==='wallets')loadWallets();if(view==='receipts'||view==='agents'||view==='compliance')loadData()}
@@ -472,25 +493,51 @@ function loadData(){
 
     // Agents tab
     if(d.agents&&Object.keys(d.agents).length){
-      const rows=document.getElementById('agent-rows').children;
-      for(let r of rows){
-        const name=r.cells[0]?.textContent;
+      const el=document.getElementById('agent-rows');
+      let h='';
+      const order=['Coordinator','Gateway','Auditor','Investigator','Recommender','Isolator'];
+      order.forEach(name=>{
         const ag=d.agents[name];
-        if(ag){
-          r.cells[2].innerHTML='<span class="text-v-muted2 font-mono text-[10px]">'+ag.kid+'</span>';
-          r.cells[3].innerHTML='<span class="font-mono">'+ag.artifacts+'</span>';
-          r.cells[4].innerHTML='<span class="text-v-grn font-medium">'+ag.status+'</span>';
+        if(!ag)return;
+        const statusColor=ag.status==='Active'?'text-v-grn':ag.status==='Ready'?'text-v-amb':'text-v-muted';
+        h+='<tr class="tbl-row">';
+        h+='<td class="px-4 py-3 font-medium">'+name+'</td>';
+        h+='<td class="px-4 py-3 text-v-muted2">'+(ag.role||'--')+'</td>';
+        h+='<td class="px-4 py-3 font-mono text-[10px] text-v-muted2">'+ag.kid+'</td>';
+        h+='<td class="px-4 py-3 font-mono">'+ag.artifacts+'</td>';
+        h+='<td class="px-4 py-3"><span class="'+statusColor+' font-medium">'+ag.status+'</span></td>';
+        h+='</tr>';
+      });
+      el.innerHTML=h;
+    }
+    // Artifacts detail
+    if(d.artifacts&&d.artifacts.length){
+      window._artifactData=d.artifacts;
+      document.getElementById('agent-artifacts-panel').style.display='';
+      let ah='';
+      d.artifacts.forEach(a=>{
+        const body=a.body||{};
+        let detail='';
+        // Show key fields based on artifact type
+        if(a.artifact_type==='incident_report'){
+          detail='<span class="text-v-red">'+body.severity+'</span> &mdash; '+(body.narrative?.summary||'').substring(0,120);
+        }else if(a.artifact_type==='policy_proposal'){
+          detail=(body.proposals||[]).map(p=>'<span class="text-v-amb">'+p.change_type+'</span>').join(', ');
+        }else if(a.artifact_type==='audit_report'){
+          detail='<span class="text-v-grn">'+body.verdict+'</span> &mdash; '+(body.frameworks_checked||[]).join(', ');
+        }else if(a.artifact_type==='service_discovery'){
+          detail=body.services_found+' services from '+(body.sources||[]).join(', ');
+        }else if(a.artifact_type==='compliance_report'){
+          const sp=body.total_governed_spend_usdc||0;
+          const vs=body.verification_status||'';
+          detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed &mdash; '+vs;
+        }else if(a.artifact_type==='isolation_record'){
+          detail='<span class="text-v-red">'+body.severity+'</span> &mdash; '+(body.actions_taken||[]).map(x=>x.action).join(', ');
         }
-      }
-      // Show artifacts
-      if(d.artifacts&&d.artifacts.length){
-        document.getElementById('agent-artifacts-panel').style.display='';
-        let ah='';
-        d.artifacts.forEach(a=>{
-          ah+='<div class="tbl-row px-3 py-2 text-[11px]"><span class="font-semibold text-v-accent">'+a.agent+'</span> <span class="text-v-muted">/</span> <span class="text-v-muted2">'+a.artifact_type+'</span> <span class="font-mono text-v-muted text-[10px] ml-2">'+a.artifact_hash?.substring(0,28)+'...</span></div>';
-        });
-        document.getElementById('agent-artifacts').innerHTML=ah;
-      }
+        const idx=d.artifacts.indexOf(a);
+        ah+='<div class="px-4 py-3 border-b border-white/[.03] cursor-pointer hover:bg-white/[.02] transition" onclick="showArtifactDetail(window._artifactData['+idx+'])"><div class="flex items-center gap-2 text-xs"><span class="font-semibold text-v-accent">'+a.agent+'</span><span class="text-v-muted">/</span><span class="text-v-muted2">'+a.artifact_type+'</span><span class="font-mono text-v-muted text-[10px] ml-auto">'+(a.artifact_hash||'').substring(0,24)+'...</span></div>'+(detail?'<div class="text-[11px] text-v-muted2 mt-1">'+detail+'</div>':'')+'</div>';
+      });
+      document.getElementById('agent-artifacts').innerHTML=ah;
     }
 
     // Compliance tab

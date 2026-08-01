@@ -53,6 +53,25 @@ state = {
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize 6 agents at startup so keys are visible immediately
+    from circle.agents import GovernanceSystem
+    from circle.isolator import Isolator
+    from circle.executor import PaymentExecutor
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    gov = GovernanceSystem(tenant="verigate")
+    key = Ed25519PrivateKey.generate()
+    kid = f"gateway-verigate-init"
+    iso_kid = f"isolator-verigate-init"
+
+    state["agents"] = {
+        "Coordinator": {"kid": gov.coordinator._kid, "status": "Ready", "artifacts": 0, "role": "Service discovery"},
+        "Gateway": {"kid": kid, "status": "Ready", "artifacts": 0, "role": "Policy eval + receipts"},
+        "Auditor": {"kid": gov.auditor._kid, "status": "Ready", "artifacts": 0, "role": "Compliance auditing"},
+        "Investigator": {"kid": gov.investigator._kid, "status": "Ready", "artifacts": 0, "role": "Incident analysis"},
+        "Recommender": {"kid": gov.recommender._kid, "status": "Ready", "artifacts": 0, "role": "Policy proposals"},
+        "Isolator": {"kid": iso_kid, "status": "Ready", "artifacts": 0, "role": "Agent containment"},
+    }
     yield
 
 app = FastAPI(title="Verigate Live Dashboard", lifespan=lifespan)
@@ -88,6 +107,20 @@ async def get_data():
         "compliance": state["compliance"],
         "payments": state["payments"],
         "isolations": state["isolations"],
+    }
+
+
+@app.get("/api/artifacts")
+async def get_artifacts():
+    """Export all signed artifacts as verifiable JSON."""
+    return {
+        "artifacts": state["artifacts"],
+        "receipts": state["receipts"],
+        "agents": state["agents"],
+        "merkle_root": state["merkle_root"],
+        "anchor": state["anchor"],
+        "verification": state["verification"],
+        "export_note": "Each artifact is Ed25519-signed. Verify with the agent's public key.",
     }
 
 
@@ -281,7 +314,7 @@ async def _golden_path_stream():
         })
         # Emit Gateway agent info
         state["agents"]["Gateway"] = {"kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Policy eval + receipts"}
-        yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0})
+        yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Policy eval + receipts"})
         await asyncio.sleep(0.5)
 
         # Step 4: Happy path payment
@@ -425,6 +458,7 @@ async def _golden_path_stream():
         governance = GovernanceSystem(tenant=executor.tenant)
 
         # Emit all 6 agent keys and persist
+        roles = {"Coordinator": "Service discovery", "Auditor": "Compliance auditing", "Investigator": "Incident analysis", "Recommender": "Policy proposals", "Isolator": "Agent containment"}
         for name, kid, arts in [
             ("Coordinator", governance.coordinator._kid, len(governance.coordinator.artifacts)),
             ("Auditor", governance.auditor._kid, 0),
@@ -432,8 +466,9 @@ async def _golden_path_stream():
             ("Recommender", governance.recommender._kid, 0),
             ("Isolator", isolator._kid if isolation_record else executor._kid, len(isolator.records) if isolation_record else 0),
         ]:
-            state["agents"][name] = {"kid": kid, "status": "Active", "artifacts": arts}
-            yield _sse("agent_info", {"name": name, "kid": kid, "status": "Active", "artifacts": arts})
+            role = roles.get(name, "")
+            state["agents"][name] = {"kid": kid, "status": "Active", "artifacts": arts, "role": role}
+            yield _sse("agent_info", {"name": name, "kid": kid, "status": "Active", "artifacts": arts, "role": role})
 
         yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "running",
                             "desc": "Deep analysis of the suspicious denial. The Investigator synthesizes evidence, classifies severity, identifies root cause, and produces a signed incident report."})
@@ -466,8 +501,10 @@ async def _golden_path_stream():
                                 "details": {"proposal_id": prop.get("proposal_id", ""), "proposals": proposals}})
             yield _sse("proposal", {"proposals": proposals, "proposal_id": prop.get("proposal_id", "")})
             # Update agent artifact counts
-            yield _sse("agent_info", {"name": "Investigator", "kid": governance.investigator._kid, "status": "Active", "artifacts": len(governance.investigator.artifacts)})
-            yield _sse("agent_info", {"name": "Recommender", "kid": governance.recommender._kid, "status": "Active", "artifacts": len(governance.recommender.artifacts)})
+            state["agents"]["Investigator"]["artifacts"] = len(governance.investigator.artifacts)
+            state["agents"]["Recommender"]["artifacts"] = len(governance.recommender.artifacts)
+            yield _sse("agent_info", {"name": "Investigator", "kid": governance.investigator._kid, "status": "Active", "artifacts": len(governance.investigator.artifacts), "role": "Incident analysis"})
+            yield _sse("agent_info", {"name": "Recommender", "kid": governance.recommender._kid, "status": "Active", "artifacts": len(governance.recommender.artifacts), "role": "Policy proposals"})
             await asyncio.sleep(0.5)
         else:
             yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "complete",
@@ -488,7 +525,8 @@ async def _golden_path_stream():
 
         yield _sse("step", {"id": "auditor-receipts", "title": "Auditor: Receipt Audit", "status": "complete",
                             "desc": f"Audited {len(chain_receipts)} receipts. All verdicts: ALIGNED. {len(governance.auditor.artifacts)} signed audit reports produced."})
-        yield _sse("agent_info", {"name": "Auditor", "kid": governance.auditor._kid, "status": "Active", "artifacts": len(governance.auditor.artifacts)})
+        state["agents"]["Auditor"]["artifacts"] = len(governance.auditor.artifacts)
+        yield _sse("agent_info", {"name": "Auditor", "kid": governance.auditor._kid, "status": "Active", "artifacts": len(governance.auditor.artifacts), "role": "Compliance auditing"})
         await asyncio.sleep(0.5)
 
         # Step 10: Receipt chain
@@ -578,23 +616,38 @@ async def _golden_path_stream():
         # Step 13: Compliance report (Auditor agent, Gemini-powered)
         yield _sse("step", {"id": "compliance", "title": "Auditor: Compliance Report", "status": "running",
                             "desc": "The Auditor agent uses Gemini to generate a comprehensive compliance report over the real USDC spend, covering EU AI Act (Art 14/15/52) and NIST AI RMF.",
-                            "subtitle": "Generating EU AI Act + NIST AI RMF compliance analysis..."})
+                            "subtitle": "Generating compliance analysis..."})
         await asyncio.sleep(0.3)
 
         iso_envelopes = [ir.envelope_dict() for ir in isolator.records] if isolation_record else []
         total_spend = float(result.transfer.amount) if result.transfer else 0
-        compliance_artifact = governance.auditor.generate_compliance_report(
-            receipts=chain_receipts,
-            isolations=iso_envelopes,
-            spend=total_spend,
-            verification_status=report.overall,
-        )
+        try:
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(
+                    governance.auditor.generate_compliance_report,
+                    chain_receipts, iso_envelopes, total_spend, report.overall,
+                )
+                compliance_artifact = future.result(timeout=30)
+        except Exception as e:
+            logger.warning(f"Compliance report generation failed: {e}")
+            # Use fallback
+            compliance_artifact = governance.auditor._sign_artifact("compliance_report", {
+                "report_id": "fallback",
+                "narrative": governance.auditor._fallback_narrative(chain_receipts, iso_envelopes, total_spend, report.overall),
+            })
         compliance = compliance_artifact.body.get("narrative", {})
 
         # Persist compliance and count artifacts
         state["compliance"] = compliance
         all_artifacts = governance.get_all_artifacts()
-        iso_artifacts = [ir.envelope_dict() for ir in isolator.records] if isolation_record else []
+        iso_artifacts = []
+        if isolation_record:
+            for ir in isolator.records:
+                env = ir.envelope_dict()
+                env["agent"] = "isolator"
+                env["artifact_type"] = "isolation_record"
+                iso_artifacts.append(env)
         state["artifacts"] = all_artifacts + iso_artifacts
         total_signed_artifacts = len(chain_receipts) + len(all_artifacts) + len(iso_artifacts)
         # Update agent artifact counts
