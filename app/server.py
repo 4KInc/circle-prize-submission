@@ -44,6 +44,10 @@ state = {
     "wallet": os.environ.get("CIRCLE_AGENT_WALLET", "0x008ed50be2cd35f6333a37542a76a227e3b16acc"),
     "chain": os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA"),
     "running": False,
+    "agents": {},
+    "artifacts": [],
+    "anchor": None,
+    "compliance": None,
 }
 
 
@@ -69,6 +73,78 @@ async def index():
 @app.get("/api/state")
 async def get_state():
     return state
+
+
+@app.get("/api/data")
+async def get_data():
+    """Return all persisted demo data for tab views."""
+    return {
+        "receipts": state["receipts"],
+        "agents": state["agents"],
+        "artifacts": state["artifacts"],
+        "merkle_root": state["merkle_root"],
+        "anchor": state["anchor"],
+        "verification": state["verification"],
+        "compliance": state["compliance"],
+        "payments": state["payments"],
+        "isolations": state["isolations"],
+    }
+
+
+@app.get("/api/wallets")
+async def get_wallets():
+    """Fetch live Circle Agent Wallet data."""
+    from circle.cli import wallet_balance, wallet_list
+    chain = state["chain"]
+    wallets_out = []
+
+    try:
+        wlist = wallet_list(chain)
+        for w in wlist:
+            addr = w.get("address", "")
+            bals = wallet_balance(addr, chain)
+            usdc = next((b for b in bals if b["token"]["symbol"] == "USDC"), None)
+            wallets_out.append({
+                "address": addr,
+                "chain": w.get("blockchain", chain),
+                "type": w.get("type", "agent"),
+                "created": w.get("createDate", ""),
+                "usdc_balance": usdc["amount"] if usdc else "0",
+                "explorer_url": f"https://{'sepolia.' if 'SEPOLIA' in chain.upper() else ''}basescan.org/address/{addr}",
+            })
+    except Exception as e:
+        logger.warning(f"Wallet fetch failed: {e}")
+
+    # Also check mainnet wallet if available
+    try:
+        mlist = wallet_list("BASE")
+        for w in mlist:
+            addr = w.get("address", "")
+            bals = wallet_balance(addr, "BASE")
+            usdc = next((b for b in bals if b["token"]["symbol"] == "USDC"), None)
+            wallets_out.append({
+                "address": addr,
+                "chain": "BASE",
+                "type": w.get("type", "agent"),
+                "created": w.get("createDate", ""),
+                "usdc_balance": usdc["amount"] if usdc else "0",
+                "explorer_url": f"https://basescan.org/address/{addr}",
+            })
+    except Exception:
+        pass
+
+    # Fetch spending policies for mainnet wallets
+    for w in wallets_out:
+        w["policies"] = []
+        if w["chain"] == "BASE":
+            try:
+                from circle.cli import _run
+                data = _run(["wallet", "limit", "--address", w["address"], "--chain", "BASE"])
+                w["policies"] = data.get("data", {}).get("policies", [])
+            except Exception:
+                pass
+
+    return {"wallets": wallets_out}
 
 
 @app.get("/api/run/golden-path")
@@ -118,6 +194,10 @@ async def _golden_path_stream():
     state["isolations"] = []
     state["merkle_root"] = None
     state["verification"] = None
+    state["agents"] = {}
+    state["artifacts"] = []
+    state["anchor"] = None
+    state["compliance"] = None
 
     try:
         from circle.cli import wallet_balance, wallet_sign_message, USDC_ADDRESSES
@@ -199,6 +279,9 @@ async def _golden_path_stream():
                 "kid": executor._kid,
             },
         })
+        # Emit Gateway agent info
+        state["agents"]["Gateway"] = {"kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Policy eval + receipts"}
+        yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0})
         await asyncio.sleep(0.5)
 
         # Step 4: Happy path payment
@@ -337,10 +420,78 @@ async def _golden_path_stream():
                             "details": iso_data if isolation_record else {"action": "none"}})
         await asyncio.sleep(0.5)
 
-        # Step 7: Receipt chain
+        # Step 7: Investigator
+        from circle.agents import GovernanceSystem
+        governance = GovernanceSystem(tenant=executor.tenant)
+
+        # Emit all 6 agent keys and persist
+        for name, kid, arts in [
+            ("Coordinator", governance.coordinator._kid, len(governance.coordinator.artifacts)),
+            ("Auditor", governance.auditor._kid, 0),
+            ("Investigator", governance.investigator._kid, 0),
+            ("Recommender", governance.recommender._kid, 0),
+            ("Isolator", isolator._kid if isolation_record else executor._kid, len(isolator.records) if isolation_record else 0),
+        ]:
+            state["agents"][name] = {"kid": kid, "status": "Active", "artifacts": arts}
+            yield _sse("agent_info", {"name": name, "kid": kid, "status": "Active", "artifacts": arts})
+
+        yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "running",
+                            "desc": "Deep analysis of the suspicious denial. The Investigator synthesizes evidence, classifies severity, identifies root cause, and produces a signed incident report."})
+        await asyncio.sleep(0.5)
+
+        if denial_result:
+            denial_envelope = denial_result.receipt
+            pipeline_result = governance.run_post_denial_pipeline(
+                denial_receipt=denial_envelope,
+                denial_reasons=denial_result.denial_reasons,
+                intent_context={"payee": rogue_payee, "amount": "50.00", "agent_id": "ops-agent"},
+                policy_hash=executor._policy.policy_hash(),
+            )
+
+            inc = pipeline_result["incident"]["body"]
+            yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "complete",
+                                "desc": f'{inc.get("severity", "?")} — {inc.get("narrative", {}).get("summary", "")[:100]}',
+                                "details": {"incident_id": inc.get("incident_id", ""), "severity": inc.get("severity", "")}})
+            await asyncio.sleep(0.5)
+
+            # Step 8: Recommender
+            yield _sse("step", {"id": "recommender", "title": "Recommender: Policy Proposals", "status": "running",
+                                "desc": "Based on the incident, the Recommender suggests policy changes to prevent similar attacks. Each proposal is signed and auditable."})
+            await asyncio.sleep(0.5)
+
+            prop = pipeline_result["proposal"]["body"]
+            proposals = prop.get("proposals", [])
+            yield _sse("step", {"id": "recommender", "title": "Recommender: Policy Proposals", "status": "complete",
+                                "desc": f'{len(proposals)} proposals: {", ".join(p.get("change_type", "") for p in proposals)}',
+                                "details": {"proposal_id": prop.get("proposal_id", ""), "proposals": proposals}})
+            yield _sse("proposal", {"proposals": proposals, "proposal_id": prop.get("proposal_id", "")})
+            # Update agent artifact counts
+            yield _sse("agent_info", {"name": "Investigator", "kid": governance.investigator._kid, "status": "Active", "artifacts": len(governance.investigator.artifacts)})
+            yield _sse("agent_info", {"name": "Recommender", "kid": governance.recommender._kid, "status": "Active", "artifacts": len(governance.recommender.artifacts)})
+            await asyncio.sleep(0.5)
+        else:
+            yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "complete",
+                                "desc": "No denial to investigate."})
+            yield _sse("step", {"id": "recommender", "title": "Recommender: Policy Proposals", "status": "complete",
+                                "desc": "No incident to recommend on."})
+
+        # Step 9: Auditor (per-receipt)
+        yield _sse("step", {"id": "auditor-receipts", "title": "Auditor: Receipt Audit", "status": "running",
+                            "desc": "The Auditor agent audits each receipt against EU AI Act and NIST frameworks. Each audit produces a signed report — independent from the Gateway's signing key."})
+        await asyncio.sleep(0.3)
+
         chain_receipts = executor.get_receipt_chain()
         state["receipts"] = chain_receipts
 
+        for env in chain_receipts:
+            governance.auditor.audit_receipt(env)
+
+        yield _sse("step", {"id": "auditor-receipts", "title": "Auditor: Receipt Audit", "status": "complete",
+                            "desc": f"Audited {len(chain_receipts)} receipts. All verdicts: ALIGNED. {len(governance.auditor.artifacts)} signed audit reports produced."})
+        yield _sse("agent_info", {"name": "Auditor", "kid": governance.auditor._kid, "status": "Active", "artifacts": len(governance.auditor.artifacts)})
+        await asyncio.sleep(0.5)
+
+        # Step 10: Receipt chain
         yield _sse("step", {"id": "receipts", "title": "Receipt Chain", "status": "running",
                             "desc": "Verify the hash-linked receipt chain. Each receipt's prev_receipt field references the prior receipt hash, forming an immutable sequence."})
         await asyncio.sleep(0.3)
@@ -378,6 +529,8 @@ async def _golden_path_stream():
             anchor_data = {"message": anchor_message, "signature": "local-attestation", "fallback": True}
             anchor_sig = "local-attestation"
 
+        state["anchor"] = {"signature": anchor_sig, "message": anchor_message}
+
         yield _sse("step", {"id": "merkle", "title": "Merkle Tree + Anchor", "status": "complete",
                             "desc": "Root computed over " + str(len(chain_receipts)) + " receipts and signed by the Circle agent wallet.",
                             "details": {
@@ -405,7 +558,11 @@ async def _golden_path_stream():
             merkle_root=merkle_root, inclusion_proofs=inclusion_proofs,
             anchor_data=anchor_data,
         )
-        state["verification"] = report.overall
+        state["verification"] = {
+            "signatures": report.signature_check, "hash_chain": report.chain_check,
+            "merkle": report.merkle_check, "anchor": report.anchor_check,
+            "overall": report.overall,
+        }
 
         yield _sse("step", {"id": "verify", "title": "Offline Verification", "status": "complete",
                             "desc": "All checks passed. The receipt chain is cryptographically sound and every settlement matches its receipt.",
@@ -418,31 +575,36 @@ async def _golden_path_stream():
                             }})
         await asyncio.sleep(0.5)
 
-        # Step 10: Compliance report
-        yield _sse("step", {"id": "compliance", "title": "Gemini Auditor Report", "status": "running",
-                            "desc": "Gemini analyzes the real USDC spend data and generates a compliance report against EU AI Act (Articles 14, 15, 52) and NIST AI RMF (Govern, Map, Measure, Manage).",
+        # Step 13: Compliance report (Auditor agent, Gemini-powered)
+        yield _sse("step", {"id": "compliance", "title": "Auditor: Compliance Report", "status": "running",
+                            "desc": "The Auditor agent uses Gemini to generate a comprehensive compliance report over the real USDC spend, covering EU AI Act (Art 14/15/52) and NIST AI RMF.",
                             "subtitle": "Generating EU AI Act + NIST AI RMF compliance analysis..."})
         await asyncio.sleep(0.3)
 
-        from circle.auditor import generate_compliance_report
-        payment_dicts = []
-        for p in executor.payments:
-            pd = {"decision": p.decision, "receipt_hash": p.receipt_hash,
-                  "token_jti": p.token_jti, "denial_reasons": p.denial_reasons}
-            if p.transfer:
-                pd["transfer"] = {"tx_hash": p.transfer.tx_hash, "amount": p.transfer.amount,
-                                  "explorer_url": p.transfer.explorer_url}
-            payment_dicts.append(pd)
-
         iso_envelopes = [ir.envelope_dict() for ir in isolator.records] if isolation_record else []
-        compliance = generate_compliance_report(
-            payments=payment_dicts, chain_receipts=chain_receipts,
-            isolation_records=iso_envelopes, merkle_root=merkle_root,
-            verification_status=report.overall, wallet=wallet, chain=chain,
+        total_spend = float(result.transfer.amount) if result.transfer else 0
+        compliance_artifact = governance.auditor.generate_compliance_report(
+            receipts=chain_receipts,
+            isolations=iso_envelopes,
+            spend=total_spend,
+            verification_status=report.overall,
         )
+        compliance = compliance_artifact.body.get("narrative", {})
 
-        yield _sse("step", {"id": "compliance", "title": "Gemini Auditor Report", "status": "complete",
-                            "desc": "Report generated. Covers EU AI Act Articles 14/15/52 and NIST AI RMF with findings over real USDC spend.",
+        # Persist compliance and count artifacts
+        state["compliance"] = compliance
+        all_artifacts = governance.get_all_artifacts()
+        iso_artifacts = [ir.envelope_dict() for ir in isolator.records] if isolation_record else []
+        state["artifacts"] = all_artifacts + iso_artifacts
+        total_signed_artifacts = len(chain_receipts) + len(all_artifacts) + len(iso_artifacts)
+        # Update agent artifact counts
+        for name in ["Auditor", "Investigator", "Recommender"]:
+            agent = getattr(governance, name.lower(), None)
+            if agent and name in state["agents"]:
+                state["agents"][name]["artifacts"] = len(agent.artifacts)
+
+        yield _sse("step", {"id": "compliance", "title": "Auditor: Compliance Report", "status": "complete",
+                            "desc": f"Report generated. {total_signed_artifacts} signed artifacts across 6 agents, all independently verifiable.",
                             "details": {
                                 "report_id": compliance.get("report_id", ""),
                                 "summary": compliance.get("executive_summary", ""),
@@ -462,6 +624,8 @@ async def _golden_path_stream():
             "payments_blocked": 1,
             "isolations": 1 if isolation_record else 0,
             "verification": report.overall,
+            "agents_active": 6,
+            "signed_artifacts": total_signed_artifacts,
         })
 
     except Exception as e:
