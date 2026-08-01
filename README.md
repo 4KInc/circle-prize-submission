@@ -106,8 +106,9 @@ Three attack scenarios — all blocked, $0.00 lost, agent quarantined.
 | Item | Value |
 |------|-------|
 | Public repo | [github.com/4KInc/circle-prize-submission](https://github.com/4KInc/circle-prize-submission) |
-| Wallet address | `0x008ed50be2cd35f6333a37542a76a227e3b16acc` |
-| Chain | Base Sepolia (parametrized for Base mainnet) |
+| Wallet (testnet) | `0x008ed50be2cd35f6333a37542a76a227e3b16acc` on Base Sepolia |
+| Wallet (mainnet) | `0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2` on Base |
+| Mainnet tx | [0x47db7910...on Basescan](https://basescan.org/tx/0x47db7910f97e0d39dbea0072af04b30b44bb39d77b40bd0e783790191bbd06bb) |
 | Demo command | `make demo` |
 | Live dashboard | [verigate-dashboard-1031148889398.us-central1.run.app](https://verigate-dashboard-1031148889398.us-central1.run.app) |
 | Dashboard (local) | `make dashboard` (localhost:8080) |
