@@ -11,6 +11,7 @@ import json
 import logging
 import io
 import os
+from datetime import datetime, timezone
 import secrets
 import sys
 import time
@@ -125,6 +126,24 @@ async def get_artifacts():
         "anchor": state["anchor"],
         "verification": state["verification"],
         "export_note": "Each artifact is Ed25519-signed. Verify with the agent's public key.",
+    }
+
+
+@app.get("/api/export")
+async def get_export():
+    """Export chain in the format expected by `python -m circle.dispute verify`."""
+    return {
+        "schema": "verigate-export-v1",
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "tenant": "live-demo",
+        "receipt_chain": state.get("receipts", []),
+        "public_key_jwk": getattr(app, "_executor_jwk", None),
+        "merkle_root": state.get("merkle_root"),
+        "inclusion_proofs": state.get("inclusion_proofs", {}),
+        "anchor_data": state.get("anchor"),
+        "artifacts": state.get("artifacts", []),
+        "agents": state.get("agents", {}),
+        "isolation_records": state.get("isolations", []),
     }
 
 
@@ -804,6 +823,7 @@ async def _golden_path_stream():
             merkle_root=merkle_root, inclusion_proofs=inclusion_proofs,
             anchor_data=anchor_data,
         )
+        state["inclusion_proofs"] = inclusion_proofs
         state["verification"] = {
             "signatures": report.signature_check, "hash_chain": report.chain_check,
             "merkle": report.merkle_check, "x401": report.x401_check,

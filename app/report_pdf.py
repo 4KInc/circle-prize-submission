@@ -403,7 +403,7 @@ def generate_verification_pdf(
 
     cmd_export = (
         "# Step 1: Export the chain from the dashboard\n"
-        "curl http://localhost:8080/api/artifacts > chain-export.json"
+        "curl http://localhost:8080/api/export > chain-export.json"
     )
     cmd_verify = (
         "# Step 2: Verify offline (requires only Python + cryptography)\n"
@@ -421,15 +421,18 @@ def generate_verification_pdf(
         '# Load export\n'
         'with open("chain-export.json") as f:\n'
         '    data = json.load(f)\n\n'
-        '# Get public key\n'
-        'jwk = data["agents"]["Gateway"]["kid"]  # or from /api/artifacts\n\n'
+        '# Get public key (Ed25519 JWK)\n'
+        'jwk = data["public_key_jwk"]\n'
+        'x_bytes = base64.urlsafe_b64decode(jwk["x"] + "==")\n'
+        'pub_key = Ed25519PublicKey.from_public_bytes(x_bytes)\n\n'
         '# For each receipt:\n'
-        'for env in data["receipts"]:\n'
+        'for env in data["receipt_chain"]:\n'
         '    body_bytes = json.dumps(env["body"],\n'
         '        sort_keys=True, separators=(",",":")).encode()\n'
         '    computed = "sha256:" + hashlib.sha256(body_bytes).hexdigest()\n'
         '    assert computed == env["receipt_hash"], "TAMPERED!"\n'
-        '    # Ed25519 verify with public key...'
+        '    sig = base64.urlsafe_b64decode(env["sig"]["value"] + "==")\n'
+        '    pub_key.verify(sig, body_bytes)  # raises if invalid'
     )
 
     for cmd in [cmd_export, cmd_verify, cmd_report]:
