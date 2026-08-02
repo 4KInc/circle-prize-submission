@@ -160,6 +160,7 @@ def generate_verification_pdf(
     agents: dict,
     artifacts: list[dict],
     public_key_jwk: dict | None = None,
+    base_url: str = "https://your-dashboard-url",
 ) -> bytes:
     """Generate a PDF verification report and return bytes."""
     buf = io.BytesIO()
@@ -336,16 +337,15 @@ def generate_verification_pdf(
             art_data.append([
                 agent_names_map.get(agent_raw, agent_raw),
                 type_names.get(type_raw, type_raw.replace("_", " ")),
-                ahash[:48] + ("..." if len(ahash) > 48 else ""),
+                ahash,
             ])
-        art_table = Table(art_data, colWidths=[30 * mm, 30 * mm, 90 * mm])
+        art_table = Table(art_data, colWidths=[26 * mm, 26 * mm, 128 * mm])
         art_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), NAVY),
             ("TEXTCOLOR", (0, 0), (-1, 0), white),
-            ("FONTSIZE", (0, 0), (-1, -1), 7),
+            ("FONTSIZE", (0, 0), (-1, -1), 6.5),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTNAME", (0, 1), (2, -1), "Courier"),
-            ("FONTNAME", (0, 1), (1, -1), "Helvetica"),
+            ("FONTNAME", (2, 1), (2, -1), "Courier"),
             ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
             ("TOPPADDING", (0, 0), (-1, -1), 3),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
@@ -403,7 +403,7 @@ def generate_verification_pdf(
 
     cmd_export = (
         "# Step 1: Export the chain from the dashboard\n"
-        "curl http://localhost:8080/api/export > chain-export.json"
+        f"curl {base_url}/api/export > chain-export.json"
     )
     cmd_verify = (
         "# Step 2: Verify offline (requires only Python + cryptography)\n"

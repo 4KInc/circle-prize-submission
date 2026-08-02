@@ -148,16 +148,18 @@ async def get_export():
 
 
 @app.get("/api/verification-report.pdf")
-async def get_verification_pdf():
+async def get_verification_pdf(request: Request):
     """Generate and return a downloadable PDF verification report."""
     from app.report_pdf import generate_verification_pdf
 
+    base_url = str(request.base_url).rstrip("/")
     pdf_bytes = generate_verification_pdf(
         verification_state=state.get("verification", {}),
         receipts=state.get("receipts", []),
         agents=state.get("agents", {}),
         artifacts=state.get("artifacts", []),
         public_key_jwk=getattr(app, "_executor_jwk", None),
+        base_url=base_url,
     )
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
