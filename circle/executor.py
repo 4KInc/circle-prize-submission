@@ -1,19 +1,32 @@
-"""Payment executor — the ONLY code path that calls Circle CLI.
+"""Receipt-producing payment executor.
 
-Requires a valid Verigate authorization (Ed25519 token + receipt) before
-executing any USDC transfer. This is the executor-mediated enforcement
-model described in SPIKE.md.
+Every payment decision — approve or deny — produces a signed,
+independently verifiable receipt. This is NOT about enforcement
+(Circle's Action Gate + MPC co-signer handles that). This is about
+PROOF: cryptographic evidence of what was decided, why, and what settled.
 
-Phase 2 enhancement: receipts are signed AFTER settlement so the
-settlement_tx hash is embedded in the receipt body. This creates a
-single object proving: decision → authorization → settlement.
+WHY WE STILL EVALUATE POLICY:
+Circle's Action Gate evaluates policy at the wallet layer. We evaluate
+the SAME policy at the application layer — not to enforce (Circle does
+that independently), but to PRODUCE A RECEIPT that documents the
+decision. Without evaluating the policy ourselves, we couldn't sign a
+receipt proving the decision was correct at the time it was made.
+
+The receipt binds:
+- WHO: x401 credential hash (agent identity)
+- WHAT: policy_version hash (which rules were active)
+- WHETHER: approve/deny decision with reasons
+- WHERE: settlement tx hash (embedded AFTER on-chain settlement)
+
+One receipt = one proof object. Independently verifiable with just
+the public key (which is itself anchored on-chain via wallet signature).
 
 Flow:
-    1. Caller provides a PaymentIntent
-    2. Executor evaluates the intent against the payment policy (deterministic)
-    3. If approved: issues 60s token, executes transfer, signs receipt with tx hash
-    4. If denied: signs denial receipt, raises PaymentDenied
-    5. Returns PaymentResult with receipt + settlement tx
+    1. Verify x401 credential (if provided)
+    2. Evaluate intent against policy (to produce the receipt, not to enforce)
+    3. If approved: execute transfer, sign receipt with tx hash
+    4. If denied: sign denial receipt (equally valuable as proof)
+    5. Circle's Action Gate independently enforces at the wallet layer
 """
 
 from __future__ import annotations
@@ -53,6 +66,7 @@ class PaymentIntent:
     chain: str = "BASE-SEPOLIA"
     token_address: str | None = None
     x402_endpoint: str | None = None  # If set, use x402 protocol instead of direct transfer
+    x401_credential: Any | None = None  # x401 credential binding agent identity
 
     def __post_init__(self):
         if self.token_address is None:
@@ -89,6 +103,7 @@ class PaymentExecutor:
         max_amount: float = 1.0,
         private_key: Ed25519PrivateKey | None = None,
         kid: str | None = None,
+        x401_verifier: Any | None = None,
     ):
         self.source_wallet = source_wallet
         self.tenant = tenant
@@ -96,6 +111,9 @@ class PaymentExecutor:
         # Signing key (per-tenant)
         self._private_key = private_key or Ed25519PrivateKey.generate()
         self._kid = kid or f"gateway-{tenant}-{uuid.uuid4().hex[:8]}"
+
+        # x401 credential verifier (optional — binds agent identity to receipts)
+        self._x401_verifier = x401_verifier
 
         # Receipt chain
         self._receipt_chain = ReceiptChain(
@@ -153,8 +171,42 @@ class PaymentExecutor:
         Phase 2: receipt is signed AFTER settlement so the tx hash is
         embedded in the receipt body, creating a single proof object for
         decision → authorization → settlement.
+
+        Phase 3: x401 credential verification — if a credential is
+        provided, verify it before policy evaluation and bind the
+        credential hash into the receipt.
         """
         intent_digest = self.compute_intent_digest(intent)
+
+        # x401 credential verification (if provided)
+        x401_hash = None
+        if intent.x401_credential and self._x401_verifier:
+            x401_result = self._x401_verifier.verify(intent.x401_credential)
+            x401_hash = x401_result.credential_hash
+            if not x401_result.valid:
+                logger.warning(f"x401 credential verification failed: {x401_result.errors}")
+                # Credential failure is a denial — produce signed receipt
+                denial_receipt = self._receipt_chain.sign_decision(
+                    request_digest=intent_digest,
+                    policy_version=self._policy.policy_hash(),
+                    decision="deny",
+                    reasons=[f"X401_CREDENTIAL_INVALID:{','.join(x401_result.errors)}"],
+                    delegation_context={"x401_credential_hash": x401_hash},
+                )
+                payment_result = PaymentResult(
+                    decision="deny",
+                    receipt=denial_receipt.envelope_dict(),
+                    receipt_hash=denial_receipt.receipt_hash,
+                    intent_digest=intent_digest,
+                    denial_reasons=[f"X401_CREDENTIAL_INVALID:{','.join(x401_result.errors)}"],
+                )
+                self.payments.append(payment_result)
+                raise PaymentDenied(payment_result)
+            logger.info(f"x401 credential verified: issuer={x401_result.issuer} hash={x401_hash[:30]}...")
+        elif intent.x401_credential:
+            # Credential provided but no verifier configured — hash it anyway for binding
+            x401_hash = intent.x401_credential.credential_hash()
+            logger.info(f"x401 credential hash bound (no verifier): {x401_hash[:30]}...")
 
         # Amount cap check (separate from policy engine for clarity)
         amount_float = float(intent.amount)
@@ -173,11 +225,13 @@ class PaymentExecutor:
             result.reason_codes.append(f"AMOUNT_EXCEEDS_CAP:{intent.amount}>{self._max_amount}")
 
         if result.decision == "deny":
+            deny_delegation = {"x401_credential_hash": x401_hash} if x401_hash else None
             denial_receipt = self._receipt_chain.sign_decision(
                 request_digest=intent_digest,
                 policy_version=self._policy.policy_hash(),
                 decision="deny",
                 reasons=result.reason_codes,
+                delegation_context=deny_delegation,
             )
             payment_result = PaymentResult(
                 decision="deny",
@@ -235,19 +289,24 @@ class PaymentExecutor:
         logger.info(f"Transfer confirmed: tx={transfer.tx_hash[:16]}...")
 
         # NOW sign receipt with settlement tx hash embedded
+        delegation = {
+            "settlement_tx": transfer.tx_hash,
+            "settlement_chain": intent.chain,
+            "settlement_block": transfer.block_height,
+            "settlement_payee": transfer.destination,
+            "settlement_amount": transfer.amount,
+        }
+        # Bind x401 credential hash into the receipt (identity + decision + settlement)
+        if x401_hash:
+            delegation["x401_credential_hash"] = x401_hash
+
         receipt = self._receipt_chain.sign_decision(
             request_digest=intent_digest,
             policy_version=self._policy.policy_hash(),
             decision="approve",
             reasons=[],
             token_jti=token_jti,
-            delegation_context={
-                "settlement_tx": transfer.tx_hash,
-                "settlement_chain": intent.chain,
-                "settlement_block": transfer.block_height,
-                "settlement_payee": transfer.destination,
-                "settlement_amount": transfer.amount,
-            },
+            delegation_context=delegation,
         )
 
         payment_result = PaymentResult(
@@ -269,7 +328,15 @@ class PaymentExecutor:
         return self._receipt_chain.get_receipt_hashes()
 
     def compute_merkle_root(self) -> str:
-        """Compute Merkle batch root over all receipts."""
+        """Compute Merkle batch root over all receipts.
+
+        SCALE NOTE: In production, receipts are batched into epochs
+        (e.g., every 1000 receipts or every hour). Each epoch produces
+        a Merkle root that is anchored on-chain. Verification of a
+        single receipt requires only the receipts in its epoch, not the
+        full history. This makes verification O(log n) within an epoch
+        rather than O(n) across the full chain.
+        """
         hashes = self.get_receipt_hashes()
         if not hashes:
             raise ValueError("No receipts to compute Merkle root")
@@ -293,3 +360,44 @@ class PaymentExecutor:
             "alg": "EdDSA",
             "x": x_b64url,
         }
+
+    def anchor_public_key(self, wallet_address: str, chain: str) -> dict:
+        """Anchor the public key on-chain via wallet signature.
+
+        This solves the trust problem: "where does the verifier get the
+        public key?" The wallet signs the JWK, creating a trust chain:
+        public key → wallet signature → wallet is on-chain → verifiable.
+
+        Without this, the verifier has to trust whoever gave them the
+        export file. With this, they can verify the public key is endorsed
+        by the on-chain wallet.
+        """
+        import json
+        from circle.cli import wallet_sign_message
+
+        jwk = self.get_public_key_jwk()
+        jwk_canonical = json.dumps(jwk, sort_keys=True, separators=(",", ":"))
+        jwk_hash = hashlib.sha256(jwk_canonical.encode()).hexdigest()
+
+        try:
+            sig_data = wallet_sign_message(
+                address=wallet_address,
+                chain=chain,
+                message=jwk_hash,
+            )
+            return {
+                "public_key_jwk": jwk,
+                "jwk_hash": jwk_hash,
+                "wallet_signature": sig_data.get("signature", ""),
+                "wallet_address": wallet_address,
+                "chain": chain,
+                "anchored": True,
+            }
+        except Exception as e:
+            logger.warning(f"Public key anchoring failed: {e}")
+            return {
+                "public_key_jwk": jwk,
+                "jwk_hash": jwk_hash,
+                "anchored": False,
+                "error": str(e),
+            }

@@ -1,0 +1,11 @@
+{
+  "contract": "AgentReputation",
+  "address": "0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA",
+  "chain": "BASE-SEPOLIA",
+  "chain_id": 84532,
+  "deploy_tx": "0xa80b2fe1984d947c8d85406dd44b00d691d68a6577ba7c31ae3c1b1ece606586",
+  "deployer": "0xf1D3B6EcE13374754C1Cb6b212484a2a1Ebf60D9",
+  "explorer": "https://sepolia.basescan.org/address/0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA",
+  "deploy_tx_url": "https://sepolia.basescan.org/tx/0xa80b2fe1984d947c8d85406dd44b00d691d68a6577ba7c31ae3c1b1ece606586",
+  "test_event_tx": "https://sepolia.basescan.org/tx/0x433dc13725e1d4631326bbac53dd7666d9fe0c0ff1d2accd7222b9f3d66e1695"
+}

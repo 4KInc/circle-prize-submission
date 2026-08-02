@@ -46,13 +46,24 @@ class SettlementCheck:
 
 
 @dataclass
+class X401Check:
+    """Result of checking x401 credential binding in a receipt."""
+    receipt_hash: str
+    has_credential: bool = False
+    credential_hash: str | None = None
+    binding_valid: bool = False
+
+
+@dataclass
 class VerificationReport:
     """Complete verification report for a payment receipt chain."""
     # Individual checks
     signature_check: str = "PENDING"     # PASS | FAIL
     chain_check: str = "PENDING"         # PASS | FAIL
     merkle_check: str = "PENDING"        # PASS | FAIL | SKIPPED
+    x401_check: str = "PENDING"          # PASS | FAIL | SKIPPED
     settlement_checks: list[SettlementCheck] = field(default_factory=list)
+    x401_checks: list[X401Check] = field(default_factory=list)
     anchor_check: str = "PENDING"        # PASS | FAIL | SKIPPED
 
     # Summary
@@ -138,6 +149,33 @@ def verify_payment_chain(
 
         report.settlement_checks.append(check)
 
+    # ── 2b. x401 credential binding check ────────────────────────────
+    has_any_x401 = False
+    for env in envelopes:
+        body = env.get("body", {})
+        receipt_hash = env.get("receipt_hash", "")
+        delegation = body.get("delegation_context")
+
+        check = X401Check(receipt_hash=receipt_hash)
+
+        if delegation and "x401_credential_hash" in delegation:
+            has_any_x401 = True
+            check.has_credential = True
+            check.credential_hash = delegation["x401_credential_hash"]
+            # Credential hash is bound — binding integrity is guaranteed by
+            # the receipt signature (if sig is valid, binding is valid)
+            check.binding_valid = report.signature_check == "PASS"
+
+        report.x401_checks.append(check)
+
+    if has_any_x401:
+        all_bound_valid = all(
+            c.binding_valid for c in report.x401_checks if c.has_credential
+        )
+        report.x401_check = "PASS" if all_bound_valid else "FAIL"
+    else:
+        report.x401_check = "SKIPPED"
+
     # ── 3. Merkle inclusion proofs ────────────────────────────────────
     if merkle_root:
         report.merkle_root = merkle_root
@@ -188,6 +226,8 @@ def verify_payment_chain(
     checks = [report.signature_check, report.chain_check]
     if report.merkle_check != "SKIPPED":
         checks.append(report.merkle_check)
+    if report.x401_check != "SKIPPED":
+        checks.append(report.x401_check)
     if report.anchor_check != "SKIPPED":
         checks.append(report.anchor_check)
 
@@ -218,6 +258,7 @@ def print_report(report: VerificationReport) -> None:
     print(f"  Signatures:    {status.get(report.signature_check, '?')}")
     print(f"  Hash chain:    {status.get(report.chain_check, '?')}")
     print(f"  Merkle root:   {status.get(report.merkle_check, '?')}")
+    print(f"  x401 identity: {status.get(report.x401_check, '?')}")
     print(f"  Anchor:        {status.get(report.anchor_check, '?')}")
 
     if report.settlement_checks:

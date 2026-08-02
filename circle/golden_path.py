@@ -171,17 +171,20 @@ def _mock_agent_response(task: str) -> dict:
 def run_golden_path():
     from circle.cli import wallet_balance, USDC_ADDRESSES
     from circle.executor import PaymentExecutor, PaymentIntent, PaymentDenied
+    from circle.x401 import X401Issuer, X401Verifier
+    from circle.reputation import ReputationWriter
+    from circle.correlation import CorrelationEngine
 
     wallet = os.environ.get("CIRCLE_AGENT_WALLET", "0x008ed50be2cd35f6333a37542a76a227e3b16acc")
     chain = os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA")
     service = SERVICE_CATALOG[0]
 
     print("=" * 72)
-    print("PHASE 1 GOLDEN PATH: Gemini Ops Agent → Verigate Gate → USDC Settlement")
+    print("GOLDEN PATH: Identity → Gate → Settlement → Containment → Verification")
     print("=" * 72)
 
     # ── Step 1: Wallet check ─────────────────────────────────────────
-    print(f"\n[1/6] Wallet check")
+    print(f"\n[1/16] Wallet check")
     print(f"      Address: {wallet}")
     print(f"      Chain:   {chain}")
     balances = wallet_balance(wallet, chain)
@@ -191,8 +194,29 @@ def run_golden_path():
         return
     print(f"      USDC:    {usdc['amount']}")
 
-    # ── Step 2: Gemini ops agent decides on service purchase ─────────
-    print(f"\n[2/6] Gemini ops agent analyzing task...")
+    # ── Step 2: x401 credential issuance ──────────────────────────────
+    print(f"\n[2/16] x401 credential issuance (agent identity)")
+    x401_issuer = X401Issuer(issuer_name="golden-path-operator")
+    x401_credential = x401_issuer.issue_credential(
+        agent_id="ops-agent",
+        scope=["pay", "transfer"],
+        max_amount=1.0,
+        allowed_payees=[service["payee"]],
+        ttl_seconds=3600,
+    )
+    print(f"      Credential ID: {x401_credential.credential_id}")
+    print(f"      Issuer:        {x401_credential.issuer}")
+    print(f"      Subject:       {x401_credential.subject_agent_id}")
+    print(f"      Scope:         {x401_credential.scope}")
+    print(f"      Expires:       {x401_credential.expires_at}")
+    print(f"      Cred hash:     {x401_credential.credential_hash()[:40]}...")
+
+    # Set up x401 verifier
+    x401_verifier = X401Verifier()
+    x401_verifier.trust_issuer_jwk(x401_issuer.get_public_key_jwk())
+
+    # ── Step 3: Gemini ops agent decides on service purchase ──────────
+    print(f"\n[3/16] Gemini ops agent analyzing task...")
     task = "Fetch the latest BTC/USDC price data for our portfolio dashboard. Use an external market data service if needed."
     agent_decision = run_gemini_ops_agent(task)
     print(f"      Task:           {task[:60]}...")
@@ -207,21 +231,23 @@ def run_golden_path():
     payee = agent_decision["payee"]
     amount = agent_decision["amount"]
 
-    # ── Step 3: Set up payment executor with policy ──────────────────
-    print(f"\n[3/6] Initializing payment executor (deterministic gate)")
+    # ── Step 4: Set up payment executor with x401 + policy ────────────
+    print(f"\n[4/16] Initializing payment executor (x401 + deterministic gate)")
     executor = PaymentExecutor(
         source_wallet=wallet,
         tenant="golden-path-demo",
         allowed_payees=[payee],
         max_amount=1.0,
+        x401_verifier=x401_verifier,
     )
     print(f"      Tenant:    {executor.tenant}")
     print(f"      Kid:       {executor._kid}")
     print(f"      Max amt:   {executor._max_amount} USDC")
     print(f"      Allowlist: [{payee[:16]}...]")
+    print(f"      x401:      verifier configured with issuer trust")
 
-    # ── Step 4: HAPPY PATH — execute gated payment ───────────────────
-    print(f"\n[4/6] HAPPY PATH: Executing gated payment")
+    # ── Step 5: HAPPY PATH — execute gated payment ───────────────────
+    print(f"\n[5/16] HAPPY PATH: Executing gated payment (x401 bound)")
 
     # Determine if this is an x402 service
     x402_url = None
@@ -238,10 +264,12 @@ def run_golden_path():
         reason=agent_decision["reason"],
         chain=chain,
         x402_endpoint=x402_url,
+        x401_credential=x401_credential,
     )
     print(f"      Payee:   {intent.payee[:20]}...")
     print(f"      Amount:  {intent.amount} USDC")
     print(f"      Service: {intent.service}")
+    print(f"      x401:    credential bound to intent")
 
     result = executor.execute(intent)
     print(f"      Decision:     {result.decision}")
@@ -251,8 +279,8 @@ def run_golden_path():
     print(f"      Tx state:     {result.transfer.state}")
     print(f"      Explorer:     {result.transfer.explorer_url}")
 
-    # ── Step 5: ROGUE AGENT — prompt injection drives out-of-policy payment ─
-    print(f"\n[5/12] ROGUE AGENT: Prompt injection attack")
+    # ── Step 6: ROGUE AGENT — prompt injection drives out-of-policy payment ─
+    print(f"\n[6/16] ROGUE AGENT: Prompt injection attack")
     print(f"      Scenario: A poisoned tool result injects instructions into the")
     print(f"      ops agent's context, attempting to redirect funds to an attacker.")
 
@@ -287,9 +315,16 @@ def run_golden_path():
         print(f"      Receipt hash: {e.result.receipt_hash[:40]}...")
         print(f"      Payment:      BLOCKED PRE-SETTLEMENT")
 
-    # ── Step 6: Isolator — quarantine the rogue agent ─────────────────
-    print(f"\n[6/12] ISOLATOR: Rogue agent containment")
+    # ── Step 7: Isolator — quarantine the rogue agent ─────────────────
+    print(f"\n[7/16] ISOLATOR: Rogue agent containment")
     from circle.isolator import Isolator, classify_severity
+
+    # Set up ERC-8004 reputation writer + cross-agent correlation engine
+    reputation_writer = ReputationWriter(chain=chain, wallet_address=wallet)
+    correlation_engine = CorrelationEngine(
+        private_key=executor._private_key,
+        kid=executor._kid,
+    )
 
     isolator = Isolator(
         tenant=executor.tenant,
@@ -297,6 +332,8 @@ def run_golden_path():
         kid=executor._kid,
         wallet_address=wallet,
         chain=chain,
+        reputation_writer=reputation_writer,
+        correlation_engine=correlation_engine,
     )
 
     if denial_result:
@@ -332,15 +369,52 @@ def run_golden_path():
         else:
             print(f"      Severity {severity} below threshold — no isolation triggered")
 
-    # ── Step 7: Verify revoked agent cannot make further payments ──────
-    print(f"\n[7/12] POST-ISOLATION: Verify revoked agent is blocked")
-    if isolator.is_agent_revoked("ops-agent"):
-        print(f"      Agent 'ops-agent' is revoked in Verigate registry")
-        print(f"      Any further payment attempts would be rejected at identity check")
-        print(f"      (In production: DPoP proof verification fails for revoked agents)")
+    # ── Step 8: ERC-8004 reputation event ─────────────────────────────
+    print(f"\n[8/16] ERC-8004: Reputation event published")
+    if reputation_writer.events:
+        rep_event = reputation_writer.events[-1]
+        print(f"      Event ID:    {rep_event.event_id}")
+        print(f"      Agent:       {rep_event.agent_id}")
+        print(f"      Type:        {rep_event.event_type}")
+        print(f"      Severity:    {rep_event.severity}")
+        print(f"      Published:   {rep_event.published}")
+        print(f"      Tx hash:     {rep_event.tx_hash[:30]}..." if rep_event.tx_hash else "      Tx hash:     pending")
+        print(f"      Event hash:  {rep_event.event_hash()[:40]}...")
+    else:
+        print(f"      No reputation events (isolation not triggered)")
 
-    # ── Step 8: Receipt binding verification ─────────────────────────
-    print(f"\n[8/12] Receipt-to-settlement binding")
+    # ── Step 9: Cross-agent forensic correlation ──────────────────────
+    print(f"\n[9/16] CORRELATION: Cross-agent forensic analysis")
+    correlation_report = None
+    if isolation_record:
+        chain_receipts_for_corr = executor.get_receipt_chain()
+        correlation_report = isolator.correlate_across_agents(
+            isolation_record=isolation_record,
+            receipt_chain=chain_receipts_for_corr,
+        )
+        if correlation_report:
+            print(f"      Report ID:   {correlation_report.report_id}")
+            print(f"      Risk:        {correlation_report.risk_assessment}")
+            print(f"      Scanned:     {correlation_report.total_agents_scanned} agents")
+            print(f"      Correlated:  {len(correlation_report.correlated_agents)} matches")
+            print(f"      Patterns:    {correlation_report.trigger_patterns}")
+            for action in correlation_report.recommended_actions:
+                print(f"        - {action[:70]}")
+            print(f"      Report hash: {correlation_report.report_hash[:40]}...")
+        else:
+            print(f"      No correlation engine configured")
+    else:
+        print(f"      Skipped (no isolation event)")
+
+    # ── Step 10: Verify forensic record exists ──────────────────────
+    print(f"\n[10/16] POST-INCIDENT: Verify forensic record exists")
+    if isolator.is_agent_revoked("ops-agent"):
+        print(f"      Forensic record exists for agent 'ops-agent'")
+        print(f"      Circle's Action Gate independently handles enforcement")
+        print(f"      Verigate's record proves the incident happened with signed evidence")
+
+    # ── Step 11: Receipt binding verification ────────────────────────
+    print(f"\n[11/16] Receipt-to-settlement binding")
     chain_receipts = executor.get_receipt_chain()
     print(f"      Chain length: {len(chain_receipts)}")
     for i, env in enumerate(chain_receipts):
@@ -353,8 +427,8 @@ def run_golden_path():
             print(f"      [{i}] seq={body['seq']} decision={body['decision']} "
                   f"(no settlement — {'denial' if body['decision'] == 'deny' else 'N/A'})")
 
-    # ── Step 7: Merkle tree + inclusion proofs ────────────────────────
-    print(f"\n[9/12] Merkle tree computation")
+    # ── Step 12: Merkle tree + inclusion proofs ───────────────────────
+    print(f"\n[12/16] Merkle tree computation")
     merkle_root = executor.compute_merkle_root()
     print(f"      Merkle root: {merkle_root[:40]}...")
 
@@ -365,9 +439,11 @@ def run_golden_path():
           f"tree_size={proof_approve['tree_size']} "
           f"steps={len(proof_approve['proof'])}")
 
-    # ── Step 8: Anchor Merkle root ────────────────────────────────────
-    print(f"\n[10/12] Anchoring Merkle root (wallet-signed attestation)")
+    # ── Step 13: Anchor Merkle root + public key on-chain ─────────────
+    print(f"\n[13/16] Anchoring Merkle root + public key (wallet-signed)")
     from circle.cli import wallet_sign_message
+
+    # Anchor the Merkle root
     anchor_message = merkle_root.removeprefix("sha256:")
     try:
         anchor_data = wallet_sign_message(
@@ -375,15 +451,21 @@ def run_golden_path():
             chain=chain,
             message=anchor_message,
         )
-        print(f"      Anchor signed: {json.dumps(anchor_data)[:80]}...")
+        print(f"      Merkle anchor: {json.dumps(anchor_data)[:60]}...")
         anchor_data["message"] = anchor_message
     except RuntimeError as e:
         print(f"      Anchor signing failed: {e}")
-        print(f"      (Continuing without anchor — will use local attestation)")
         anchor_data = {"message": anchor_message, "signature": "local-attestation", "fallback": True}
 
-    # ── Step 9: Full offline verification ─────────────────────────────
-    print(f"\n[11/12] Offline verification")
+    # Anchor the public key (so verifiers don't have to trust the operator)
+    pk_anchor = executor.anchor_public_key(wallet_address=wallet, chain=chain)
+    if pk_anchor.get("anchored"):
+        print(f"      Public key anchored: wallet signed JWK hash {pk_anchor['jwk_hash'][:30]}...")
+    else:
+        print(f"      Public key anchor: local-only (wallet signing unavailable)")
+
+    # ── Step 14: Full offline verification ────────────────────────────
+    print(f"\n[14/16] Offline verification")
     from circle.verifier import verify_payment_chain, print_report
 
     jwk = executor.get_public_key_jwk()
@@ -403,8 +485,24 @@ def run_golden_path():
     )
     print_report(report)
 
-    # ── Step 12: Dashboard ───────────────────────────────────────────
-    print(f"\n[12/14] Money dashboard")
+    # ── Step 15: Dispute resolution export ────────────────────────────
+    print(f"\n[15/16] Dispute resolution chain export")
+    from circle.dispute import export_chain, verify_export
+
+    export_path = export_chain(
+        executor=executor,
+        isolator=isolator,
+        merkle_root=merkle_root,
+        anchor_data=anchor_data,
+        public_key_anchor=pk_anchor,
+    )
+    print(f"      Export:    {export_path}")
+    print(f"      Contents:  {len(chain_receipts)} receipts, Merkle root, anchor, isolation records")
+    print(f"      x401:      credential hashes bound in receipts")
+    print(f"      Usage:     python -m circle.dispute verify {export_path}")
+
+    # ── Step 16: Dashboard ─────────────────────────────────────────
+    print(f"\n[16/16] Dashboard + Auditor")
     from circle.dashboard import generate_dashboard
 
     # Build payment dicts for the dashboard
@@ -437,8 +535,8 @@ def run_golden_path():
     )
     print(f"      Dashboard:  {dashboard_path}")
 
-    # ── Step 13: Auditor compliance report ─────────────────────────────
-    print(f"\n[13/14] Auditor compliance report (Gemini)")
+    # Auditor compliance report
+    print(f"\n      Auditor compliance report (Gemini)")
     from circle.auditor import generate_compliance_report, export_report_pdf
 
     compliance_report = generate_compliance_report(
@@ -463,32 +561,44 @@ def run_golden_path():
     print(f"      Approved/Blocked: {sf.get('payments_approved', 0)}/{sf.get('payments_blocked', 0)}")
     print(f"      Integrity:  {sf.get('receipt_chain_integrity', 'N/A')}")
 
-    # ── Step 14: Summary ──────────────────────────────────────────────
+    # ── Summary ──────────────────────────────────────────────────────
     print("\n" + "=" * 72)
-    print("GOLDEN PATH COMPLETE (Phases 1-4)")
+    print("GOLDEN PATH COMPLETE")
     print("=" * 72)
-    print(f"\n  Phase 1 — Happy flow:")
-    print(f"    Settlement tx:     {result.transfer.explorer_url}")
-    print(f"    Settlement in receipt: {result.receipt['body'].get('delegation_context', {}).get('settlement_tx', 'N/A')[:40]}...")
+    print(f"\n  Identity (x401):")
+    print(f"    Credential:        {x401_credential.credential_id}")
+    print(f"    Issuer:            {x401_credential.issuer}")
+    print(f"    Cred hash bound:   {x401_credential.credential_hash()[:40]}...")
+    print(f"\n  Settlement:")
+    print(f"    Tx:                {result.transfer.explorer_url}")
+    print(f"    Bound in receipt:  {result.receipt['body'].get('delegation_context', {}).get('settlement_tx', 'N/A')[:40]}...")
     print(f"    JTI→idempotency:   {result.token_jti}")
-    print(f"\n  Phase 2 — Receipt binding + anchoring:")
-    print(f"    Receipt chain:     {len(chain_receipts)} receipts, hash-linked, Ed25519 signed")
+    print(f"\n  Receipt chain + anchoring:")
+    print(f"    Chain:             {len(chain_receipts)} receipts, hash-linked, Ed25519 signed")
     print(f"    Merkle root:       {merkle_root[:40]}...")
     print(f"    Anchor:            wallet-signed attestation")
     print(f"    Verifier:          {report.overall}")
-    print(f"\n  Phase 3 — Rogue agent containment:")
+    print(f"\n  Rogue agent containment:")
     if denial_result:
         print(f"    Injection attack:  BLOCKED pre-settlement")
         print(f"    Denial receipt:    {denial_result.receipt_hash[:40]}...")
     if isolation_record:
-        print(f"    Isolation record:  {isolation_record.isolation_id}")
+        print(f"    Isolation:         {isolation_record.isolation_id}")
         print(f"    Agent revoked:     {isolator.is_agent_revoked('ops-agent')}")
         print(f"    Wallet frozen:     {isolator.is_wallet_frozen()} (simulated on testnet)")
-    print(f"\n  Phase 4 — Dashboard + Auditor:")
+    if reputation_writer.events:
+        print(f"    ERC-8004 event:    {reputation_writer.events[-1].event_id}")
+    if correlation_report:
+        print(f"    Correlation:       {correlation_report.risk_assessment} ({len(correlation_report.correlated_agents)} matches)")
+    print(f"\n  Dispute resolution:")
+    print(f"    Chain export:      {export_path}")
+    print(f"    Verify command:    python -m circle.dispute verify {export_path}")
+    print(f"\n  Compliance:")
     print(f"    Dashboard:         {dashboard_path}")
     print(f"    Compliance PDF:    {pdf_path}")
     print(f"    Governed spend:    ${sf.get('total_governed_spend_usdc', 0):.2f} USDC")
     print(f"\n  Infrastructure:")
+    print(f"    x401 identity:     credential verified + bound to receipts")
     print(f"    Gemini agent:      task analyzed, service discovered, intent formed")
     print(f"    Zero-LLM gate:     deterministic policy eval (payee allowlist + amount cap)")
     print(f"    Circle wallet:     {wallet[:20]}... on {chain}")

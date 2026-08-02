@@ -238,6 +238,9 @@ async def _golden_path_stream():
         from circle.isolator import Isolator, classify_severity
         from circle.verifier import verify_payment_chain
         from circle.golden_path import run_gemini_ops_agent, SERVICE_CATALOG
+        from circle.x401 import X401Issuer, X401Verifier
+        from circle.reputation import ReputationWriter
+        from circle.correlation import CorrelationEngine
 
         wallet = state["wallet"]
         chain = state["chain"]
@@ -274,7 +277,35 @@ async def _golden_path_stream():
         })
         await asyncio.sleep(0.5)
 
-        # Step 3: Gemini ops agent
+        # Step: x401 credential issuance
+        yield _sse("step", {"id": "x401", "title": "x401 Credential Issuance", "status": "running",
+                            "desc": "Issue an x401 verifiable credential authorizing the agent. Binds human operator identity to scoped permissions (pay, transfer, amount cap, payee allowlist)."})
+        await asyncio.sleep(0.3)
+
+        x401_issuer = X401Issuer(issuer_name="live-demo-operator")
+        x401_credential = x401_issuer.issue_credential(
+            agent_id="ops-agent",
+            scope=["pay", "transfer"],
+            max_amount=1.0,
+            allowed_payees=[service["payee"]],
+            ttl_seconds=3600,
+        )
+        x401_verifier = X401Verifier()
+        x401_verifier.trust_issuer_jwk(x401_issuer.get_public_key_jwk())
+
+        yield _sse("step", {
+            "id": "x401", "title": "x401 Credential Issuance", "status": "complete",
+            "desc": f"Credential issued: {x401_credential.credential_id}. Issuer: {x401_credential.issuer}. Scope: {x401_credential.scope}. Credential hash will be bound into every receipt.",
+            "details": {
+                "credential_id": x401_credential.credential_id,
+                "issuer": x401_credential.issuer,
+                "scope": x401_credential.scope,
+                "credential_hash": x401_credential.credential_hash()[:40] + "...",
+            },
+        })
+        await asyncio.sleep(0.5)
+
+        # Step: Gemini ops agent
         yield _sse("step", {"id": "agent", "title": "Gemini Ops Agent", "status": "running",
                             "desc": "Gemini 2.5 Flash analyzes the task, selects a service from the catalog, and forms a structured payment intent. This is the only LLM call in the flow.",
                             "subtitle": "Analyzing task and selecting service..."})
@@ -303,11 +334,12 @@ async def _golden_path_stream():
         executor = PaymentExecutor(
             source_wallet=wallet, tenant="live-demo",
             allowed_payees=[payee], max_amount=1.0,
+            x401_verifier=x401_verifier,
         )
 
         yield _sse("step", {
             "id": "gate-init", "title": "Initialize Verigate Gate", "status": "complete",
-            "desc": "Gate ready. Payments to approved payees under 1.0 USDC will pass. Everything else is denied.",
+            "desc": "Gate ready with x401 verifier. Payments to approved payees under 1.0 USDC with valid credentials will pass.",
             "details": {
                 "kid": executor._kid,
             },
@@ -326,7 +358,7 @@ async def _golden_path_stream():
                 x402_url = svc.get("endpoint")
                 break
 
-        payment_desc = "Evaluate the payment intent against policy rules. If approved, issue a 60-second single-use Ed25519 token"
+        payment_desc = "Verify x401 credential, evaluate intent against policy rules. If approved, issue a 60-second single-use Ed25519 token"
         if x402_url:
             payment_desc += ", execute x402 payment via Circle CLI (402 challenge → EIP-3009 sign → settle)."
         else:
@@ -342,6 +374,7 @@ async def _golden_path_stream():
             service=agent_decision["service_name"],
             reason=agent_decision["reason"], chain=chain,
             x402_endpoint=x402_url,
+            x401_credential=x401_credential,
         )
 
         yield _sse("policy", {"decision": "evaluating", "payee": payee[:20] + "...", "amount": amount})
@@ -360,15 +393,15 @@ async def _golden_path_stream():
         state["payments"].append(payment_data)
 
         yield _sse("step", {"id": "payment", "title": "Authorized USDC Payment", "status": "complete",
-                            "desc": "Payment settled on Base Sepolia. Receipt signed with settlement tx hash embedded. Token JTI used as Circle idempotency key.",
+                            "desc": "Payment settled on Base Sepolia. Receipt signed with x401 credential hash + settlement tx hash embedded. One object proves: identity + decision + settlement.",
                             "details": payment_data})
         yield _sse("payment", payment_data)
         await asyncio.sleep(0.8)
 
         # Step 5: Rogue agent attack
         yield _sse("step", {"id": "rogue", "title": "Prompt Injection Attack", "status": "running",
-                            "desc": "A poisoned tool result injects adversarial instructions into the agent's context, attempting to redirect 50 USDC to an attacker-controlled address.",
-                            "subtitle": "Poisoned tool result attempting to redirect funds..."})
+                            "desc": "A poisoned tool result injects adversarial instructions into the agent's context. Circle's Action Gate would independently block this — Verigate produces the signed proof.",
+                            "subtitle": "Poisoned tool result — documenting the attempt..."})
         await asyncio.sleep(1.0)
 
         rogue_payee = "0x" + secrets.token_hex(20)
@@ -403,7 +436,7 @@ async def _golden_path_stream():
             yield _sse("payment", denial_data)
 
         yield _sse("step", {"id": "rogue", "title": "Prompt Injection Attack", "status": "blocked",
-                            "desc": "Gate denied the payment pre-settlement. The attacker address is off-allowlist and the amount exceeds the cap. $0.00 moved. Signed denial receipt produced.",
+                            "desc": "Signed denial receipt produced. Circle's Action Gate independently blocks this at the wallet layer — Verigate's receipt proves it happened and documents why.",
                             "details": {
                                 "decision": "DENIED",
                                 "reasons": denial_result.denial_reasons if denial_result else [],
@@ -412,14 +445,21 @@ async def _golden_path_stream():
         await asyncio.sleep(0.8)
 
         # Step 6: Isolator
-        yield _sse("step", {"id": "isolator", "title": "Isolator: Agent Containment", "status": "running",
-                            "desc": "Classify the denial severity. HIGH/CRITICAL triggers containment: revoke the agent's Verigate identity and freeze the Circle wallet.",
-                            "subtitle": "Classifying severity and executing containment..."})
+        yield _sse("step", {"id": "isolator", "title": "Forensic Recorder: Incident Documentation", "status": "running",
+                            "desc": "Classify severity, analyze the attack vector, and produce signed forensic evidence. Circle enforces — Verigate proves what happened and recommends actions.",
+                            "subtitle": "Analyzing incident and producing forensic record..."})
         await asyncio.sleep(0.5)
+
+        reputation_writer = ReputationWriter(chain=chain, wallet_address=wallet)
+        correlation_engine = CorrelationEngine(
+            private_key=executor._private_key, kid=executor._kid,
+        )
 
         isolator = Isolator(
             tenant=executor.tenant, private_key=executor._private_key,
             kid=executor._kid, wallet_address=wallet, chain=chain,
+            reputation_writer=reputation_writer,
+            correlation_engine=correlation_engine,
         )
 
         isolation_record = None
@@ -437,25 +477,80 @@ async def _golden_path_stream():
 
         if isolation_record:
             iso_data = {
-                "isolation_id": isolation_record.isolation_id,
+                "isolation_id": isolation_record.record_id,
                 "severity": isolation_record.severity,
                 "agent": isolation_record.agent_id,
-                "actions": [a["action"] for a in isolation_record.actions_taken],
-                "agent_revoked": isolator.is_agent_revoked("ops-agent"),
-                "wallet_frozen": isolator.is_wallet_frozen(),
+                "findings": [f["finding"] for f in isolation_record.findings],
+                "recommendations": [r["action"] for r in isolation_record.recommendations],
                 "record_hash": isolation_record.receipt_hash[:40] + "...",
             }
             state["isolations"].append(iso_data)
             yield _sse("isolation", iso_data)
 
-        yield _sse("step", {"id": "isolator", "title": "Isolator: Agent Containment", "status": "complete",
-                            "desc": "Agent quarantined. Identity revoked from Verigate registry. Wallet spending frozen. Signed isolation record produced.",
+        if isolation_record:
+            iso_data["findings"] = [f["finding"] for f in isolation_record.findings]
+            iso_data["recommendations"] = [r["action"] for r in isolation_record.recommendations]
+
+        yield _sse("step", {"id": "isolator", "title": "Forensic Recorder: Incident Documentation", "status": "complete",
+                            "desc": "Signed forensic record produced with findings, evidence, and recommendations for Circle's Action Gate. Circle enforces the containment.",
                             "details": iso_data if isolation_record else {"action": "none"}})
         await asyncio.sleep(0.5)
+
+        # ERC-8004 reputation event
+        if reputation_writer.events:
+            rep_event = reputation_writer.events[-1]
+            yield _sse("step", {"id": "reputation", "title": "ERC-8004 Reputation Event", "status": "running",
+                                "desc": "Publishing isolation event to the ERC-8004 on-chain agent reputation registry. Other operators can verify this agent's track record."})
+            await asyncio.sleep(0.4)
+            yield _sse("reputation", {
+                "event_id": rep_event.event_id,
+                "agent_id": rep_event.agent_id,
+                "event_type": rep_event.event_type,
+                "severity": rep_event.severity,
+                "published": rep_event.published,
+                "tx_hash": rep_event.tx_hash,
+                "event_hash": rep_event.event_hash()[:40] + "...",
+            })
+            yield _sse("step", {"id": "reputation", "title": "ERC-8004 Reputation Event", "status": "complete",
+                                "desc": f"Reputation event {rep_event.event_id} published. Agent {rep_event.agent_id} flagged as {rep_event.severity} on-chain.",
+                                "details": {"event_id": rep_event.event_id, "tx_hash": rep_event.tx_hash}})
+            await asyncio.sleep(0.5)
+
+        # Cross-agent forensic correlation
+        if isolation_record:
+            yield _sse("step", {"id": "correlation", "title": "Cross-Agent Forensic Correlation", "status": "running",
+                                "desc": "Scanning all denial receipts for matching attack patterns. Detecting if this is an isolated incident or a systemic attack across multiple agents."})
+            await asyncio.sleep(0.4)
+
+            chain_receipts_for_corr = executor.get_receipt_chain()
+            correlation_report = isolator.correlate_across_agents(
+                isolation_record=isolation_record,
+                receipt_chain=chain_receipts_for_corr,
+            )
+            if correlation_report:
+                yield _sse("correlation", {
+                    "report_id": correlation_report.report_id,
+                    "risk": correlation_report.risk_assessment,
+                    "agents_scanned": correlation_report.total_agents_scanned,
+                    "correlated": len(correlation_report.correlated_agents),
+                    "patterns": correlation_report.trigger_patterns,
+                    "actions": correlation_report.recommended_actions,
+                    "report_hash": correlation_report.report_hash[:40] + "...",
+                })
+                yield _sse("step", {"id": "correlation", "title": "Cross-Agent Forensic Correlation", "status": "complete",
+                                    "desc": f"Risk: {correlation_report.risk_assessment}. Scanned {correlation_report.total_agents_scanned} agents. Patterns: {', '.join(correlation_report.trigger_patterns)}.",
+                                    "details": {"risk": correlation_report.risk_assessment, "patterns": correlation_report.trigger_patterns}})
+            else:
+                yield _sse("step", {"id": "correlation", "title": "Cross-Agent Forensic Correlation", "status": "complete",
+                                    "desc": "No correlation engine configured."})
+            await asyncio.sleep(0.5)
 
         # Step 7: Investigator
         from circle.agents import GovernanceSystem
         governance = GovernanceSystem(tenant=executor.tenant)
+
+        # Have coordinator produce a service discovery artifact
+        governance.coordinator.discover_services("market data")
 
         # Emit all 6 agent keys and persist
         roles = {"Coordinator": "Service discovery", "Auditor": "Compliance auditing", "Investigator": "Incident analysis", "Recommender": "Policy proposals", "Isolator": "Agent containment"}
@@ -519,6 +614,8 @@ async def _golden_path_stream():
 
         chain_receipts = executor.get_receipt_chain()
         state["receipts"] = chain_receipts
+        state["agents"]["Gateway"]["artifacts"] = len(chain_receipts)
+        yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": len(chain_receipts), "role": "Policy eval + receipts"})
 
         for env in chain_receipts:
             governance.auditor.audit_receipt(env)
@@ -567,7 +664,7 @@ async def _golden_path_stream():
             anchor_data = {"message": anchor_message, "signature": "local-attestation", "fallback": True}
             anchor_sig = "local-attestation"
 
-        state["anchor"] = {"signature": anchor_sig, "message": anchor_message}
+        state["anchor"] = {"signature": anchor_sig, "message": anchor_message, "wallet": wallet, "chain": chain}
 
         yield _sse("step", {"id": "merkle", "title": "Merkle Tree + Anchor", "status": "complete",
                             "desc": "Root computed over " + str(len(chain_receipts)) + " receipts and signed by the Circle agent wallet.",
@@ -598,16 +695,17 @@ async def _golden_path_stream():
         )
         state["verification"] = {
             "signatures": report.signature_check, "hash_chain": report.chain_check,
-            "merkle": report.merkle_check, "anchor": report.anchor_check,
-            "overall": report.overall,
+            "merkle": report.merkle_check, "x401": report.x401_check,
+            "anchor": report.anchor_check, "overall": report.overall,
         }
 
         yield _sse("step", {"id": "verify", "title": "Offline Verification", "status": "complete",
-                            "desc": "All checks passed. The receipt chain is cryptographically sound and every settlement matches its receipt.",
+                            "desc": "All checks passed. Signatures, hash chain, Merkle root, x401 identity bindings, and anchor all verified.",
                             "details": {
                                 "signatures": report.signature_check,
                                 "hash_chain": report.chain_check,
                                 "merkle": report.merkle_check,
+                                "x401": report.x401_check,
                                 "anchor": report.anchor_check,
                                 "overall": report.overall,
                             }})
@@ -696,6 +794,8 @@ async def _rogue_path_stream():
         from circle.executor import PaymentExecutor, PaymentIntent, PaymentDenied
         from circle.isolator import Isolator, classify_severity
         from circle.verifier import verify_payment_chain
+        from circle.reputation import ReputationWriter
+        from circle.correlation import CorrelationEngine
 
         wallet = state["wallet"]
         chain = state["chain"]
@@ -753,9 +853,16 @@ async def _rogue_path_stream():
         yield _sse("step", {"id": "isolator", "title": "Isolator Activated", "status": "running"})
         await asyncio.sleep(0.5)
 
+        rogue_rep_writer = ReputationWriter(chain=chain, wallet_address=wallet)
+        rogue_corr_engine = CorrelationEngine(
+            private_key=executor._private_key, kid=executor._kid,
+        )
+
         isolator = Isolator(
             tenant=executor.tenant, private_key=executor._private_key,
             kid=executor._kid, wallet_address=wallet, chain=chain,
+            reputation_writer=rogue_rep_writer,
+            correlation_engine=rogue_corr_engine,
         )
 
         for denial in denials:
@@ -773,11 +880,43 @@ async def _rogue_path_stream():
                 })
                 await asyncio.sleep(0.8)
 
+        # Emit reputation events
+        for rep_event in rogue_rep_writer.events:
+            yield _sse("reputation", {
+                "event_id": rep_event.event_id,
+                "agent_id": rep_event.agent_id,
+                "event_type": rep_event.event_type,
+                "severity": rep_event.severity,
+                "published": rep_event.published,
+                "tx_hash": rep_event.tx_hash,
+            })
+            await asyncio.sleep(0.5)
+
+        # Cross-agent correlation
+        if isolator.records:
+            last_record = isolator.records[-1]
+            rogue_chain = executor.get_receipt_chain()
+            corr_report = isolator.correlate_across_agents(
+                isolation_record=last_record,
+                receipt_chain=rogue_chain,
+            )
+            if corr_report:
+                yield _sse("correlation", {
+                    "report_id": corr_report.report_id,
+                    "risk": corr_report.risk_assessment,
+                    "agents_scanned": corr_report.total_agents_scanned,
+                    "correlated": len(corr_report.correlated_agents),
+                    "patterns": corr_report.trigger_patterns,
+                    "actions": corr_report.recommended_actions,
+                })
+                await asyncio.sleep(0.5)
+
         yield _sse("step", {"id": "isolator", "title": "Isolator Activated", "status": "complete",
                             "details": {
                                 "agent_revoked": isolator.is_agent_revoked("ops-agent"),
                                 "wallet_frozen": isolator.is_wallet_frozen(),
                                 "isolation_records": len(isolator.records),
+                                "reputation_events": len(rogue_rep_writer.events),
                             }})
         await asyncio.sleep(0.5)
 

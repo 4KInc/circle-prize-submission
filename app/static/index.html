@@ -69,23 +69,36 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="view on p-6" id="v-overview">
   <div class="max-w-2xl mx-auto mt-20 text-center">
-    <h2 class="text-3xl font-extrabold tracking-tight mb-4">Six-agent governance for autonomous USDC payments</h2>
-    <p class="text-v-muted2 text-sm leading-relaxed mb-3">A multi-agent system built on <span class="text-white font-medium">Circle Agent Stack</span> that governs how AI agents spend USDC. Every payment flows through Circle Agent Wallets, gets policy-checked by our 6-agent system, and settles on Base.</p>
-    <p class="text-v-muted text-xs mb-6">Circle Agent Wallets / x402 Protocol / Agent Marketplace / Circle CLI / Nanopayments</p>
+    <h2 class="text-3xl font-extrabold tracking-tight mb-4">Cryptographic proof for every agent payment decision</h2>
+    <p class="text-v-muted2 text-sm leading-relaxed mb-3">Circle protects the wallet. <span class="text-white font-medium">Verigate protects the operator.</span> Every authorization decision is Ed25519 signed, hash-chained, Merkle-anchored, and independently verifiable — binding x401 identity, policy state, and on-chain settlement into a single proof object.</p>
+    <p class="text-v-muted text-xs mb-6">x401 Identity / ERC-8004 Reputation / Circle Agent Stack / x402 Protocol / Recibo / Dispute Resolution</p>
     <div class="flex gap-3 justify-center mb-12">
       <button class="h-9 px-5 rounded-lg bg-v-accent text-v-bg text-xs font-semibold border-none cursor-pointer hover:opacity-90" onclick="runDemo()">Run Golden Path</button>
       <button class="h-9 px-5 rounded-lg bg-transparent text-v-muted2 text-xs font-medium border border-v-border2 cursor-pointer hover:text-white hover:border-v-accent" onclick="runRogue()">Rogue Agent Demo</button>
     </div>
 
-    <!-- Circle integration highlight -->
+    <!-- What Verigate adds -->
+    <div class="glass p-4 mb-4 text-left">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-xs font-semibold text-v-accent">What Verigate Adds to Circle's Stack</span>
+      </div>
+      <div class="grid grid-cols-4 gap-3">
+        <div><div class="text-[11px] font-semibold text-white mb-0.5">x401 Identity Binding</div><div class="text-[10px] text-v-muted2 leading-relaxed">Verifiable credentials bound into every receipt — proves WHO authorized the agent</div></div>
+        <div><div class="text-[11px] font-semibold text-white mb-0.5">Cryptographic Receipts</div><div class="text-[10px] text-v-muted2 leading-relaxed">Ed25519 signed, hash-chained, settlement-bound — independently verifiable offline</div></div>
+        <div><div class="text-[11px] font-semibold text-white mb-0.5">ERC-8004 Reputation</div><div class="text-[10px] text-v-muted2 leading-relaxed">Isolation events published to on-chain registry for portable agent trust</div></div>
+        <div><div class="text-[11px] font-semibold text-white mb-0.5">Dispute Resolution</div><div class="text-[10px] text-v-muted2 leading-relaxed">Export receipt chain for third-party arbiters — zero trust, zero network needed</div></div>
+      </div>
+    </div>
+
+    <!-- Circle integration -->
     <div class="glass p-4 mb-4 text-left">
       <div class="flex items-center gap-2 mb-3">
         <span class="text-xs font-semibold text-v-blu">Built on Circle Agent Stack</span>
       </div>
       <div class="grid grid-cols-4 gap-3">
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">Agent Wallets</div><div class="text-[10px] text-v-muted2 leading-relaxed">MPC-secured USDC wallets with spending policies, caps, and allowlists</div></div>
+        <div><div class="text-[11px] font-semibold text-white mb-0.5">Agent Wallets</div><div class="text-[10px] text-v-muted2 leading-relaxed">MPC-secured USDC wallets with Action Gate, spending caps, and allowlists</div></div>
         <div><div class="text-[11px] font-semibold text-white mb-0.5">x402 Protocol</div><div class="text-[10px] text-v-muted2 leading-relaxed">HTTP 402 + EIP-3009 for pay-per-request service access</div></div>
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">Marketplace</div><div class="text-[10px] text-v-muted2 leading-relaxed">Machine-readable service discovery at agents.circle.com</div></div>
+        <div><div class="text-[11px] font-semibold text-white mb-0.5">Recibo</div><div class="text-[10px] text-v-muted2 leading-relaxed">Bi-directional settlement binding — receipt hash embedded in on-chain transfer</div></div>
         <div><div class="text-[11px] font-semibold text-white mb-0.5">Circle CLI</div><div class="text-[10px] text-v-muted2 leading-relaxed">Wallet ops, transfers, signing, policy management</div></div>
       </div>
     </div>
@@ -93,11 +106,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
     <!-- Agent cards -->
     <div class="grid grid-cols-3 gap-3 text-left">
       <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Coordinator</div><div class="text-[11px] text-v-muted2 leading-relaxed">Discovers x402 services from Circle Agent Marketplace. Routes capabilities between agents.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Gateway</div><div class="text-[11px] text-v-muted2 leading-relaxed">Evaluates payment intents against policy. Issues Ed25519 tokens. Signs receipts. Zero LLM.</div></div>
+      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Gateway</div><div class="text-[11px] text-v-muted2 leading-relaxed">Verifies x401 credentials, evaluates policy (zero LLM), signs receipts binding identity + decision + settlement.</div></div>
       <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Auditor</div><div class="text-[11px] text-v-muted2 leading-relaxed">Audits every receipt against EU AI Act and NIST AI RMF. Generates compliance reports via Gemini.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Investigator</div><div class="text-[11px] text-v-muted2 leading-relaxed">Deep analysis of suspicious denials. Classifies severity, identifies root cause, produces incident reports.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Recommender</div><div class="text-[11px] text-v-muted2 leading-relaxed">Proposes policy changes after incidents. Suggests caps, allowlist tightening, Circle wallet policies.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Isolator</div><div class="text-[11px] text-v-muted2 leading-relaxed">Quarantines rogue agents. Revokes Verigate identity and freezes Circle wallet spending.</div></div>
+      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Investigator</div><div class="text-[11px] text-v-muted2 leading-relaxed">Deep analysis of suspicious denials. Cross-agent forensic correlation detects systemic attacks.</div></div>
+      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Recommender</div><div class="text-[11px] text-v-muted2 leading-relaxed">Proposes policy changes for Circle's Action Gate. Suggests cap adjustments, allowlist tightening.</div></div>
+      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Forensic Recorder</div><div class="text-[11px] text-v-muted2 leading-relaxed">Produces signed forensic evidence. Publishes ERC-8004 reputation. Recommends actions to Circle's stack.</div></div>
     </div>
   </div>
 </div>
@@ -168,25 +181,25 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
     <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-3">Defense-in-Depth: Verigate + Circle</div>
     <div class="grid grid-cols-2 gap-4">
       <div class="p-3 rounded-lg bg-v-bg border border-v-border">
-        <div class="text-xs font-semibold text-v-accent mb-2">Layer 1: Verigate Gate</div>
+        <div class="text-xs font-semibold text-v-accent mb-2">Layer 1: Verigate (Proof + Forensics)</div>
         <div class="space-y-1.5 text-[11px] text-v-muted2">
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>Deterministic policy evaluation (zero LLM)</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>Ed25519 signed receipts for every decision</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>60s single-use token (JTI = Circle idempotency key)</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>6-agent governance system (investigate, recommend, isolate)</div>
+          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>x401 identity verification + credential binding</div>
+          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>Ed25519 signed receipt chain (hash-linked, Merkle-anchored)</div>
+          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>Settlement binding (tx hash in receipt body)</div>
+          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>ERC-8004 reputation + cross-agent correlation + dispute resolution</div>
         </div>
       </div>
       <div class="p-3 rounded-lg bg-v-bg border border-v-border">
-        <div class="text-xs font-semibold text-v-blu mb-2">Layer 2: Circle Wallet Policies</div>
+        <div class="text-xs font-semibold text-v-blu mb-2">Layer 2: Circle Agent Stack (Enforcement)</div>
         <div class="space-y-1.5 text-[11px] text-v-muted2">
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Per-transaction USDC caps</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Daily / weekly / monthly spending limits</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Recipient allowlists and blocklists</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Sanctions screening on every transfer</div>
+          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Action Gate + MPC co-signer enforcement</div>
+          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Spending caps, allowlists, sanctions screening</div>
+          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Execution Harness (microVM isolation)</div>
+          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>x401 / ERC-8004 / ERC-8183 trust stack</div>
         </div>
       </div>
     </div>
-    <div class="text-center mt-3 text-[11px] text-v-muted">Even if Verigate is bypassed, Circle's wallet policies independently enforce spending limits.</div>
+    <div class="text-center mt-3 text-[11px] text-v-muted">Circle enforces spending limits. Verigate produces cryptographic proof of every decision — independently verifiable by third parties.</div>
   </div>
 </div>
 
@@ -196,30 +209,67 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 <div class="view p-6" id="v-agents">
   <div class="flex items-center justify-between mb-4">
     <h3 class="text-sm font-semibold">Agent Registry</h3>
-    <span class="text-[11px] text-v-muted font-mono" id="agent-count">6 agents registered</span>
-  </div>
-  <div class="glass overflow-hidden" id="agent-table">
-    <table class="w-full text-xs">
-      <thead><tr class="border-b border-v-border text-v-muted text-left">
-        <th class="px-4 py-2.5 font-semibold">Agent</th><th class="px-4 py-2.5 font-semibold">Role</th><th class="px-4 py-2.5 font-semibold">Signing Key (Ed25519)</th><th class="px-4 py-2.5 font-semibold">Artifacts</th><th class="px-4 py-2.5 font-semibold">Status</th>
-      </tr></thead>
-      <tbody id="agent-rows"></tbody>
-    </table>
-  </div>
-  <div class="mt-4 glass overflow-hidden" id="agent-artifacts-panel" style="display:none">
-    <div class="flex items-center justify-between px-4 py-2.5 border-b border-v-border">
-      <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Signed Artifacts</span>
+    <div class="flex items-center gap-3">
       <button class="text-[10px] font-mono text-v-blu hover:underline cursor-pointer bg-transparent border-none" onclick="exportArtifacts()">Export JSON</button>
+      <span class="text-[11px] text-v-muted font-mono" id="agent-count">6 agents registered</span>
     </div>
-    <div id="agent-artifacts" class="max-h-[500px] overflow-y-auto"></div>
   </div>
-  <!-- Artifact detail modal -->
+
+  <!-- Agent sub-tabs -->
+  <div class="mb-4">
+    <div class="nav-pill" id="agent-nav">
+      <button class="active" onclick="agentTab('all')">All Agents</button>
+      <button onclick="agentTab('Coordinator')">Coordinator</button>
+      <button onclick="agentTab('Gateway')">Gateway</button>
+      <button onclick="agentTab('Auditor')">Auditor</button>
+      <button onclick="agentTab('Investigator')">Investigator</button>
+      <button onclick="agentTab('Recommender')">Recommender</button>
+      <button onclick="agentTab('Isolator')">Isolator</button>
+    </div>
+  </div>
+
+  <!-- All agents table (shown when "All Agents" selected) -->
+  <div id="agent-all-panel">
+    <div class="glass overflow-hidden" id="agent-table">
+      <table class="w-full text-xs">
+        <thead><tr class="border-b border-v-border text-v-muted text-left">
+          <th class="px-4 py-2.5 font-semibold">Agent</th><th class="px-4 py-2.5 font-semibold">Role</th><th class="px-4 py-2.5 font-semibold">Signing Key (Ed25519)</th><th class="px-4 py-2.5 font-semibold">Artifacts</th><th class="px-4 py-2.5 font-semibold">Status</th>
+        </tr></thead>
+        <tbody id="agent-rows"></tbody>
+      </table>
+    </div>
+    <div class="mt-4 glass overflow-hidden" id="agent-artifacts-panel" style="display:none">
+      <div class="px-4 py-2.5 border-b border-v-border">
+        <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">All Signed Artifacts</span>
+      </div>
+      <div id="agent-artifacts" class="max-h-[500px] overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- Per-agent detail panel (shown when a specific agent is selected) -->
+  <div id="agent-detail-panel" style="display:none">
+    <!-- Agent info card -->
+    <div class="glass p-5 mb-4" id="agent-detail-card"></div>
+    <!-- Agent's artifacts -->
+    <div class="glass overflow-hidden">
+      <div class="px-4 py-2.5 border-b border-v-border">
+        <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider" id="agent-detail-artifacts-title">Artifacts</span>
+      </div>
+      <div id="agent-detail-artifacts" class="max-h-[500px] overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- Artifact detail modal (human-readable) -->
   <div id="artifact-detail" class="mt-4 glass overflow-hidden" style="display:none">
     <div class="flex items-center justify-between px-4 py-2.5 border-b border-v-border">
       <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider" id="detail-title">Artifact Detail</span>
-      <button class="text-[10px] text-v-muted hover:text-white cursor-pointer bg-transparent border-none" onclick="document.getElementById('artifact-detail').style.display='none'">Close</button>
+      <div class="flex items-center gap-3">
+        <button class="text-[10px] font-mono text-v-muted hover:text-v-muted2 cursor-pointer bg-transparent border-none" onclick="toggleDetailRaw()">Toggle Raw JSON</button>
+        <button class="text-[10px] text-v-muted hover:text-white cursor-pointer bg-transparent border-none" onclick="document.getElementById('artifact-detail').style.display='none'">Close</button>
+      </div>
     </div>
-    <pre id="detail-json" class="p-4 text-[10px] font-mono text-v-muted2 overflow-auto max-h-80 whitespace-pre-wrap"></pre>
+    <div id="detail-rendered" class="p-4"></div>
+    <pre id="detail-json" class="p-4 text-[10px] font-mono text-v-muted2 overflow-auto max-h-80 whitespace-pre-wrap hidden"></pre>
   </div>
 </div>
 
@@ -249,6 +299,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
       <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-1">Wallet-Signed Anchor</div>
       <div class="text-[10px] text-v-muted mb-2">Merkle root signed by the Circle Agent Wallet</div>
       <div class="font-mono text-[11px] text-v-blu break-all" id="anchor-display">--</div>
+      <div class="mt-2 space-y-1" id="anchor-links" style="display:none">
+        <div class="flex items-center gap-2"><span class="text-[10px] text-v-muted">Wallet:</span><a id="anchor-wallet-link" href="#" target="_blank" class="font-mono text-[10px] text-v-blu hover:underline"></a></div>
+        <div class="flex items-center gap-2"><span class="text-[10px] text-v-muted">Basescan:</span><a id="anchor-basescan-link" href="#" target="_blank" class="text-[10px] text-v-blu hover:underline">View on Basescan</a></div>
+      </div>
     </div>
   </div>
 </div>
@@ -330,7 +384,9 @@ function addPay(d){
 }
 function addAtk(d){document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="px-4 py-3 border-b border-white/[.03] ri"><div class="text-xs font-semibold text-v-red flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-v-red"></span>'+(d.name||'Attack')+(d.amount?' &middot; '+d.amount:'')+'</div><div class="text-[10.5px] font-mono text-v-muted mt-1.5 p-2 bg-v-bg rounded-md border border-v-border">'+(d.reason||d.payload||'').substring(0,160)+'</div></div>');document.getElementById('feed').scrollTop=document.getElementById('feed').scrollHeight}
 function addBlk(d){document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="px-3 py-2 border-b border-white/[.03] text-[11px] font-semibold text-v-grn bg-v-grn/5 flex items-center gap-1.5 ri"><span class="w-1.5 h-1.5 rounded-full bg-v-grn"></span>BLOCKED &middot; '+d.name+' &middot; '+d.reasons.join(', ')+'</div>');nNo++;upd()}
-function addIso(d){nIso++;nArtifacts++;upd();document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-v-red bg-v-red/5 ri"><div class="text-[11px] font-bold text-v-red">ISOLATION '+d.isolation_id+'</div><div class="grid grid-cols-2 gap-1 mt-2 text-[10.5px] font-mono text-v-muted"><div><b class="text-v-muted2">Severity</b> '+d.severity+'</div><div><b class="text-v-muted2">Agent</b> '+(d.agent||'ops-agent')+'</div>'+(d.agent_revoked?'<div><b class="text-v-muted2">Identity</b> Revoked</div>':'')+(d.wallet_frozen?'<div><b class="text-v-muted2">Wallet</b> Frozen</div>':'')+'</div></div>')}
+function addIso(d){nIso++;nArtifacts++;upd();let findings='';(d.findings||[]).forEach(f=>{findings+='<div class="text-[10px] text-v-red font-mono py-0.5">'+f+'</div>'});let recs='';(d.recommendations||[]).forEach(r=>{recs+='<div class="text-[10px] text-v-amb font-mono py-0.5">'+r+'</div>'});document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-v-red bg-v-red/5 ri"><div class="text-[11px] font-bold text-v-red">FORENSIC RECORD '+d.isolation_id+'</div><div class="grid grid-cols-2 gap-1 mt-2 text-[10.5px] font-mono text-v-muted"><div><b class="text-v-muted2">Severity</b> '+d.severity+'</div><div><b class="text-v-muted2">Agent</b> '+(d.agent||'ops-agent')+'</div></div>'+(findings?'<div class="mt-2"><div class="text-[10px] text-v-muted font-semibold mb-0.5">Findings</div>'+findings+'</div>':'')+(recs?'<div class="mt-1.5"><div class="text-[10px] text-v-muted font-semibold mb-0.5">Recommendations for Circle</div>'+recs+'</div>':'')+'</div>')}
+function addReputation(d){nArtifacts++;upd();document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-purple-500 bg-purple-500/5 ri"><div class="text-[11px] font-bold text-purple-400">ERC-8004 REPUTATION</div><div class="grid grid-cols-2 gap-1 mt-2 text-[10.5px] font-mono text-v-muted"><div><b class="text-v-muted2">Event</b> '+d.event_id+'</div><div><b class="text-v-muted2">Agent</b> '+d.agent_id+'</div><div><b class="text-v-muted2">Type</b> '+d.event_type+'</div><div><b class="text-v-muted2">Published</b> '+(d.published?'<span class="text-v-grn">Yes</span>':'Pending')+'</div>'+(d.tx_hash?'<div class="col-span-2"><b class="text-v-muted2">Tx</b> '+d.tx_hash.substring(0,30)+'...</div>':'')+'</div></div>')}
+function addCorrelation(d){nArtifacts++;upd();document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-v-amb bg-v-amb/5 ri"><div class="text-[11px] font-bold text-v-amb">CROSS-AGENT CORRELATION</div><div class="grid grid-cols-2 gap-1 mt-2 text-[10.5px] font-mono text-v-muted"><div><b class="text-v-muted2">Risk</b> <span class="'+(d.risk==='SYSTEMIC'?'text-v-red':d.risk==='SPREADING'?'text-v-amb':'text-v-grn')+'">'+d.risk+'</span></div><div><b class="text-v-muted2">Scanned</b> '+d.agents_scanned+' agents</div><div><b class="text-v-muted2">Matches</b> '+d.correlated+'</div><div><b class="text-v-muted2">Patterns</b> '+(d.patterns||[]).join(', ')+'</div></div>'+(d.actions?'<div class="mt-2 space-y-0.5">'+d.actions.map(a=>'<div class="text-[10px] text-v-muted2">'+a+'</div>').join('')+'</div>':'')+'</div>')}
 function addProposal(d){nArtifacts+=d.proposals?.length||0;upd();let items='';(d.proposals||[]).forEach(p=>{items+='<div class="text-[10.5px] font-mono text-v-muted2 py-0.5"><b class="text-v-amb">'+p.change_type+'</b>: '+p.description+'</div>'});document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-v-amb bg-v-amb/5 ri"><div class="text-[11px] font-bold text-v-amb">POLICY PROPOSALS</div>'+items+'</div>');storeIncidents.push({type:'proposal',data:d});updateComplianceView()}
 
 function addSummary(d){
@@ -348,9 +404,9 @@ function addSummary(d){
 // ── Verification + Compliance ──
 function showV(d){
   document.getElementById('bot').classList.remove('hidden');document.getElementById('bot').classList.add('grid');
-  const c=[['Ed25519 Signatures',d.signatures],['Hash Chain',d.hash_chain],['Merkle Root',d.merkle],['Anchor',d.anchor]];
+  const c=[['Ed25519 Signatures',d.signatures],['Hash Chain',d.hash_chain],['Merkle Root',d.merkle],['x401 Identity',d.x401||'SKIP'],['Anchor',d.anchor]];
   const el=document.getElementById('vbox');
-  el.innerHTML='<div class="grid grid-cols-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between px-4 py-3 border-b border-v-border border-r border-v-border"><span class="text-xs text-v-muted2">'+l+'</span><span class="text-[11px] font-mono font-semibold '+(s==='PASS'?'text-v-grn':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="p-4 text-center font-mono text-sm font-bold '+(d.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+d.overall+'</div>';
+  el.innerHTML='<div class="grid grid-cols-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between px-4 py-3 border-b border-v-border border-r border-v-border"><span class="text-xs text-v-muted2">'+l+'</span><span class="text-[11px] font-mono font-semibold '+(s==='PASS'?'text-v-grn':s==='SKIP'?'text-v-muted':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="p-4 text-center font-mono text-sm font-bold '+(d.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+d.overall+'</div>';
   document.getElementById('sv-chk').textContent=d.overall;document.getElementById('sv-chk').className='text-base font-bold font-mono '+(d.overall==='PASS'?'text-v-grn':'text-v-red');
   storeVerify=d;updateComplianceView();
 }
@@ -391,7 +447,7 @@ function updateReceiptsView(){
 // ── Compliance view ──
 function updateComplianceView(){
   if(storeVerify){
-    const c=[['Ed25519 Signatures',storeVerify.signatures],['Hash Chain',storeVerify.hash_chain],['Merkle Root',storeVerify.merkle],['Anchor',storeVerify.anchor]];
+    const c=[['Ed25519 Signatures',storeVerify.signatures],['Hash Chain',storeVerify.hash_chain],['Merkle Root',storeVerify.merkle],['x401 Identity',storeVerify.x401||'SKIP'],['Anchor',storeVerify.anchor]];
     document.getElementById('comp-verify').innerHTML='<div class="grid grid-cols-2 gap-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between p-2 rounded bg-v-bg"><span class="text-[11px] text-v-muted2">'+l+'</span><span class="text-[11px] font-mono font-semibold '+(s==='PASS'?'text-v-grn':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="text-center mt-3 font-mono text-sm font-bold '+(storeVerify.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+storeVerify.overall+'</div>';
   }
   if(storeCompliance){
@@ -410,7 +466,7 @@ function updateComplianceView(){
 
 function fin(d){lock(false);const t=document.getElementById('ptag');t.textContent='DONE';t.className='text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-v-grn/10 text-v-grn border border-v-grn/20';if(d)addSummary(d)}
 
-function sse(url){reset();lock(true);const s=new EventSource(url);s.onmessage=e=>{const d=JSON.parse(e.data);switch(d.type){case'step':addStep(d);if(d.details?.signatures)showV(d.details);if(d.details?.summary)showC(d.details);break;case'payment':addPay(d);break;case'attack':addAtk(d);break;case'blocked':addBlk(d);break;case'isolation':addIso(d);break;case'proposal':addProposal(d);break;case'agent_info':updateAgent(d);break;case'complete':fin(d);s.close();break;case'error':lock(false);s.close();break}};s.onerror=()=>{lock(false);s.close()}}
+function sse(url){reset();lock(true);const s=new EventSource(url);s.onmessage=e=>{const d=JSON.parse(e.data);switch(d.type){case'step':addStep(d);if(d.details?.signatures)showV(d.details);if(d.details?.summary)showC(d.details);break;case'payment':addPay(d);break;case'attack':addAtk(d);break;case'blocked':addBlk(d);break;case'isolation':addIso(d);break;case'reputation':addReputation(d);break;case'correlation':addCorrelation(d);break;case'proposal':addProposal(d);break;case'agent_info':updateAgent(d);break;case'complete':fin(d);s.close();break;case'error':lock(false);s.close();break}};s.onerror=()=>{lock(false);s.close()}}
 function runDemo(){sse('/api/run/golden-path')}
 function runRogue(){sse('/api/run/rogue-path')}
 
@@ -460,11 +516,174 @@ function showArtifactDetail(artifact){
   document.getElementById('artifact-detail').style.display='';
   document.getElementById('detail-title').textContent=artifact.agent+' / '+artifact.artifact_type;
   document.getElementById('detail-json').textContent=JSON.stringify(artifact,null,2);
+  document.getElementById('detail-json').classList.add('hidden');
+  document.getElementById('detail-rendered').classList.remove('hidden');
+  document.getElementById('detail-rendered').innerHTML=renderArtifactDetail(artifact);
+}
+function toggleDetailRaw(){
+  document.getElementById('detail-json').classList.toggle('hidden');
+  document.getElementById('detail-rendered').classList.toggle('hidden');
+}
+function renderArtifactDetail(a){
+  const b=a.body||{};const t=a.artifact_type||'';
+  let h='<div class="space-y-4">';
+  // Header
+  h+='<div class="flex items-center gap-3"><span class="text-xs font-bold text-v-accent">'+a.agent+'</span><span class="text-[10px] px-2 py-0.5 rounded bg-v-card border border-v-border text-v-muted2 font-mono">'+t.replace(/_/g,' ')+'</span></div>';
+  // Hash + signature
+  h+='<div class="grid grid-cols-2 gap-3">';
+  if(a.artifact_hash)h+='<div class="p-2.5 rounded bg-v-bg border border-v-border"><div class="text-[9px] text-v-muted uppercase tracking-wider font-semibold mb-1">Artifact Hash</div><div class="font-mono text-[10px] text-v-muted2 break-all">'+a.artifact_hash+'</div></div>';
+  if(a.signature)h+='<div class="p-2.5 rounded bg-v-bg border border-v-border"><div class="text-[9px] text-v-muted uppercase tracking-wider font-semibold mb-1">Ed25519 Signature</div><div class="font-mono text-[10px] text-v-muted2 break-all">'+a.signature+'</div></div>';
+  h+='</div>';
+  // Type-specific rendering
+  if(t==='receipt'){
+    const del=b.delegation_context||{};const isApprove=b.decision==='approve';
+    h+='<div class="p-3 rounded-lg border-l-2 '+(isApprove?'border-v-grn bg-v-grn/5':'border-v-red bg-v-red/5')+'">';
+    h+='<div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold '+(isApprove?'text-v-grn':'text-v-red')+'">'+b.decision?.toUpperCase()+'</span><span class="text-[10px] font-mono text-v-muted">seq '+b.seq+'</span></div>';
+    h+='<div class="grid grid-cols-2 gap-2 text-[10px]">';
+    if(b.agent_id)h+='<div><span class="text-v-muted font-semibold">Agent:</span> <span class="text-v-muted2">'+b.agent_id+'</span></div>';
+    if(b.service)h+='<div><span class="text-v-muted font-semibold">Service:</span> <span class="text-v-muted2">'+b.service+'</span></div>';
+    if(del.payee)h+='<div><span class="text-v-muted font-semibold">Payee:</span> <span class="text-v-muted2 font-mono">'+del.payee+'</span></div>';
+    if(del.amount)h+='<div><span class="text-v-muted font-semibold">Amount:</span> <span class="text-v-muted2 font-mono">'+del.amount+' USDC</span></div>';
+    if(del.settlement_tx){const isSep=(del.settlement_chain||'').toUpperCase().includes('SEPOLIA');const exp=isSep?'sepolia.basescan.org':'basescan.org';h+='<div class="col-span-2"><span class="text-v-muted font-semibold">Settlement:</span> <a href="https://'+exp+'/tx/'+del.settlement_tx+'" target="_blank" class="text-v-blu hover:underline font-mono">'+del.settlement_tx.substring(0,32)+'...</a></div>'}
+    h+='</div>';
+    if(b.denial_reasons&&b.denial_reasons.length){h+='<div class="mt-2 space-y-0.5">';b.denial_reasons.forEach(r=>{h+='<div class="text-[10px] text-v-red font-mono">'+r+'</div>'});h+='</div>'}
+    if(b.prev_receipt)h+='<div class="text-[10px] font-mono text-v-muted mt-2">prev: '+b.prev_receipt+'</div>';
+    h+='</div>';
+  }else if(t==='incident_report'){
+    h+='<div class="p-3 rounded-lg border-l-2 border-v-red bg-v-red/5">';
+    h+='<div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-v-red">'+b.severity+'</span><span class="text-[10px] font-mono text-v-muted">'+b.incident_id+'</span></div>';
+    if(b.narrative){
+      if(b.narrative.summary)h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-2">'+b.narrative.summary+'</p>';
+      if(b.narrative.root_cause)h+='<div class="text-[10px] mb-1"><span class="text-v-muted font-semibold">Root Cause:</span> <span class="text-v-muted2">'+b.narrative.root_cause+'</span></div>';
+      if(b.narrative.attack_vector)h+='<div class="text-[10px] mb-1"><span class="text-v-muted font-semibold">Attack Vector:</span> <span class="text-v-muted2">'+b.narrative.attack_vector+'</span></div>';
+      if(b.narrative.impact)h+='<div class="text-[10px] mb-1"><span class="text-v-muted font-semibold">Impact:</span> <span class="text-v-muted2">'+b.narrative.impact+'</span></div>';
+      if(b.narrative.timeline&&b.narrative.timeline.length){h+='<div class="mt-2"><div class="text-[10px] text-v-muted font-semibold mb-1">Timeline</div>';b.narrative.timeline.forEach(e=>{h+='<div class="text-[10px] text-v-muted2 pl-3 border-l border-v-border py-0.5">'+e+'</div>'});h+='</div>'}
+    }
+    h+='</div>';
+  }else if(t==='policy_proposal'){
+    h+='<div class="space-y-2">';
+    if(b.proposal_id)h+='<div class="text-[10px] font-mono text-v-muted">'+b.proposal_id+'</div>';
+    (b.proposals||[]).forEach(p=>{
+      h+='<div class="p-3 rounded-lg border-l-2 border-v-amb bg-v-amb/5">';
+      h+='<div class="text-xs font-semibold text-v-amb mb-1">'+p.change_type+'</div>';
+      h+='<div class="text-[11px] text-v-muted2 leading-relaxed">'+p.description+'</div>';
+      if(p.rationale)h+='<div class="text-[10px] text-v-muted mt-1">Rationale: '+p.rationale+'</div>';
+      if(p.suggested_value!==undefined)h+='<div class="text-[10px] font-mono text-v-muted2 mt-1">Suggested: <span class="text-white">'+JSON.stringify(p.suggested_value)+'</span></div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }else if(t==='audit_report'){
+    const vColor=b.verdict==='ALIGNED'?'text-v-grn':'text-v-red';
+    h+='<div class="p-3 rounded-lg border-l-2 '+(b.verdict==='ALIGNED'?'border-v-grn bg-v-grn/5':'border-v-red bg-v-red/5')+'">';
+    h+='<div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold '+vColor+'">'+b.verdict+'</span></div>';
+    if(b.frameworks_checked)h+='<div class="text-[10px] text-v-muted mb-2">Frameworks: '+(b.frameworks_checked||[]).map(f=>'<span class="px-1.5 py-0.5 rounded bg-v-card border border-v-border text-v-muted2 mr-1">'+f+'</span>').join('')+'</div>';
+    if(b.findings&&b.findings.length){h+='<div class="mt-2 space-y-1">';b.findings.forEach(f=>{h+='<div class="text-[11px] text-v-muted2">'+f+'</div>'});h+='</div>'}
+    if(b.receipt_seq!==undefined)h+='<div class="text-[10px] font-mono text-v-muted mt-2">Receipt seq: '+b.receipt_seq+'</div>';
+    h+='</div>';
+  }else if(t==='compliance_report'){
+    h+='<div class="p-3 rounded-lg border-l-2 border-v-blu bg-v-blu/5">';
+    if(b.narrative){
+      const n=b.narrative;
+      if(n.executive_summary)h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-3">'+n.executive_summary+'</p>';
+      if(n.spend_findings){
+        const sf=n.spend_findings;
+        h+='<div class="grid grid-cols-3 gap-2 mb-3">';
+        if(sf.total_governed_spend_usdc!==undefined)h+='<div class="p-2 rounded bg-v-bg border border-v-border text-center"><div class="text-[9px] text-v-muted uppercase">Governed Spend</div><div class="text-sm font-bold font-mono text-v-grn">$'+(typeof sf.total_governed_spend_usdc==='number'?sf.total_governed_spend_usdc.toFixed(2):sf.total_governed_spend_usdc)+'</div></div>';
+        if(sf.payments_approved!==undefined)h+='<div class="p-2 rounded bg-v-bg border border-v-border text-center"><div class="text-[9px] text-v-muted uppercase">Approved</div><div class="text-sm font-bold font-mono text-v-grn">'+sf.payments_approved+'</div></div>';
+        if(sf.payments_blocked!==undefined)h+='<div class="p-2 rounded bg-v-bg border border-v-border text-center"><div class="text-[9px] text-v-muted uppercase">Blocked</div><div class="text-sm font-bold font-mono text-v-red">'+sf.payments_blocked+'</div></div>';
+        h+='</div>';
+      }
+      if(n.eu_ai_act){h+='<div class="mb-2"><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">EU AI Act</div>';for(const[k,v]of Object.entries(n.eu_ai_act))h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-1"><strong class="text-white font-medium">'+k.replace(/_/g,' ')+'</strong>: '+v+'</p>';h+='</div>'}
+      if(n.nist_ai_rmf){h+='<div class="mb-2"><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(n.nist_ai_rmf))h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-1"><strong class="text-white font-medium">'+k.toUpperCase()+'</strong>: '+v+'</p>';h+='</div>'}
+      if(n.recommendations){h+='<div><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">Recommendations</div>';n.recommendations.forEach((r,i)=>{h+='<p class="text-[11px] text-v-muted2">'+(i+1)+'. '+r+'</p>'});h+='</div>'}
+    }
+    h+='</div>';
+  }else if(t==='isolation_record'){
+    h+='<div class="p-3 rounded-lg border-l-2 border-v-red bg-v-red/5">';
+    h+='<div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-v-red">'+b.severity+'</span><span class="text-[10px] font-mono text-v-muted">'+b.isolation_id+'</span></div>';
+    if(b.agent_id)h+='<div class="text-[10px] mb-1"><span class="text-v-muted font-semibold">Agent:</span> <span class="text-v-muted2">'+b.agent_id+'</span></div>';
+    if(b.reason)h+='<div class="text-[10px] mb-2"><span class="text-v-muted font-semibold">Reason:</span> <span class="text-v-muted2">'+b.reason+'</span></div>';
+    if(b.actions_taken&&b.actions_taken.length){h+='<div class="space-y-1">';b.actions_taken.forEach(a=>{h+='<div class="flex items-center gap-2 text-[10px] py-1 px-2 rounded bg-v-bg border border-v-border"><span class="font-semibold text-v-red">'+a.action+'</span><span class="text-v-muted2">'+(a.status||'')+'</span>'+(a.detail?'<span class="text-v-muted font-mono text-[9px] ml-auto">'+a.detail.substring(0,60)+'</span>':'')+'</div>'});h+='</div>'}
+    h+='</div>';
+  }else if(t==='service_discovery'){
+    h+='<div class="p-3 rounded-lg border-l-2 border-v-blu bg-v-blu/5">';
+    h+='<div class="text-xs font-semibold text-v-blu mb-2">'+b.services_found+' services discovered</div>';
+    if(b.sources)h+='<div class="text-[10px] text-v-muted mb-2">Sources: '+(b.sources||[]).join(', ')+'</div>';
+    if(b.services&&b.services.length){b.services.forEach(s=>{h+='<div class="flex items-center justify-between py-1.5 border-b border-v-border last:border-none text-[10px]"><span class="text-v-muted2 font-medium">'+s.name+'</span><span class="text-v-muted font-mono">'+(s.price_usdc||'?')+' USDC</span></div>'})}
+    h+='</div>';
+  }else{
+    // Generic: render body as key-value pairs
+    h+='<div class="p-3 rounded-lg bg-v-bg border border-v-border space-y-1">';
+    for(const[k,v]of Object.entries(b)){
+      const val=typeof v==='object'?JSON.stringify(v):String(v);
+      h+='<div class="text-[10px]"><span class="text-v-muted font-semibold">'+k+':</span> <span class="text-v-muted2 font-mono break-all">'+val.substring(0,200)+(val.length>200?'...':'')+'</span></div>';
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  return h;
+}
+// ── Agent sub-tabs ──
+let _currentAgentTab='all';
+function agentTab(name){
+  _currentAgentTab=name;
+  document.querySelectorAll('#agent-nav button').forEach(b=>b.classList.remove('active'));
+  [...document.querySelectorAll('#agent-nav button')].find(b=>b.textContent===name||(name==='all'&&b.textContent==='All Agents'))?.classList.add('active');
+  if(name==='all'){
+    document.getElementById('agent-all-panel').style.display='';
+    document.getElementById('agent-detail-panel').style.display='none';
+  }else{
+    document.getElementById('agent-all-panel').style.display='none';
+    document.getElementById('agent-detail-panel').style.display='';
+    renderAgentDetail(name);
+  }
+}
+function renderAgentDetail(name){
+  // Fetch data
+  fetch('/api/data').then(r=>r.json()).then(d=>{
+    const ag=d.agents?.[name];
+    const card=document.getElementById('agent-detail-card');
+    if(!ag){card.innerHTML='<span class="text-xs text-v-muted">No data for '+name+'. Run a demo first.</span>';document.getElementById('agent-detail-artifacts').innerHTML='';return}
+    const statusColor=ag.status==='Active'?'text-v-grn':ag.status==='Ready'?'text-v-amb':'text-v-muted';
+    const roleDescs={Coordinator:'Routes tasks between agents, discovers x402 services from the Circle Agent Marketplace, and manages agent-to-agent communication.',Gateway:'Evaluates every payment intent against deterministic policy rules (zero LLM). Issues 60-second Ed25519 tokens and signs immutable receipts for every decision.',Auditor:'Audits each receipt against EU AI Act (Art 14/15/52) and NIST AI RMF frameworks. Generates comprehensive compliance reports using Gemini.',Investigator:'Performs deep analysis on suspicious denials. Classifies severity, identifies root causes and attack vectors, and produces signed incident reports.',Recommender:'Proposes policy changes based on incidents. Suggests amount cap adjustments, allowlist tightening, and Circle wallet spending policy updates.',Isolator:'Quarantines rogue agents by revoking their Verigate identity and freezing Circle wallet spending. Produces signed isolation records.'};
+    card.innerHTML='<div class="flex items-center justify-between mb-3"><div class="flex items-center gap-3"><span class="text-lg font-bold text-v-accent">'+name+'</span><span class="'+statusColor+' text-xs font-medium px-2 py-0.5 rounded bg-v-card border border-v-border">'+ag.status+'</span></div><span class="text-[10px] font-mono text-v-muted">'+ag.artifacts+' artifacts</span></div>'
+      +'<p class="text-[11px] text-v-muted2 leading-relaxed mb-3">'+(roleDescs[name]||ag.role||'')+'</p>'
+      +'<div class="p-2.5 rounded bg-v-bg border border-v-border"><div class="text-[9px] text-v-muted uppercase tracking-wider font-semibold mb-1">Ed25519 Signing Key (kid)</div><div class="font-mono text-[10px] text-v-muted2 break-all">'+ag.kid+'</div></div>';
+    // Filter artifacts for this agent
+    let arts=(d.artifacts||[]).filter(a=>a.agent?.toLowerCase()===name.toLowerCase());
+    // For Gateway, include receipts as viewable items
+    if(name==='Gateway'&&d.receipts&&d.receipts.length){
+      d.receipts.forEach(env=>{
+        const b=env.body||{};const del=b.delegation_context||{};
+        arts.push({agent:'gateway',artifact_type:'receipt',body:b,artifact_hash:env.receipt_hash,signature:env.sig?.value||env.signature||'',receipt_hash:env.receipt_hash});
+      });
+    }
+    document.getElementById('agent-detail-artifacts-title').textContent=name+' Artifacts ('+arts.length+')';
+    if(!arts.length){document.getElementById('agent-detail-artifacts').innerHTML='<div class="px-4 py-8 text-center text-xs text-v-muted">No artifacts yet for '+name+'. Run the Golden Path demo.</div>';return}
+    window._filteredArtifacts=arts;
+    let ah='';
+    arts.forEach((a,idx)=>{
+      const body=a.body||{};let detail='';
+      if(a.artifact_type==='receipt'){
+        const del=body.delegation_context||{};
+        const isApprove=body.decision==='approve';
+        detail='<span class="'+(isApprove?'text-v-grn':'text-v-red')+' font-semibold">'+body.decision?.toUpperCase()+'</span> — seq '+body.seq+(del.settlement_tx?' — tx: '+del.settlement_tx.substring(0,20)+'...':'');
+      }
+      else if(a.artifact_type==='incident_report')detail='<span class="text-v-red">'+body.severity+'</span> — '+(body.narrative?.summary||'').substring(0,120);
+      else if(a.artifact_type==='policy_proposal')detail=(body.proposals||[]).map(p=>'<span class="text-v-amb">'+p.change_type+'</span>').join(', ');
+      else if(a.artifact_type==='audit_report')detail='<span class="text-v-grn">'+body.verdict+'</span> — '+(body.frameworks_checked||[]).join(', ');
+      else if(a.artifact_type==='service_discovery')detail=body.services_found+' services from '+(body.sources||[]).join(', ');
+      else if(a.artifact_type==='compliance_report'){const sp=body.total_governed_spend_usdc||0;detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed — '+(body.verification_status||'')}
+      else if(a.artifact_type==='isolation_record')detail='<span class="text-v-red">'+body.severity+'</span> — '+(body.actions_taken||[]).map(x=>x.action).join(', ');
+      ah+='<div class="px-4 py-3 border-b border-white/[.03] cursor-pointer hover:bg-white/[.02] transition" onclick="showArtifactDetail(window._filteredArtifacts['+idx+'])"><div class="flex items-center gap-2 text-xs"><span class="text-v-muted2">'+a.artifact_type.replace(/_/g,' ')+'</span><span class="font-mono text-v-muted text-[10px] ml-auto">'+(a.artifact_hash||'').substring(0,24)+'...</span></div>'+(detail?'<div class="text-[11px] text-v-muted2 mt-1">'+detail+'</div>':'')+'</div>';
+    });
+    document.getElementById('agent-detail-artifacts').innerHTML=ah;
+  }).catch(()=>{});
 }
 
 // Auto-load data when switching tabs
 const origGo=go;
-go=function(view){origGo(view);if(view==='wallets')loadWallets();if(view==='receipts'||view==='agents'||view==='compliance')loadData()}
+go=function(view){origGo(view);if(view==='wallets')loadWallets();if(view==='receipts'||view==='agents'||view==='compliance'){loadData();if(view==='agents'&&_currentAgentTab!=='all')renderAgentDetail(_currentAgentTab)}}
 
 function loadData(){
   fetch('/api/data').then(r=>r.json()).then(d=>{
@@ -489,7 +708,19 @@ function loadData(){
       document.getElementById('receipt-count').textContent=d.receipts.length+' receipts';
     }
     if(d.merkle_root)document.getElementById('merkle-display').textContent=d.merkle_root;
-    if(d.anchor)document.getElementById('anchor-display').textContent=d.anchor.signature||'--';
+    if(d.anchor){
+      document.getElementById('anchor-display').textContent=d.anchor.signature||'--';
+      if(d.anchor.wallet){
+        const isSep=(d.anchor.chain||'').toUpperCase().includes('SEPOLIA');
+        const explorerBase=isSep?'https://sepolia.basescan.org':'https://basescan.org';
+        document.getElementById('anchor-links').style.display='';
+        const wLink=document.getElementById('anchor-wallet-link');
+        wLink.href=explorerBase+'/address/'+d.anchor.wallet;
+        wLink.textContent=d.anchor.wallet;
+        const bLink=document.getElementById('anchor-basescan-link');
+        bLink.href=explorerBase+'/address/'+d.anchor.wallet;
+      }
+    }
 
     // Agents tab
     if(d.agents&&Object.keys(d.agents).length){
@@ -543,7 +774,7 @@ function loadData(){
     // Compliance tab
     if(d.verification&&typeof d.verification==='object'){
       const v=d.verification;
-      const c=[['Ed25519 Signatures',v.signatures],['Hash Chain',v.hash_chain],['Merkle Root',v.merkle],['Anchor',v.anchor]];
+      const c=[['Ed25519 Signatures',v.signatures],['Hash Chain',v.hash_chain],['Merkle Root',v.merkle],['x401 Identity',v.x401||'SKIP'],['Anchor',v.anchor]];
       document.getElementById('comp-verify').innerHTML='<div class="grid grid-cols-2 gap-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between p-2 rounded bg-v-bg"><span class="text-[11px] text-v-muted2">'+l+'</span><span class="text-[11px] font-mono font-semibold '+(s==='PASS'?'text-v-grn':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="text-center mt-3 font-mono text-sm font-bold '+(v.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+v.overall+'</div>';
     }
     if(d.compliance){
