@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import io
 import os
 import secrets
 import sys
@@ -17,7 +18,7 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -65,16 +66,19 @@ async def lifespan(app: FastAPI):
     iso_kid = f"isolator-verigate-init"
 
     state["agents"] = {
-        "Coordinator": {"kid": gov.coordinator._kid, "status": "Ready", "artifacts": 0, "role": "Service discovery"},
-        "Gateway": {"kid": kid, "status": "Ready", "artifacts": 0, "role": "Policy eval + receipts"},
-        "Auditor": {"kid": gov.auditor._kid, "status": "Ready", "artifacts": 0, "role": "Compliance auditing"},
-        "Investigator": {"kid": gov.investigator._kid, "status": "Ready", "artifacts": 0, "role": "Incident analysis"},
-        "Recommender": {"kid": gov.recommender._kid, "status": "Ready", "artifacts": 0, "role": "Policy proposals"},
-        "Isolator": {"kid": iso_kid, "status": "Ready", "artifacts": 0, "role": "Agent containment"},
+        "Coordinator": {"kid": gov.coordinator._kid, "status": "Ready", "artifacts": 0, "role": "x402 marketplace discovery + agent routing"},
+        "Gateway": {"kid": kid, "status": "Ready", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"},
+        "Auditor": {"kid": gov.auditor._kid, "status": "Ready", "artifacts": 0, "role": "EU AI Act / NIST / DORA compliance proof"},
+        "Investigator": {"kid": gov.investigator._kid, "status": "Ready", "artifacts": 0, "role": "Forensic evidence + severity classification"},
+        "Recommender": {"kid": gov.recommender._kid, "status": "Ready", "artifacts": 0, "role": "Circle policy recommendations"},
+        "Isolator": {"kid": iso_kid, "status": "Ready", "artifacts": 0, "role": "Forensic recording + ERC-8004 reputation"},
     }
     yield
 
 app = FastAPI(title="Verigate Live Dashboard", lifespan=lifespan)
+app._governance = None
+app._executor_jwk = None
+app._isolator_jwk = None
 
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -122,6 +126,105 @@ async def get_artifacts():
         "verification": state["verification"],
         "export_note": "Each artifact is Ed25519-signed. Verify with the agent's public key.",
     }
+
+
+@app.get("/api/verification-report.pdf")
+async def get_verification_pdf():
+    """Generate and return a downloadable PDF verification report."""
+    from app.report_pdf import generate_verification_pdf
+
+    pdf_bytes = generate_verification_pdf(
+        verification_state=state.get("verification", {}),
+        receipts=state.get("receipts", []),
+        agents=state.get("agents", {}),
+        artifacts=state.get("artifacts", []),
+        public_key_jwk=getattr(app, "_executor_jwk", None),
+    )
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=verigate-verification-report.pdf"},
+    )
+
+
+@app.post("/api/verify-artifact")
+async def verify_artifact(request: Request):
+    """Verify an artifact's hash and Ed25519 signature independently.
+
+    Recomputes SHA-256 of RFC 8785 JCS-canonicalized body and checks
+    the Ed25519 signature against the agent's public key.
+    """
+    import base64
+    import hashlib
+    from gateway.canonical import canonicalize
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    from cryptography.exceptions import InvalidSignature
+
+    data = await request.json()
+    body = data.get("body")
+    sig = data.get("sig", {})
+    claimed_hash = data.get("artifact_hash") or data.get("receipt_hash", "")
+
+    checks = []
+
+    if not body or not sig:
+        return {"verified": False, "checks": [{"name": "Envelope", "status": "FAIL", "detail": "Missing body or sig"}]}
+
+    # 1. Canonicalize + hash check
+    try:
+        body_bytes = canonicalize(body)
+        computed_hash = "sha256:" + hashlib.sha256(body_bytes).hexdigest()
+        if claimed_hash and computed_hash == claimed_hash:
+            checks.append({"name": "Hash Integrity", "status": "PASS", "detail": f"SHA-256 of JCS-canonicalized body matches: {computed_hash[:40]}..."})
+        elif claimed_hash:
+            checks.append({"name": "Hash Integrity", "status": "FAIL", "detail": f"Computed {computed_hash[:40]}... != claimed {claimed_hash[:40]}..."})
+        else:
+            checks.append({"name": "Hash Integrity", "status": "PASS", "detail": f"Computed hash: {computed_hash[:40]}..."})
+    except Exception as e:
+        checks.append({"name": "Hash Integrity", "status": "FAIL", "detail": f"Canonicalization error: {e}"})
+        return {"verified": False, "checks": checks}
+
+    # 2. Find the agent's public key by kid
+    kid = sig.get("kid", "")
+    pub_key_jwk = None
+    # Check governance system agents
+    if hasattr(app, "_governance") and app._governance:
+        for name, jwk in app._governance.get_all_keys().items():
+            if jwk.get("kid") == kid:
+                pub_key_jwk = jwk
+                break
+    # Check gateway executor
+    if not pub_key_jwk and hasattr(app, "_executor_jwk") and app._executor_jwk and app._executor_jwk.get("kid") == kid:
+        pub_key_jwk = app._executor_jwk
+    # Check isolator
+    if not pub_key_jwk and hasattr(app, "_isolator_jwk") and app._isolator_jwk and app._isolator_jwk.get("kid") == kid:
+        pub_key_jwk = app._isolator_jwk
+
+    if not pub_key_jwk:
+        checks.append({"name": "Key Lookup", "status": "WARN", "detail": f"No public key found for kid '{kid}'. Signature cannot be verified without key."})
+        return {"verified": False, "checks": checks}
+
+    checks.append({"name": "Key Lookup", "status": "PASS", "detail": f"Found Ed25519 public key for kid '{kid}'"})
+
+    # 3. Ed25519 signature verification
+    try:
+        def _b64url_decode(s):
+            s += "=" * (4 - len(s) % 4)
+            return base64.urlsafe_b64decode(s)
+
+        x_bytes = _b64url_decode(pub_key_jwk["x"])
+        public_key = Ed25519PublicKey.from_public_bytes(x_bytes)
+        sig_bytes = _b64url_decode(sig["value"])
+        public_key.verify(sig_bytes, body_bytes)
+        checks.append({"name": "Ed25519 Signature", "status": "PASS", "detail": "Signature valid — body was signed by this agent's private key"})
+    except InvalidSignature:
+        checks.append({"name": "Ed25519 Signature", "status": "FAIL", "detail": "Signature invalid — body may have been tampered with"})
+        return {"verified": False, "checks": checks}
+    except Exception as e:
+        checks.append({"name": "Ed25519 Signature", "status": "FAIL", "detail": f"Verification error: {e}"})
+        return {"verified": False, "checks": checks}
+
+    return {"verified": True, "checks": checks}
 
 
 @app.get("/api/wallets")
@@ -345,8 +448,8 @@ async def _golden_path_stream():
             },
         })
         # Emit Gateway agent info
-        state["agents"]["Gateway"] = {"kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Policy eval + receipts"}
-        yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Policy eval + receipts"})
+        state["agents"]["Gateway"] = {"kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"}
+        yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"})
         await asyncio.sleep(0.5)
 
         # Step 4: Happy path payment
@@ -549,11 +652,19 @@ async def _golden_path_stream():
         from circle.agents import GovernanceSystem
         governance = GovernanceSystem(tenant=executor.tenant)
 
+        # Store keys on app for /api/verify-artifact
+        app._governance = governance
+        app._executor_jwk = executor.get_public_key_jwk()
+        if isolation_record:
+            iso_pub = isolator._private_key.public_key().public_bytes_raw()
+            import base64 as _b64
+            app._isolator_jwk = {"kty": "OKP", "crv": "Ed25519", "kid": isolator._kid, "alg": "EdDSA", "x": _b64.urlsafe_b64encode(iso_pub).rstrip(b"=").decode("ascii")}
+
         # Have coordinator produce a service discovery artifact
         governance.coordinator.discover_services("market data")
 
         # Emit all 6 agent keys and persist
-        roles = {"Coordinator": "Service discovery", "Auditor": "Compliance auditing", "Investigator": "Incident analysis", "Recommender": "Policy proposals", "Isolator": "Agent containment"}
+        roles = {"Coordinator": "x402 marketplace discovery + agent routing", "Auditor": "EU AI Act / NIST / DORA compliance proof", "Investigator": "Forensic evidence + severity classification", "Recommender": "Circle policy recommendations", "Isolator": "Forensic recording + ERC-8004 reputation"}
         for name, kid, arts in [
             ("Coordinator", governance.coordinator._kid, len(governance.coordinator.artifacts)),
             ("Auditor", governance.auditor._kid, 0),
@@ -598,8 +709,8 @@ async def _golden_path_stream():
             # Update agent artifact counts
             state["agents"]["Investigator"]["artifacts"] = len(governance.investigator.artifacts)
             state["agents"]["Recommender"]["artifacts"] = len(governance.recommender.artifacts)
-            yield _sse("agent_info", {"name": "Investigator", "kid": governance.investigator._kid, "status": "Active", "artifacts": len(governance.investigator.artifacts), "role": "Incident analysis"})
-            yield _sse("agent_info", {"name": "Recommender", "kid": governance.recommender._kid, "status": "Active", "artifacts": len(governance.recommender.artifacts), "role": "Policy proposals"})
+            yield _sse("agent_info", {"name": "Investigator", "kid": governance.investigator._kid, "status": "Active", "artifacts": len(governance.investigator.artifacts), "role": "Forensic evidence + severity classification"})
+            yield _sse("agent_info", {"name": "Recommender", "kid": governance.recommender._kid, "status": "Active", "artifacts": len(governance.recommender.artifacts), "role": "Circle policy recommendations"})
             await asyncio.sleep(0.5)
         else:
             yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "complete",
@@ -615,7 +726,7 @@ async def _golden_path_stream():
         chain_receipts = executor.get_receipt_chain()
         state["receipts"] = chain_receipts
         state["agents"]["Gateway"]["artifacts"] = len(chain_receipts)
-        yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": len(chain_receipts), "role": "Policy eval + receipts"})
+        yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": len(chain_receipts), "role": "Deterministic policy eval + signed receipts"})
 
         for env in chain_receipts:
             governance.auditor.audit_receipt(env)
@@ -623,7 +734,7 @@ async def _golden_path_stream():
         yield _sse("step", {"id": "auditor-receipts", "title": "Auditor: Receipt Audit", "status": "complete",
                             "desc": f"Audited {len(chain_receipts)} receipts. All verdicts: ALIGNED. {len(governance.auditor.artifacts)} signed audit reports produced."})
         state["agents"]["Auditor"]["artifacts"] = len(governance.auditor.artifacts)
-        yield _sse("agent_info", {"name": "Auditor", "kid": governance.auditor._kid, "status": "Active", "artifacts": len(governance.auditor.artifacts), "role": "Compliance auditing"})
+        yield _sse("agent_info", {"name": "Auditor", "kid": governance.auditor._kid, "status": "Active", "artifacts": len(governance.auditor.artifacts), "role": "EU AI Act / NIST / DORA compliance proof"})
         await asyncio.sleep(0.5)
 
         # Step 10: Receipt chain
@@ -745,6 +856,7 @@ async def _golden_path_stream():
                 env = ir.envelope_dict()
                 env["agent"] = "isolator"
                 env["artifact_type"] = "isolation_record"
+                env["artifact_hash"] = env.get("receipt_hash", "")
                 iso_artifacts.append(env)
         state["artifacts"] = all_artifacts + iso_artifacts
         total_signed_artifacts = len(chain_receipts) + len(all_artifacts) + len(iso_artifacts)
@@ -849,8 +961,8 @@ async def _rogue_path_stream():
                 })
                 await asyncio.sleep(1.0)
 
-        # Isolator
-        yield _sse("step", {"id": "isolator", "title": "Isolator Activated", "status": "running"})
+        # Forensic Recorder
+        yield _sse("step", {"id": "isolator", "title": "Forensic Recorder: Incident Documentation", "status": "running"})
         await asyncio.sleep(0.5)
 
         rogue_rep_writer = ReputationWriter(chain=chain, wallet_address=wallet)
@@ -911,11 +1023,9 @@ async def _rogue_path_stream():
                 })
                 await asyncio.sleep(0.5)
 
-        yield _sse("step", {"id": "isolator", "title": "Isolator Activated", "status": "complete",
+        yield _sse("step", {"id": "isolator", "title": "Forensic Recorder: Incident Documentation", "status": "complete",
                             "details": {
-                                "agent_revoked": isolator.is_agent_revoked("ops-agent"),
-                                "wallet_frozen": isolator.is_wallet_frozen(),
-                                "isolation_records": len(isolator.records),
+                                "forensic_records": len(isolator.records),
                                 "reputation_events": len(rogue_rep_writer.events),
                             }})
         await asyncio.sleep(0.5)
