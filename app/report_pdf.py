@@ -207,11 +207,11 @@ def generate_verification_pdf(
 
     checks = []
     for key, label in [
-        ("signature_check", "Ed25519 Signatures"),
-        ("chain_check", "Hash Chain Integrity"),
-        ("merkle_check", "Merkle Root (RFC 6962)"),
-        ("x401_check", "x401 Identity Binding"),
-        ("anchor_check", "Wallet-Signed Anchor"),
+        ("signatures", "Ed25519 Signatures"),
+        ("hash_chain", "Hash Chain Integrity"),
+        ("merkle", "Merkle Root (RFC 6962)"),
+        ("x401", "x401 Identity Binding"),
+        ("anchor", "Wallet-Signed Anchor"),
         ("overall", "Overall Verdict"),
     ]:
         val = verification.get(key, "NOT RUN")
