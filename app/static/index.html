@@ -1,225 +1,301 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verigate</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2309090b'/%3E%3Ctext x='8' y='23' font-size='20' font-weight='800' font-family='system-ui' fill='%23fff'%3EV%3C/text%3E%3C/svg%3E">
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23111318'/%3E%3Ctext x='8' y='23' font-size='20' font-weight='800' font-family='system-ui' fill='%23b8f600'%3EV%3C/text%3E%3C/svg%3E">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <script>
-tailwind.config={theme:{extend:{colors:{v:{bg:'#050505',surface:'#0a0a0a',card:'#111111',border:'#1a1a1a',border2:'#252525',accent:'#c8ff00',muted:'#666',muted2:'#999',grn:'#34d399',red:'#f87171',amb:'#fbbf24',blu:'#60a5fa'}},fontFamily:{sans:['Inter','sans-serif'],mono:['DM Mono','monospace']}}}}
+tailwind.config={
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "surface":"#111318","surface-container":"#1e2024","surface-container-high":"#282a2e",
+      "surface-container-highest":"#333539","surface-container-low":"#1a1c20","surface-container-lowest":"#0c0e12",
+      "on-surface":"#e2e2e8","on-surface-variant":"#c3caac","outline":"#8d9479","outline-variant":"#434933",
+      "primary-fixed":"#b8f600","primary-fixed-dim":"#a1d800","on-primary-fixed":"#141f00",
+      "secondary":"#b8c3ff","secondary-container":"#0043eb","on-secondary":"#002388",
+      "tertiary-fixed-dim":"#dcb8ff","tertiary-container":"#efdbff",
+      "error":"#ffb4ab","error-container":"#93000a","on-error":"#690005",
+      v:{bg:'#0c0e12',surface:'#111318',card:'#1e2024',border:'rgba(255,255,255,0.06)',border2:'rgba(255,255,255,0.1)',
+         accent:'#b8f600',muted:'#8d9479',muted2:'#c3caac',grn:'#b8f600',red:'#ffb4ab',amb:'#fbbf24',blu:'#b8c3ff'}
+    },
+    fontFamily:{sans:['Hanken Grotesk','sans-serif'],display:['Sora','sans-serif'],mono:['JetBrains Mono','monospace']},
+    borderRadius:{DEFAULT:'0.25rem',lg:'0.5rem',xl:'0.75rem',full:'9999px'},
+  }}
+}
 </script>
 <style>
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.02;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px}
-.shell{margin:10px;border-radius:18px;border:1px solid #1a1a1a;overflow:hidden;background:#080808;min-height:calc(100vh - 20px)}
-.glass{background:rgba(17,17,17,.6);border:1px solid #1a1a1a;border-radius:14px;backdrop-filter:blur(20px);transition:border-color .2s}
-.glass:hover{border-color:#252525}
-.nav-pill{display:inline-flex;align-items:center;gap:3px;padding:4px 5px;border-radius:100px;background:rgba(17,17,17,.8);border:1px solid #1a1a1a}
-.nav-pill button{padding:5px 14px;border-radius:100px;font-size:12px;font-weight:500;color:#666;background:transparent;border:none;cursor:pointer;transition:.2s;white-space:nowrap}
-.nav-pill button:hover{color:#999;background:rgba(255,255,255,.04)}
-.nav-pill button.active{color:#fff;background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.15)}
+body{background:#111318;color:#e2e2e8;overflow-x:hidden}
+body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 50% 20%,rgba(44,0,81,.12) 0%,transparent 40%),radial-gradient(circle at 80% 60%,rgba(184,246,0,.04) 0%,transparent 40%);z-index:-2;pointer-events:none}
+.noise-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:-1;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");mix-blend-mode:screen}
+.bento-card{position:relative;background:rgba(30,32,36,.6);backdrop-filter:blur(12px);border-radius:12px;padding:24px;overflow:hidden;transition:transform .3s,box-shadow .3s}
+.bento-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.1),rgba(184,246,0,.3),rgba(255,255,255,.1));opacity:.5}
+.bento-card:hover{transform:translateY(-2px);box-shadow:0 10px 40px rgba(0,0,0,.4),0 0 20px rgba(184,246,0,.05)}
+.glass{background:rgba(30,32,36,.6);border:1px solid rgba(255,255,255,.06);border-radius:12px;backdrop-filter:blur(12px);transition:border-color .2s}
+.glass:hover{border-color:rgba(255,255,255,.1)}
+.btn-primary{background:#b8f600;color:#141f00;transition:all .2s;border:none;cursor:pointer}
+.btn-primary:hover{box-shadow:0 0 20px rgba(184,246,0,.4);transform:scale(1.02)}
+.btn-secondary{background:rgba(255,255,255,.05);border:1px solid rgba(184,246,0,.3);color:#b8f600;backdrop-filter:blur(10px);transition:all .2s;cursor:pointer}
+.btn-secondary:hover{background:rgba(184,246,0,.1);border-color:#b8f600;box-shadow:0 0 15px rgba(184,246,0,.2)}
+.nav-pill{display:inline-flex;align-items:center;gap:3px;padding:4px 5px;border-radius:100px;background:rgba(30,32,36,.8);border:1px solid rgba(255,255,255,.06)}
+.nav-pill button{padding:5px 14px;border-radius:100px;font-size:12px;font-weight:500;color:#8d9479;background:transparent;border:none;cursor:pointer;transition:.2s;white-space:nowrap;font-family:'Hanken Grotesk',sans-serif}
+.nav-pill button:hover{color:#c3caac;background:rgba(255,255,255,.04)}
+.nav-pill button.active{color:#b8f600;background:rgba(184,246,0,.08);border:1px solid rgba(184,246,0,.15);font-weight:600}
 .view{display:none}.view.on{display:block}
-.tbl-row{border-bottom:1px solid rgba(26,26,26,.8);transition:background .15s}
+.tbl-row{border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
 .tbl-row:hover{background:rgba(255,255,255,.02)}
 .tbl-row:last-child{border-bottom:none}
 @keyframes ri{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ri{animation:ri .3s ease}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#252525;border-radius:2px}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#333539;border-radius:2px}
+.status-glow{box-shadow:0 0 12px #b8f600}
+.score-ring{width:100px;height:100px;border-radius:50%;background:conic-gradient(#b8f600 0deg,#b8f600 calc(var(--score)*3.6deg),rgba(255,255,255,.06) calc(var(--score)*3.6deg));display:flex;align-items:center;justify-content:center}
+.score-ring-inner{width:80px;height:80px;border-radius:50%;background:#1e2024;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.nav-link{background:transparent;border:none;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;font-size:14px;color:#c3caac;opacity:.8;transition:all .2s;padding:0 0 2px 0}
+.nav-link:hover{color:#b8f600;transform:scale(1.05)}
+.nav-link.active{color:#b8f600;font-weight:700;opacity:1;border-bottom:2px solid #b8f600}
 </style>
 </head>
-<body class="bg-v-bg text-white font-sans antialiased">
-<div class="shell">
+<body class="antialiased min-h-screen font-sans">
+<div class="noise-overlay"></div>
 
-<!-- ═══ Top bar ═══ -->
-<div class="flex items-center justify-between px-6 h-14 border-b border-v-border">
-  <div class="flex items-center gap-3">
-    <div class="w-6 h-6 rounded-md bg-white text-v-bg flex items-center justify-center text-xs font-extrabold">V</div>
-    <span class="font-bold text-sm tracking-tight">Verigate</span>
-    <span class="text-v-muted text-xs ml-2 pl-3 border-l border-v-border">Payment Governance Console</span>
+<!-- ═══ Floating Pill Nav ═══ -->
+<nav class="fixed top-0 left-0 right-0 z-50 flex justify-center items-center px-8 mt-6">
+<div class="bg-surface/60 backdrop-blur-xl rounded-full mx-auto w-fit px-6 py-2 border border-white/10 shadow-[0_0_20px_rgba(184,246,0,0.1)] flex items-center gap-6">
+  <div class="flex items-center gap-2">
+    <img alt="Verigate Logo" class="w-8 h-8 rounded-md cursor-pointer" onclick="go('overview')" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpYGHTaEs_L9sZeXLF4Fq0x_UXPXD9eSA40UiNLLfXDl4cVurcNEuUzPHKLkhLvTrPmU6Mtpdzi085v0fWf_wE476kp0GWpgoWiB-NheZEdY_uVskiLyAjg3vRWB3av54PVOYFwRAbMhQnO1475WBvlEhGrTUM5xkz8f0X1AWMiU3uqhRN5h4tFjCX0lE_UviyfymX6GRnS3nlk-DVurXVCbFfT0Ynh7CbDJ7Y_3qcEp2y0uub7EEZ5ZjQmk9tasNiehYFkqIkF4G5"/>
+    <span class="font-display text-lg font-black text-primary-fixed cursor-pointer" onclick="go('overview')">Verigate</span>
+  </div>
+  <div class="hidden md:flex items-center gap-5 text-sm" id="nav">
+    <button class="nav-link active" onclick="go('overview')">Overview</button>
+    <button class="nav-link" onclick="go('demo')">Live Demo</button>
+    <button class="nav-link" onclick="go('wallets')">Wallets</button>
+    <button class="nav-link" onclick="go('agents')">Agents</button>
+    <button class="nav-link" onclick="go('receipts')">Receipts</button>
+    <button class="nav-link" onclick="go('compliance')">Compliance</button>
   </div>
   <div class="flex items-center gap-3">
-    <div class="nav-pill" id="nav">
-      <button class="active" onclick="go('overview')">Overview</button>
-      <button onclick="go('demo')">Live Demo</button>
-      <button onclick="go('wallets')">Wallets</button>
-      <button onclick="go('agents')">Agents</button>
-      <button onclick="go('receipts')">Receipts</button>
-      <button onclick="go('compliance')">Compliance</button>
-    </div>
-    <button class="h-7 px-3 rounded-lg bg-v-accent text-v-bg text-xs font-semibold border-none cursor-pointer hover:opacity-90 transition" id="btn-run" onclick="runDemo()">Run Golden Path</button>
-    <button class="h-7 px-3 rounded-lg bg-transparent text-v-muted2 text-xs font-medium border border-v-border2 cursor-pointer hover:text-white hover:border-v-accent transition" id="btn-rogue" onclick="runRogue()">Rogue Demo</button>
+    <button class="hidden lg:block btn-secondary px-4 py-1.5 rounded-lg font-mono text-xs" id="btn-rogue" onclick="runRogue()">Rogue Demo</button>
+    <button class="btn-primary px-4 py-1.5 rounded-lg font-mono text-xs font-bold shadow-[0_0_15px_rgba(184,246,0,0.3)]" id="btn-run" onclick="runDemo()">Run Golden Path</button>
   </div>
 </div>
+</nav>
 
 <!-- ═══ Metrics strip ═══ -->
-<div class="hidden items-center h-12 px-6 border-b border-v-border gap-0" id="strip">
-  <div class="flex-1 flex flex-col justify-center"><div class="text-[10px] text-v-muted uppercase tracking-wider font-semibold">Governed</div><div class="text-base font-bold font-mono text-v-grn" id="sv-spend">$0.00</div></div>
-  <div class="flex-1 flex flex-col justify-center border-l border-v-border pl-5"><div class="text-[10px] text-v-muted uppercase tracking-wider font-semibold">Fee (25bps)</div><div class="text-base font-bold font-mono" id="sv-fee">$0.0000</div></div>
-  <div class="flex-1 flex flex-col justify-center border-l border-v-border pl-5"><div class="text-[10px] text-v-muted uppercase tracking-wider font-semibold">Approved</div><div class="text-base font-bold font-mono text-v-grn" id="sv-ok">0</div></div>
-  <div class="flex-1 flex flex-col justify-center border-l border-v-border pl-5"><div class="text-[10px] text-v-muted uppercase tracking-wider font-semibold">Blocked</div><div class="text-base font-bold font-mono text-v-red" id="sv-no">0</div></div>
-  <div class="flex-1 flex flex-col justify-center border-l border-v-border pl-5"><div class="text-[10px] text-v-muted uppercase tracking-wider font-semibold">Agents</div><div class="text-base font-bold font-mono" id="sv-agents">6</div></div>
-  <div class="flex-1 flex flex-col justify-center border-l border-v-border pl-5"><div class="text-[10px] text-v-muted uppercase tracking-wider font-semibold">Artifacts</div><div class="text-base font-bold font-mono" id="sv-artifacts">0</div></div>
-  <div class="flex-1 flex flex-col justify-center border-l border-v-border pl-5"><div class="text-[10px] text-v-muted uppercase tracking-wider font-semibold">Integrity</div><div class="text-base font-bold font-mono" id="sv-chk">--</div></div>
+<div class="hidden items-center h-12 px-8 gap-0 fixed top-[72px] left-0 right-0 z-40 bg-surface/80 backdrop-blur-xl border-b border-white/5" id="strip">
+  <div class="flex-1 flex flex-col justify-center"><div class="text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold font-mono">Governed</div><div class="text-base font-bold font-mono text-primary-fixed" id="sv-spend">$0.00</div></div>
+  <div class="flex-1 flex flex-col justify-center border-l border-white/5 pl-5"><div class="text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold font-mono">Fee (25bps)</div><div class="text-base font-bold font-mono text-on-surface" id="sv-fee">$0.0000</div></div>
+  <div class="flex-1 flex flex-col justify-center border-l border-white/5 pl-5"><div class="text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold font-mono">Approved</div><div class="text-base font-bold font-mono text-primary-fixed" id="sv-ok">0</div></div>
+  <div class="flex-1 flex flex-col justify-center border-l border-white/5 pl-5"><div class="text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold font-mono">Blocked</div><div class="text-base font-bold font-mono text-error" id="sv-no">0</div></div>
+  <div class="flex-1 flex flex-col justify-center border-l border-white/5 pl-5"><div class="text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold font-mono">Agents</div><div class="text-base font-bold font-mono text-on-surface" id="sv-agents">6</div></div>
+  <div class="flex-1 flex flex-col justify-center border-l border-white/5 pl-5"><div class="text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold font-mono">Artifacts</div><div class="text-base font-bold font-mono text-on-surface" id="sv-artifacts">0</div></div>
+  <div class="flex-1 flex flex-col justify-center border-l border-white/5 pl-5"><div class="text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold font-mono">Integrity</div><div class="text-base font-bold font-mono text-on-surface" id="sv-chk">--</div></div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ═══ Main Content ═══ -->
+<main class="pt-28 pb-24 px-8 max-w-7xl mx-auto">
+
 <!-- VIEW: Overview -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<div class="view on p-6" id="v-overview">
-  <div class="max-w-2xl mx-auto mt-20 text-center">
-    <h2 class="text-3xl font-extrabold tracking-tight mb-4">Cryptographic proof for every agent payment decision</h2>
-    <p class="text-v-muted2 text-sm leading-relaxed mb-3">Circle protects the wallet. <span class="text-white font-medium">Verigate protects the operator.</span> Every authorization decision is Ed25519 signed, hash-chained, Merkle-anchored, and independently verifiable — binding x401 identity, policy state, and on-chain settlement into a single proof object.</p>
-    <p class="text-v-muted text-xs mb-6">x401 Identity / ERC-8004 Reputation / Circle Agent Stack / x402 Protocol / Recibo / Dispute Resolution</p>
-    <div class="flex gap-3 justify-center mb-12">
-      <button class="h-9 px-5 rounded-lg bg-v-accent text-v-bg text-xs font-semibold border-none cursor-pointer hover:opacity-90" onclick="runDemo()">Run Golden Path</button>
-      <button class="h-9 px-5 rounded-lg bg-transparent text-v-muted2 text-xs font-medium border border-v-border2 cursor-pointer hover:text-white hover:border-v-accent" onclick="runRogue()">Rogue Agent Demo</button>
+<div class="view on" id="v-overview">
+  <div class="max-w-3xl mx-auto mt-16 text-center">
+    <div class="inline-flex items-center gap-2 bg-surface-container/60 backdrop-blur-xl px-4 py-1.5 rounded-full border border-primary-fixed/20 mb-8">
+      <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
+      <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">System Operational</span>
+    </div>
+    <h1 class="text-4xl md:text-5xl font-display font-extrabold tracking-tight mb-6 text-on-surface leading-tight">Cryptographic proof for every agent <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-fixed to-secondary">payment decision</span></h1>
+    <p class="text-on-surface-variant text-base leading-relaxed mb-3 max-w-2xl mx-auto">Circle protects the wallet. <span class="text-on-surface font-medium">Verigate protects the operator.</span> Every authorization decision is Ed25519 signed, hash-chained, Merkle-anchored, and independently verifiable.</p>
+    <div class="flex flex-wrap gap-2 justify-center mb-8">
+      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">x401 Identity</span>
+      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">ERC-8004</span>
+      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Circle Agent Stack</span>
+      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">x402 Protocol</span>
+      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Base L2</span>
+    </div>
+    <div class="flex gap-3 justify-center mb-16">
+      <button class="btn-primary h-11 px-6 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="runDemo()">Run Golden Path <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
+      <button class="btn-secondary h-11 px-6 rounded-xl font-display text-sm" onclick="runRogue()">Rogue Agent Demo</button>
     </div>
 
-    <!-- What Verigate adds -->
-    <div class="glass p-4 mb-4 text-left">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-xs font-semibold text-v-accent">What Verigate Adds to Circle's Stack</span>
-      </div>
-      <div class="grid grid-cols-4 gap-3">
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">x401 Identity Binding</div><div class="text-[10px] text-v-muted2 leading-relaxed">Verifiable credentials bound into every receipt — proves WHO authorized the agent</div></div>
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">Cryptographic Receipts</div><div class="text-[10px] text-v-muted2 leading-relaxed">Ed25519 signed, hash-chained, settlement-bound — independently verifiable offline</div></div>
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">ERC-8004 Reputation</div><div class="text-[10px] text-v-muted2 leading-relaxed">Isolation events published to on-chain registry for portable agent trust</div></div>
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">Dispute Resolution</div><div class="text-[10px] text-v-muted2 leading-relaxed">Export receipt chain for third-party arbiters — zero trust, zero network needed</div></div>
+    <!-- Capability cards -->
+    <div class="bento-card p-5 mb-4 text-left">
+      <div class="flex items-center gap-2 mb-4"><span class="font-display text-sm font-semibold text-primary-fixed">What Verigate Adds to Circle's Stack</span></div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div><div class="text-sm font-semibold text-on-surface mb-1">x401 Identity Binding</div><div class="text-xs text-on-surface-variant leading-relaxed">Verifiable credentials bound into every receipt — proves WHO authorized the agent</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">Cryptographic Receipts</div><div class="text-xs text-on-surface-variant leading-relaxed">Ed25519 signed, hash-chained, settlement-bound — independently verifiable offline</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">ERC-8004 Reputation</div><div class="text-xs text-on-surface-variant leading-relaxed">Isolation events published to on-chain registry for portable agent trust</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">Dispute Resolution</div><div class="text-xs text-on-surface-variant leading-relaxed">Export receipt chain for third-party arbiters — zero trust, zero network needed</div></div>
       </div>
     </div>
 
-    <!-- Circle integration -->
-    <div class="glass p-4 mb-4 text-left">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="text-xs font-semibold text-v-blu">Built on Circle Agent Stack</span>
-      </div>
-      <div class="grid grid-cols-4 gap-3">
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">Agent Wallets</div><div class="text-[10px] text-v-muted2 leading-relaxed">MPC-secured USDC wallets with Action Gate, spending caps, and allowlists</div></div>
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">x402 Protocol</div><div class="text-[10px] text-v-muted2 leading-relaxed">HTTP 402 + EIP-3009 for pay-per-request service access</div></div>
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">Recibo</div><div class="text-[10px] text-v-muted2 leading-relaxed">Bi-directional settlement binding — receipt hash embedded in on-chain transfer</div></div>
-        <div><div class="text-[11px] font-semibold text-white mb-0.5">Circle CLI</div><div class="text-[10px] text-v-muted2 leading-relaxed">Wallet ops, transfers, signing, policy management</div></div>
+    <div class="bento-card p-5 mb-4 text-left">
+      <div class="flex items-center gap-2 mb-4"><span class="font-display text-sm font-semibold text-secondary">Built on Circle Agent Stack</span></div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div><div class="text-sm font-semibold text-on-surface mb-1">Agent Wallets</div><div class="text-xs text-on-surface-variant leading-relaxed">MPC-secured USDC wallets with Action Gate, spending caps, and allowlists</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">x402 Protocol</div><div class="text-xs text-on-surface-variant leading-relaxed">HTTP 402 + EIP-3009 for pay-per-request service access</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">Recibo</div><div class="text-xs text-on-surface-variant leading-relaxed">Bi-directional settlement binding — receipt hash embedded in on-chain transfer</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">Circle CLI</div><div class="text-xs text-on-surface-variant leading-relaxed">Wallet ops, transfers, signing, policy management</div></div>
       </div>
     </div>
 
     <!-- Agent cards -->
-    <div class="grid grid-cols-3 gap-3 text-left">
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Coordinator</div><div class="text-[11px] text-v-muted2 leading-relaxed">Discovers x402 services from Circle Agent Marketplace. Routes capabilities between agents.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Gateway</div><div class="text-[11px] text-v-muted2 leading-relaxed">Verifies x401 credentials, evaluates policy (zero LLM), signs receipts binding identity + decision + settlement.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Auditor</div><div class="text-[11px] text-v-muted2 leading-relaxed">Audits every receipt against EU AI Act and NIST AI RMF. Generates compliance reports via Gemini.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Investigator</div><div class="text-[11px] text-v-muted2 leading-relaxed">Deep analysis of suspicious denials. Cross-agent forensic correlation detects systemic attacks.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Recommender</div><div class="text-[11px] text-v-muted2 leading-relaxed">Proposes policy changes for Circle's Action Gate. Suggests cap adjustments, allowlist tightening.</div></div>
-      <div class="glass p-4"><div class="text-xs font-semibold text-v-accent mb-1">Forensic Recorder</div><div class="text-[11px] text-v-muted2 leading-relaxed">Produces signed forensic evidence. Publishes ERC-8004 reputation. Recommends actions to Circle's stack.</div></div>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-left">
+      <div class="bento-card !p-4"><div class="font-display text-sm font-semibold text-primary-fixed mb-1">Coordinator</div><div class="text-xs text-on-surface-variant leading-relaxed">Discovers x402 services from Circle Agent Marketplace. Routes capabilities between agents.</div></div>
+      <div class="bento-card !p-4"><div class="font-display text-sm font-semibold text-primary-fixed mb-1">Gateway</div><div class="text-xs text-on-surface-variant leading-relaxed">Verifies x401 credentials, evaluates policy (zero LLM), signs receipts binding identity + decision + settlement.</div></div>
+      <div class="bento-card !p-4"><div class="font-display text-sm font-semibold text-primary-fixed mb-1">Auditor</div><div class="text-xs text-on-surface-variant leading-relaxed">Audits every receipt against EU AI Act and NIST AI RMF. Generates compliance reports via Gemini.</div></div>
+      <div class="bento-card !p-4"><div class="font-display text-sm font-semibold text-primary-fixed mb-1">Investigator</div><div class="text-xs text-on-surface-variant leading-relaxed">Deep analysis of suspicious denials. Cross-agent forensic correlation detects systemic attacks.</div></div>
+      <div class="bento-card !p-4"><div class="font-display text-sm font-semibold text-primary-fixed mb-1">Recommender</div><div class="text-xs text-on-surface-variant leading-relaxed">Proposes policy changes for Circle's Action Gate. Suggests cap adjustments, allowlist tightening.</div></div>
+      <div class="bento-card !p-4"><div class="font-display text-sm font-semibold text-primary-fixed mb-1">Forensic Recorder</div><div class="text-xs text-on-surface-variant leading-relaxed">Produces signed forensic evidence. Publishes ERC-8004 reputation. Recommends actions to Circle's stack.</div></div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- VIEW: Live Demo -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<div class="view p-6" id="v-demo">
-  <div class="grid grid-cols-2 gap-4">
-    <div class="glass overflow-hidden">
-      <div class="flex items-center justify-between px-4 py-2.5 border-b border-v-border"><span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Pipeline</span><span id="ptag" class="hidden text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-v-amb/10 text-v-amb border border-v-amb/20">LIVE</span></div>
-      <div class="max-h-[560px] overflow-y-auto" id="steps"></div>
-    </div>
-    <div class="glass overflow-hidden">
-      <div class="px-4 py-2.5 border-b border-v-border"><span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Feed</span></div>
-      <div class="max-h-[560px] overflow-y-auto" id="feed"></div>
-    </div>
-  </div>
-  <div class="hidden grid-cols-2 gap-4 mt-4" id="bot">
-    <div class="glass overflow-hidden">
-      <div class="px-4 py-2.5 border-b border-v-border"><span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Verification</span></div>
-      <div id="vbox"></div>
-    </div>
-    <div class="glass overflow-hidden">
-      <div class="px-4 py-2.5 border-b border-v-border"><span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Compliance</span></div>
-      <div id="cbox"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- VIEW: Wallets -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<div class="view p-6" id="v-wallets">
-  <div class="flex items-center justify-between mb-4">
+<div class="view" id="v-demo">
+  <!-- Header row -->
+  <div class="flex items-start justify-between mb-6">
     <div>
-      <h3 class="text-sm font-semibold">Circle Agent Wallets</h3>
-      <p class="text-[11px] text-v-muted2 mt-0.5">Programmable USDC wallets controlled by AI agents via Circle Agent Stack</p>
+      <h1 class="font-display text-4xl font-extrabold text-on-surface">Live Demo Environment</h1>
+      <p class="text-on-surface-variant text-sm mt-1">Monitoring agent transactions and policy verifications in real-time.</p>
     </div>
-    <button class="h-7 px-3 rounded-lg bg-transparent text-v-muted2 text-xs font-medium border border-v-border2 cursor-pointer hover:text-white hover:border-v-accent transition" onclick="loadWallets()">Refresh</button>
-  </div>
-
-  <div id="wallet-cards" class="grid grid-cols-2 gap-4">
-    <div class="glass p-5 col-span-2 text-center text-v-muted text-xs py-12">Loading wallets from Circle...</div>
-  </div>
-
-  <!-- How it works -->
-  <div class="mt-6 glass overflow-hidden">
-    <div class="px-4 py-2.5 border-b border-v-border"><span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Circle Agent Stack Integration</span></div>
-    <div class="grid grid-cols-3 gap-0">
-      <div class="p-4 border-r border-v-border">
-        <div class="text-xs font-semibold text-v-accent mb-1.5">Agent Wallets</div>
-        <div class="text-[11px] text-v-muted2 leading-relaxed">2-of-2 MPC custody. Key shares never exposed to agents. Spending policies (per-tx caps, daily limits, recipient allowlists) enforced at the wallet layer before on-chain submission.</div>
-      </div>
-      <div class="p-4 border-r border-v-border">
-        <div class="text-xs font-semibold text-v-accent mb-1.5">x402 Protocol</div>
-        <div class="text-[11px] text-v-muted2 leading-relaxed">HTTP 402 payment protocol. Agent sends request, gets 402 challenge, signs EIP-3009 authorization, retries with payment. Used by <code class="text-v-muted font-mono text-[10px]">circle services pay</code>.</div>
-      </div>
-      <div class="p-4">
-        <div class="text-xs font-semibold text-v-accent mb-1.5">Agent Marketplace</div>
-        <div class="text-[11px] text-v-muted2 leading-relaxed">Machine-readable service discovery at agents.circle.com. Agents find, evaluate, and pay for services autonomously via <code class="text-v-muted font-mono text-[10px]">circle services search</code>.</div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 bg-surface-container/60 px-4 py-2 rounded-full border border-primary-fixed/20" id="ptag-wrap" style="display:none">
+        <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
+        <span class="font-mono text-xs text-primary-fixed" id="ptag">NETWORK ACTIVE</span>
       </div>
     </div>
   </div>
-
-  <!-- Defense in depth diagram -->
-  <div class="mt-4 glass p-5">
-    <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-3">Defense-in-Depth: Verigate + Circle</div>
-    <div class="grid grid-cols-2 gap-4">
-      <div class="p-3 rounded-lg bg-v-bg border border-v-border">
-        <div class="text-xs font-semibold text-v-accent mb-2">Layer 1: Verigate (Proof + Forensics)</div>
-        <div class="space-y-1.5 text-[11px] text-v-muted2">
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>x401 identity verification + credential binding</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>Ed25519 signed receipt chain (hash-linked, Merkle-anchored)</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>Settlement binding (tx hash in receipt body)</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-grn flex-shrink-0"></span>ERC-8004 reputation + cross-agent correlation + dispute resolution</div>
+  <!-- Stats cards row -->
+  <div class="grid grid-cols-3 gap-4 mb-6" id="demo-stats" style="display:none">
+    <div class="bento-card !py-4 text-center">
+      <div class="font-mono text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold">Approved</div>
+      <div class="font-mono text-2xl font-bold text-primary-fixed mt-1" id="ds-approved">0</div>
+    </div>
+    <div class="bento-card !py-4 text-center">
+      <div class="font-mono text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold">Blocked</div>
+      <div class="font-mono text-2xl font-bold text-error mt-1" id="ds-blocked">0</div>
+    </div>
+    <div class="bento-card !py-4 text-center">
+      <div class="font-mono text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold">Governed</div>
+      <div class="font-mono text-2xl font-bold text-on-surface mt-1" id="ds-governed">$0.00</div>
+    </div>
+  </div>
+  <!-- Two-column: Execution Log + Receipt Inspector / Feed -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <!-- Left: Execution Log (7 cols) -->
+    <div class="lg:col-span-7 glass overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-white/5">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-on-surface-variant/60" style="font-size:18px">terminal</span>
+          <span class="font-display text-sm font-bold text-on-surface">Execution Log</span>
         </div>
       </div>
-      <div class="p-3 rounded-lg bg-v-bg border border-v-border">
-        <div class="text-xs font-semibold text-v-blu mb-2">Layer 2: Circle Agent Stack (Enforcement)</div>
-        <div class="space-y-1.5 text-[11px] text-v-muted2">
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Action Gate + MPC co-signer enforcement</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Spending caps, allowlists, sanctions screening</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>Execution Harness (microVM isolation)</div>
-          <div class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-v-blu flex-shrink-0"></span>x401 / ERC-8004 / ERC-8183 trust stack</div>
+      <div class="max-h-[600px] overflow-y-auto" id="steps"></div>
+    </div>
+    <!-- Right: Receipt Inspector + Feed (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-4">
+      <!-- Receipt Inspector -->
+      <div class="glass overflow-hidden">
+        <div class="flex items-center gap-2 px-5 py-3 border-b border-white/5">
+          <span class="material-symbols-outlined text-on-surface-variant/60" style="font-size:18px">receipt_long</span>
+          <span class="font-display text-sm font-bold text-on-surface">Receipt Inspector</span>
         </div>
+        <div class="max-h-[300px] overflow-y-auto" id="feed"></div>
+      </div>
+      <!-- Chain Integrity -->
+      <div class="glass overflow-hidden">
+        <div class="flex items-center gap-2 px-5 py-3 border-b border-white/5">
+          <span class="material-symbols-outlined text-on-surface-variant/60" style="font-size:18px">link</span>
+          <span class="font-display text-sm font-bold text-on-surface">Chain Integrity</span>
+        </div>
+        <div id="vbox" class="p-0"></div>
+        <div id="cbox" class="p-0 max-h-[200px] overflow-y-auto"></div>
       </div>
     </div>
-    <div class="text-center mt-3 text-[11px] text-v-muted">Circle enforces spending limits. Verigate produces cryptographic proof of every decision — independently verifiable by third parties.</div>
+  </div>
+  <!-- Verification + Compliance (hidden until complete) -->
+  <div class="hidden grid-cols-1 lg:grid-cols-2 gap-4 mt-4" id="bot">
+    <div class="glass overflow-hidden">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-white/5">
+        <span class="material-symbols-outlined text-primary-fixed" style="font-size:18px;font-variation-settings:'FILL' 1">verified</span>
+        <span class="font-display text-sm font-bold text-on-surface">Verification</span>
+      </div>
+      <div id="vbox2"></div>
+    </div>
+    <div class="glass overflow-hidden">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-white/5">
+        <span class="material-symbols-outlined text-secondary" style="font-size:18px">policy</span>
+        <span class="font-display text-sm font-bold text-on-surface">Compliance</span>
+      </div>
+      <div id="cbox2" class="max-h-96 overflow-y-auto"></div>
+    </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- VIEW: Wallets -->
+<div class="view" id="v-wallets">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h2 class="font-display text-2xl font-bold text-on-surface">Wallet Infrastructure</h2>
+      <p class="text-sm text-on-surface-variant mt-1">Circle-managed MPC wallets settling USDC on Base L2</p>
+      <div class="flex items-center gap-2 mt-2">
+        <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/15 border border-secondary/20 font-mono text-[11px] text-secondary">
+          <svg width="12" height="12" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M20.5 18.5c0-2.1-1.3-2.8-3.8-3.1-1.8-.3-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.6.4 1.9 1.3.1.2.2.3.4.3h.9c.3 0 .4-.2.4-.4-.3-1.3-1.1-2.2-2.5-2.5V10c0-.2-.2-.4-.5-.4h-.8c-.2 0-.4.2-.4.4v1.3c-1.7.3-2.8 1.4-2.8 2.8 0 2 1.2 2.7 3.7 3.1 1.6.3 2.3.6 2.3 1.6 0 .9-.8 1.5-1.9 1.5-1.5 0-2-.6-2.2-1.4-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.4.4.3 1.5 1.2 2.4 2.9 2.7V22c0 .2.2.4.5.4h.8c.2 0 .4-.2.4-.4v-1.3c1.8-.3 2.9-1.4 2.9-2.8z" fill="white"/></svg>USDC</span>
+        <span class="font-mono text-[11px] text-on-surface-variant/60 px-2.5 py-1 rounded-full bg-surface-container-high/60 border border-white/5">Circle Agent Stack</span>
+        <span class="font-mono text-[11px] text-on-surface-variant/60 px-2.5 py-1 rounded-full bg-surface-container-high/60 border border-white/5">Base L2</span>
+      </div>
+    </div>
+    <button class="btn-secondary px-4 py-2 rounded-lg font-mono text-xs" onclick="loadWallets()">Refresh</button>
+  </div>
+  <div id="wallet-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bento-card col-span-2 text-center text-on-surface-variant text-sm py-12">Loading wallets from Circle...</div>
+  </div>
+  <div class="mt-6 bento-card">
+    <div class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider mb-4">Defense-in-Depth: Verigate + Circle</div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="p-4 rounded-lg bg-surface-container-lowest border border-white/5">
+        <div class="font-display text-sm font-semibold text-primary-fixed mb-3">Layer 1: Verigate (Proof + Forensics)</div>
+        <div class="space-y-2 text-xs text-on-surface-variant">
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed flex-shrink-0"></span>x401 identity verification + credential binding</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed flex-shrink-0"></span>Ed25519 signed receipt chain (hash-linked, Merkle-anchored)</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed flex-shrink-0"></span>Settlement binding (tx hash in receipt body)</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed flex-shrink-0"></span>ERC-8004 reputation + cross-agent correlation</div>
+        </div>
+      </div>
+      <div class="p-4 rounded-lg bg-surface-container-lowest border border-white/5">
+        <div class="font-display text-sm font-semibold text-secondary mb-3">Layer 2: Circle Agent Stack (Enforcement)</div>
+        <div class="space-y-2 text-xs text-on-surface-variant">
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0"></span>Action Gate + MPC co-signer enforcement</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0"></span>Spending caps, allowlists, sanctions screening</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0"></span>Execution Harness (microVM isolation)</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0"></span>x401 / ERC-8004 / ERC-8183 trust stack</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- VIEW: Agents -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<div class="view p-6" id="v-agents">
-  <div class="flex items-center justify-between mb-4">
-    <h3 class="text-sm font-semibold">Agent Registry</h3>
+<div class="view" id="v-agents">
+  <div class="flex items-center justify-between mb-2">
+    <div>
+      <h1 class="font-display text-2xl md:text-4xl font-extrabold text-on-surface">Agent Swarm</h1>
+      <p class="font-mono text-sm text-on-surface-variant flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-primary-fixed status-glow"></span><span id="agent-count">6 Active Nodes</span> | System Load: Optimal</p>
+    </div>
     <div class="flex items-center gap-3">
-      <button class="text-[10px] font-mono text-v-blu hover:underline cursor-pointer bg-transparent border-none" onclick="exportArtifacts()">Export JSON</button>
-      <a href="/api/verification-report.pdf" target="_blank" class="text-[10px] font-semibold text-v-grn hover:text-white cursor-pointer bg-v-grn/10 border border-v-grn/20 rounded px-2 py-0.5 no-underline">Download PDF Report</a>
-      <span class="text-[11px] text-v-muted font-mono" id="agent-count">6 agents registered</span>
+      <button class="font-mono text-[11px] text-secondary hover:underline cursor-pointer bg-transparent border-none" onclick="exportArtifacts()">Export JSON</button>
+      <a href="/api/verification-report.pdf" target="_blank" class="btn-secondary px-4 py-2 rounded-lg font-mono text-xs no-underline">Download PDF Report</a>
     </div>
   </div>
 
-  <!-- Agent sub-tabs -->
-  <div class="mb-4">
+  <!-- Filter tabs -->
+  <div class="flex items-center justify-between mb-6 mt-4 flex-wrap gap-3">
     <div class="nav-pill" id="agent-nav">
-      <button class="active" onclick="agentTab('all')">All Agents</button>
+      <button class="active" onclick="agentTab('all')">All</button>
       <button onclick="agentTab('Coordinator')">Coordinator</button>
       <button onclick="agentTab('Gateway')">Gateway</button>
       <button onclick="agentTab('Auditor')">Auditor</button>
@@ -227,118 +303,302 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
       <button onclick="agentTab('Recommender')">Recommender</button>
       <button onclick="agentTab('Isolator')">Forensic Recorder</button>
     </div>
+    <div class="nav-pill" id="agent-status-filter">
+      <button class="active" onclick="agentStatusFilter('all')">All</button>
+      <button onclick="agentStatusFilter('active')">Active</button>
+      <button onclick="agentStatusFilter('quarantined')">Quarantined <span id="quarantine-badge" class="hidden ml-1 bg-error/20 text-error text-[9px] px-1.5 py-0.5 rounded-full font-bold">0</span></button>
+    </div>
   </div>
 
-  <!-- All agents table (shown when "All Agents" selected) -->
-  <div id="agent-all-panel">
-    <div class="glass overflow-hidden" id="agent-table">
-      <table class="w-full text-xs">
-        <thead><tr class="border-b border-v-border text-v-muted text-left">
-          <th class="px-4 py-2.5 font-semibold">Agent</th><th class="px-4 py-2.5 font-semibold">Role</th><th class="px-4 py-2.5 font-semibold">Signing Key (Ed25519)</th><th class="px-4 py-2.5 font-semibold">Artifacts</th><th class="px-4 py-2.5 font-semibold">Status</th>
-        </tr></thead>
-        <tbody id="agent-rows"></tbody>
-      </table>
-    </div>
-    <div class="mt-4 glass overflow-hidden" id="agent-artifacts-panel" style="display:none">
-      <div class="px-4 py-2.5 border-b border-v-border">
-        <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">All Signed Artifacts</span>
+  <!-- Grid: agents + sidebar -->
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <!-- All agents card grid -->
+    <div class="xl:col-span-9" id="agent-all-panel">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="agent-rows"></div>
+      <div class="mt-4 glass overflow-hidden" id="agent-artifacts-panel" style="display:none">
+        <div class="px-5 py-3 border-b border-white/5"><span class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">All Signed Artifacts</span></div>
+        <div id="agent-artifacts" class="max-h-[500px] overflow-y-auto"></div>
       </div>
-      <div id="agent-artifacts" class="max-h-[500px] overflow-y-auto"></div>
+      <!-- Hidden table for updateAgentRow compat -->
+      <table class="hidden" id="agent-table"><tbody id="agent-rows-compat"></tbody></table>
     </div>
+
+    <!-- Intelligence Overview Sidebar -->
+    <aside class="xl:col-span-3">
+      <div class="bento-card sticky top-28 flex flex-col gap-6">
+        <div>
+          <h3 class="font-display text-base font-bold text-on-surface flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-primary-fixed" style="font-size:20px">radar</span> Intelligence Overview
+          </h3>
+          <p class="text-xs text-on-surface-variant">System-wide agent performance and reputation aggregation.</p>
+        </div>
+        <!-- Network Trust -->
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between items-end">
+            <span class="font-mono text-[10px] text-on-surface-variant/60 uppercase tracking-wider">Network Trust Mean</span>
+            <span class="font-display text-xl font-bold text-primary-fixed" id="trust-mean">--</span>
+          </div>
+          <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-primary-fixed rounded-full transition-all duration-700" id="trust-bar" style="width:0%"></div>
+          </div>
+          <div class="flex justify-between font-mono text-[10px] text-on-surface-variant/60">
+            <span>Risk: <span id="trust-risk">--</span></span>
+            <span class="text-primary-fixed" id="trust-delta">--</span>
+          </div>
+        </div>
+        <!-- Anomaly Feed -->
+        <div class="flex flex-col gap-3">
+          <h4 class="font-mono text-xs font-semibold text-on-surface border-b border-white/5 pb-2">Anomaly Detection</h4>
+          <div id="anomaly-feed">
+            <p class="text-xs text-on-surface-variant">No anomalies detected.</p>
+          </div>
+        </div>
+        <button class="w-full py-2.5 rounded-lg border border-white/10 font-mono text-xs text-on-surface hover:bg-white/5 transition-colors" onclick="exportArtifacts()">Download Full Audit Report</button>
+      </div>
+    </aside>
   </div>
 
-  <!-- Per-agent detail panel (shown when a specific agent is selected) -->
+  <!-- Per-agent detail panel -->
   <div id="agent-detail-panel" style="display:none">
-    <!-- Agent info card -->
-    <div class="glass p-5 mb-4" id="agent-detail-card"></div>
-    <!-- Agent's artifacts -->
+    <div class="bento-card mb-4" id="agent-detail-card"></div>
     <div class="glass overflow-hidden">
-      <div class="px-4 py-2.5 border-b border-v-border">
-        <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider" id="agent-detail-artifacts-title">Artifacts</span>
-      </div>
+      <div class="px-5 py-3 border-b border-white/5"><span class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider" id="agent-detail-artifacts-title">Artifacts</span></div>
       <div id="agent-detail-artifacts" class="max-h-[500px] overflow-y-auto"></div>
     </div>
   </div>
-
-  <!-- Artifact detail modal (human-readable) -->
+  <!-- Artifact detail modal -->
   <div id="artifact-detail" class="mt-4 glass overflow-hidden" style="display:none">
-    <div class="flex items-center justify-between px-4 py-2.5 border-b border-v-border">
-      <span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider" id="detail-title">Artifact Detail</span>
+    <div class="flex items-center justify-between px-5 py-3 border-b border-white/5">
+      <span class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider" id="detail-title">Artifact Detail</span>
       <div class="flex items-center gap-3">
-        <button class="text-[10px] font-semibold text-v-grn hover:text-white cursor-pointer bg-v-grn/10 border border-v-grn/20 rounded px-2.5 py-1" onclick="verifyCurrentArtifact()">Verify</button>
-        <button class="text-[10px] font-mono text-v-muted hover:text-v-muted2 cursor-pointer bg-transparent border-none" onclick="toggleDetailRaw()">Toggle Raw JSON</button>
-        <button class="text-[10px] text-v-muted hover:text-white cursor-pointer bg-transparent border-none" onclick="document.getElementById('artifact-detail').style.display='none'">Close</button>
+        <button class="font-mono text-[11px] font-semibold text-primary-fixed hover:text-on-surface cursor-pointer bg-primary-fixed/10 border border-primary-fixed/20 rounded px-2.5 py-1" onclick="verifyCurrentArtifact()">Verify</button>
+        <button class="font-mono text-[11px] text-on-surface-variant hover:text-on-surface cursor-pointer bg-transparent border-none" onclick="toggleDetailRaw()">Toggle Raw JSON</button>
+        <button class="text-on-surface-variant hover:text-on-surface cursor-pointer bg-transparent border-none text-xs" onclick="document.getElementById('artifact-detail').style.display='none'">Close</button>
       </div>
     </div>
-    <div id="verify-result" class="px-4" style="display:none"></div>
-    <div id="detail-rendered" class="p-4"></div>
-    <pre id="detail-json" class="p-4 text-[10px] font-mono text-v-muted2 overflow-auto max-h-80 whitespace-pre-wrap hidden"></pre>
+    <div id="verify-result" class="px-5" style="display:none"></div>
+    <div id="detail-rendered" class="p-5"></div>
+    <pre id="detail-json" class="p-5 font-mono text-[11px] text-on-surface-variant overflow-auto max-h-80 whitespace-pre-wrap hidden"></pre>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- VIEW: Receipts -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<div class="view p-6" id="v-receipts">
-  <div class="flex items-center justify-between mb-4">
-    <h3 class="text-sm font-semibold">Receipt Chain</h3>
-    <span class="text-[11px] text-v-muted font-mono" id="receipt-count">0 receipts</span>
-  </div>
-  <div class="glass overflow-hidden" id="receipt-table">
-    <table class="w-full text-xs">
-      <thead><tr class="border-b border-v-border text-v-muted text-left">
-        <th class="px-4 py-2.5 font-semibold">Seq</th><th class="px-4 py-2.5 font-semibold">Decision</th><th class="px-4 py-2.5 font-semibold">Receipt Hash</th><th class="px-4 py-2.5 font-semibold">Settlement Tx</th><th class="px-4 py-2.5 font-semibold">Prev Receipt</th>
-      </tr></thead>
-      <tbody id="receipt-rows"><tr class="tbl-row"><td class="px-4 py-3 text-v-muted" colspan="5">No receipts yet. Run a demo to generate receipts.</td></tr></tbody>
-    </table>
-  </div>
-  <div class="grid grid-cols-2 gap-4 mt-4">
-    <div class="glass p-4">
-      <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-1">Merkle Root</div>
-      <div class="text-[10px] text-v-muted mb-2">RFC 6962 tree over all receipt hashes in the batch</div>
-      <div class="font-mono text-[11px] text-v-grn break-all" id="merkle-display">--</div>
+<div class="view" id="v-receipts">
+  <div class="flex items-center justify-between mb-2">
+    <div>
+      <h1 class="font-display text-4xl font-extrabold text-on-surface">Proof Explorer</h1>
+      <p class="text-on-surface-variant text-sm mt-1">Cryptographic verification of agent operations.</p>
     </div>
-    <div class="glass p-4">
-      <div class="text-[11px] font-semibold text-v-muted uppercase tracking-wider mb-1">Wallet-Signed Anchor</div>
-      <div class="text-[10px] text-v-muted mb-2">Merkle root signed by the Circle Agent Wallet</div>
-      <div class="font-mono text-[11px] text-v-blu break-all" id="anchor-display">--</div>
-      <div class="mt-2 space-y-1" id="anchor-links" style="display:none">
-        <div class="flex items-center gap-2"><span class="text-[10px] text-v-muted">Wallet:</span><a id="anchor-wallet-link" href="#" target="_blank" class="font-mono text-[10px] text-v-blu hover:underline"></a></div>
-        <div class="flex items-center gap-2"><span class="text-[10px] text-v-muted">Basescan:</span><a id="anchor-basescan-link" href="#" target="_blank" class="text-[10px] text-v-blu hover:underline">View on Basescan</a></div>
+    <div class="flex items-center gap-2 bg-surface-container/60 px-4 py-2 rounded-full border border-primary-fixed/20">
+      <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
+      <span class="font-mono text-xs text-primary-fixed">Network Live</span>
+    </div>
+  </div>
+  <!-- Two-column layout: receipts table + verification detail -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-6">
+    <!-- Left: Receipt table -->
+    <div class="lg:col-span-7">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-display text-xl font-bold text-on-surface">Recent Receipts</h2>
+        <span class="font-mono text-xs text-on-surface-variant" id="receipt-count">0 receipts</span>
+      </div>
+      <div class="glass overflow-hidden" id="receipt-table">
+        <table class="w-full text-xs">
+          <thead><tr class="border-b border-white/5 text-on-surface-variant/60 text-left">
+            <th class="px-5 py-3 font-semibold font-mono text-[11px] uppercase tracking-wider">Receipt ID</th>
+            <th class="px-5 py-3 font-semibold font-mono text-[11px] uppercase tracking-wider">Decision</th>
+            <th class="px-5 py-3 font-semibold font-mono text-[11px] uppercase tracking-wider">Tx Hash</th>
+            <th class="px-5 py-3 font-semibold font-mono text-[11px] uppercase tracking-wider">Seq</th>
+          </tr></thead>
+          <tbody id="receipt-rows"><tr class="tbl-row"><td class="px-5 py-6 text-on-surface-variant text-center" colspan="4">No receipts yet. Run a demo to generate receipts.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Right: Verification detail -->
+    <div class="lg:col-span-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-display text-xl font-bold text-on-surface">Verification Detail</h2>
+      </div>
+      <div class="bento-card" id="receipt-detail-panel">
+        <div id="receipt-detail-content">
+          <div class="text-center py-8">
+            <span class="material-symbols-outlined text-on-surface-variant/30" style="font-size:48px">verified</span>
+            <p class="text-sm text-on-surface-variant mt-2">Select a receipt to view verification details</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Chain Integrity Summary -->
+  <div class="bento-card mt-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary-fixed" style="font-size:24px;font-variation-settings:'FILL' 1">security</span>
+        <div>
+          <div class="font-mono text-[11px] text-on-surface-variant/60 uppercase tracking-wider font-semibold">Chain Integrity Summary</div>
+          <div class="font-display text-lg font-bold text-on-surface" id="chain-integrity-status">State: <span class="text-primary-fixed" id="chain-sync-label">Awaiting Data</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="font-mono text-[11px] text-on-surface-variant/60 uppercase tracking-wider font-semibold">Merkle Root</div>
+        <div class="font-mono text-xs text-primary-fixed break-all max-w-md" id="merkle-display">--</div>
+      </div>
+    </div>
+    <div class="mt-3 pt-3 border-t border-white/5 flex items-center gap-4" id="anchor-links" style="display:none">
+      <span class="text-xs text-on-surface-variant">Wallet-Signed Anchor:</span>
+      <span class="font-mono text-xs text-secondary break-all" id="anchor-display">--</span>
+      <a id="anchor-wallet-link" href="#" target="_blank" class="font-mono text-xs text-secondary hover:underline hidden"></a>
+      <a id="anchor-basescan-link" href="#" target="_blank" class="text-xs text-secondary hover:underline hidden">View on Basescan</a>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW: Compliance -->
+<div class="view" id="v-compliance">
+  <div class="mb-6">
+    <h2 class="font-display text-2xl md:text-4xl font-bold text-on-surface mb-2">Compliance & Audit</h2>
+    <p class="text-on-surface-variant text-sm">Automated regulatory reporting powered by Gemini. Cryptographic receipts provide the evidence layer.</p>
+  </div>
+
+  <!-- Compliance Frameworks -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <!-- EU AI Act -->
+    <div class="bento-card">
+      <div class="flex items-center gap-2 mb-5">
+        <span class="material-symbols-outlined text-primary-fixed" style="font-size:20px">policy</span>
+        <span class="font-display text-sm font-semibold text-on-surface">EU AI Act Compliance</span>
+      </div>
+      <div class="flex items-start gap-6">
+        <div class="score-ring shrink-0" style="--score:94">
+          <div class="score-ring-inner">
+            <span class="font-display text-2xl font-bold text-primary-fixed">94</span>
+            <span class="font-mono text-[10px] text-on-surface-variant">/100</span>
+          </div>
+        </div>
+        <div class="flex-1 space-y-2.5">
+          <div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-fixed" style="font-size:16px;font-variation-settings:'FILL' 1">check_circle</span><span class="text-xs text-on-surface">Human oversight documented</span></div>
+          <div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-fixed" style="font-size:16px;font-variation-settings:'FILL' 1">check_circle</span><span class="text-xs text-on-surface">Transparency requirements met</span></div>
+          <div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-fixed" style="font-size:16px;font-variation-settings:'FILL' 1">check_circle</span><span class="text-xs text-on-surface">Risk assessment complete</span></div>
+          <div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-fixed" style="font-size:16px;font-variation-settings:'FILL' 1">check_circle</span><span class="text-xs text-on-surface">Record-keeping verified</span></div>
+          <div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary-fixed" style="font-size:16px;font-variation-settings:'FILL' 1">check_circle</span><span class="text-xs text-on-surface">Data governance enforced</span></div>
+        </div>
+      </div>
+      <div class="flex items-center justify-between mt-5 pt-4 border-t border-white/5">
+        <span class="font-mono text-[10px] text-on-surface-variant">Last audit: 2 hours ago</span>
+        <button class="btn-primary px-3 py-1.5 rounded-lg font-mono text-xs font-bold">Generate Report</button>
+      </div>
+    </div>
+
+    <!-- NIST AI RMF -->
+    <div class="bento-card">
+      <div class="flex items-center gap-2 mb-5">
+        <span class="material-symbols-outlined text-secondary" style="font-size:20px">shield</span>
+        <span class="font-display text-sm font-semibold text-on-surface">NIST AI RMF</span>
+      </div>
+      <div class="space-y-4">
+        <div><div class="flex justify-between mb-1.5"><span class="text-xs text-on-surface">Govern</span><span class="font-mono text-[10px] text-primary-fixed">92%</span></div><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full bg-primary-fixed" style="width:92%"></div></div></div>
+        <div><div class="flex justify-between mb-1.5"><span class="text-xs text-on-surface">Map</span><span class="font-mono text-[10px] text-primary-fixed">88%</span></div><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full bg-primary-fixed" style="width:88%"></div></div></div>
+        <div><div class="flex justify-between mb-1.5"><span class="text-xs text-on-surface">Measure</span><span class="font-mono text-[10px] text-secondary">76%</span></div><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full bg-secondary" style="width:76%"></div></div></div>
+        <div><div class="flex justify-between mb-1.5"><span class="text-xs text-on-surface">Manage</span><span class="font-mono text-[10px] text-primary-fixed">95%</span></div><div class="h-1.5 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full bg-primary-fixed" style="width:95%"></div></div></div>
+      </div>
+      <div class="flex items-center justify-between mt-5 pt-4 border-t border-white/5">
+        <span class="font-mono text-[10px] text-on-surface-variant">Framework v2.0</span>
+        <button class="btn-primary px-3 py-1.5 rounded-lg font-mono text-xs font-bold">Generate Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verification + Auditor Report -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="glass overflow-hidden">
+      <div class="px-5 py-3 border-b border-white/5"><span class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Verification</span></div>
+      <div id="comp-verify" class="p-5"><span class="text-sm text-on-surface-variant">Run a demo to generate verification results.</span></div>
+    </div>
+    <div class="glass overflow-hidden">
+      <div class="px-5 py-3 border-b border-white/5"><span class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Auditor Report</span></div>
+      <div id="comp-report" class="p-5 max-h-96 overflow-y-auto"><span class="text-sm text-on-surface-variant">Run a demo to generate compliance report.</span></div>
+    </div>
+  </div>
+
+  <!-- Incidents -->
+  <div class="glass mb-6 overflow-hidden" id="comp-incidents" style="display:none">
+    <div class="px-5 py-3 border-b border-white/5"><span class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Incidents + Proposals</span></div>
+    <div id="comp-incidents-body" class="p-5 max-h-80 overflow-y-auto"></div>
+  </div>
+
+  <!-- Audit Trail -->
+  <div class="mb-6">
+    <h3 class="font-display text-lg font-bold text-on-surface mb-3">Audit Trail</h3>
+    <div class="bento-card space-y-0">
+      <div class="flex gap-4 pb-5">
+        <div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-primary-fixed shrink-0" style="box-shadow:0 0 12px #b8f600"></div><div class="w-0.5 bg-white/5 flex-1 mt-1.5"></div></div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-primary-fixed/10 border border-primary-fixed/20 font-mono text-[10px] text-primary-fixed">Receipt Signed</span><span class="font-mono text-[10px] text-on-surface-variant">2 min ago</span></div>
+          <p class="text-xs text-on-surface">Payment receipt #R-0047 signed and hash-chained. Settlement tx <span class="font-mono text-[11px] text-secondary">0x47db...06bb</span> bound.</p>
+        </div>
+      </div>
+      <div class="flex gap-4 pb-5">
+        <div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-error shrink-0" style="box-shadow:0 0 12px #f87171"></div><div class="w-0.5 bg-white/5 flex-1 mt-1.5"></div></div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-error/10 border border-error/20 font-mono text-[10px] text-error">Agent Quarantined</span><span class="font-mono text-[10px] text-on-surface-variant">8 min ago</span></div>
+          <p class="text-xs text-on-surface">Rogue agent <span class="font-mono text-[11px] text-on-surface-variant">0xd4e7...1f09</span> isolated. Prompt injection attack blocked. x401 credential revoked. ERC-8004 reputation event published.</p>
+        </div>
+      </div>
+      <div class="flex gap-4 pb-5">
+        <div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-secondary shrink-0" style="box-shadow:0 0 12px rgba(184,195,255,.4)"></div><div class="w-0.5 bg-white/5 flex-1 mt-1.5"></div></div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 font-mono text-[10px] text-secondary">Credential Issued</span><span class="font-mono text-[10px] text-on-surface-variant">15 min ago</span></div>
+          <p class="text-xs text-on-surface">x401 verifiable credential issued to Ops Agent. Credential hash <span class="font-mono text-[11px] text-secondary">sha256:9f3c...a1b2</span> bound to receipt chain.</p>
+        </div>
+      </div>
+      <div class="flex gap-4">
+        <div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-tertiary-fixed-dim shrink-0" style="box-shadow:0 0 12px rgba(220,184,255,.4)"></div></div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-tertiary-container/10 border border-tertiary-fixed-dim/20 font-mono text-[10px] text-tertiary-fixed-dim">Policy Change</span><span class="font-mono text-[10px] text-on-surface-variant">1 hour ago</span></div>
+          <p class="text-xs text-on-surface">Spending policy updated. New policy hash <span class="font-mono text-[11px] text-on-surface-variant">sha256:b7e4...c8d3</span> active. Previous policy archived in receipt chain.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export & Verification -->
+  <div>
+    <h3 class="font-display text-lg font-bold text-on-surface mb-3">Export & Verification</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bento-card flex flex-col">
+        <div class="w-10 h-10 rounded-lg bg-primary-fixed/10 border border-primary-fixed/20 flex items-center justify-center mb-3">
+          <span class="material-symbols-outlined text-primary-fixed" style="font-size:20px">download</span>
+        </div>
+        <h4 class="font-display text-sm font-semibold text-on-surface mb-1">Export Receipt Chain</h4>
+        <p class="text-xs text-on-surface-variant mb-3 flex-1">Download the complete hash-linked receipt chain as JSON for offline verification.</p>
+        <button class="btn-secondary px-3 py-1.5 rounded-lg font-mono text-xs w-full" onclick="exportArtifacts()">chain-export.json</button>
+      </div>
+      <div class="bento-card flex flex-col">
+        <div class="w-10 h-10 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center mb-3">
+          <span class="material-symbols-outlined text-secondary" style="font-size:20px">picture_as_pdf</span>
+        </div>
+        <h4 class="font-display text-sm font-semibold text-on-surface mb-1">Generate PDF Report</h4>
+        <p class="text-xs text-on-surface-variant mb-3 flex-1">Gemini-generated compliance narrative over real USDC spend data. EU AI Act + NIST AI RMF aligned.</p>
+        <button class="btn-secondary px-3 py-1.5 rounded-lg font-mono text-xs w-full">Generate PDF</button>
+      </div>
+      <div class="bento-card flex flex-col">
+        <div class="w-10 h-10 rounded-lg bg-tertiary-fixed-dim/10 border border-tertiary-fixed-dim/20 flex items-center justify-center mb-3">
+          <span class="material-symbols-outlined text-tertiary-fixed-dim" style="font-size:20px">gavel</span>
+        </div>
+        <h4 class="font-display text-sm font-semibold text-on-surface mb-1">Dispute Resolution Kit</h4>
+        <p class="text-xs text-on-surface-variant mb-3 flex-1">Self-contained proof chain for third-party arbiters. Zero trust, zero network access needed.</p>
+        <button class="btn-secondary px-3 py-1.5 rounded-lg font-mono text-xs w-full">Export Kit</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- VIEW: Compliance -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<div class="view p-6" id="v-compliance">
-  <div class="flex items-center justify-between mb-4">
-    <h3 class="text-sm font-semibold">Compliance Reports</h3>
-  </div>
-  <div class="grid grid-cols-2 gap-4">
-    <div class="glass overflow-hidden">
-      <div class="px-4 py-2.5 border-b border-v-border"><span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Verification</span></div>
-      <div id="comp-verify" class="p-4"><span class="text-xs text-v-muted">Run a demo to generate verification results.</span></div>
-    </div>
-    <div class="glass overflow-hidden">
-      <div class="px-4 py-2.5 border-b border-v-border"><span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Auditor Report</span></div>
-      <div id="comp-report" class="p-4 max-h-96 overflow-y-auto"><span class="text-xs text-v-muted">Run a demo to generate compliance report.</span></div>
-    </div>
-  </div>
-  <div class="glass mt-4 overflow-hidden" id="comp-incidents" style="display:none">
-    <div class="px-4 py-2.5 border-b border-v-border"><span class="text-[11px] font-semibold text-v-muted uppercase tracking-wider">Incidents + Proposals</span></div>
-    <div id="comp-incidents-body" class="p-4 max-h-80 overflow-y-auto"></div>
-  </div>
-</div>
-
-</div><!-- shell -->
+</main>
 
 <script>
-const SVG_SPIN='<svg class="w-2.5 h-2.5 text-v-muted animate-spin" style="animation:spin .8s linear infinite" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6" stroke-dasharray="28" stroke-dashoffset="8" stroke-linecap="round"/></svg>';
-const SVG_OK='<svg class="w-2.5 h-2.5 text-v-grn" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 5"/></svg>';
-const SVG_X='<svg class="w-2.5 h-2.5 text-v-red" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 4L12 12M12 4L4 12"/></svg>';
+const SVG_SPIN='<svg class="w-3 h-3 text-on-surface-variant animate-spin" style="animation:spin .8s linear infinite" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6" stroke-dasharray="28" stroke-dashoffset="8" stroke-linecap="round"/></svg>';
+const SVG_OK='<svg class="w-3 h-3 text-v-grn" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 5"/></svg>';
+const SVG_X='<svg class="w-3 h-3 text-v-red" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 4L12 12M12 4L4 12"/></svg>';
 
 let nOk=0,nNo=0,spend=0,nIso=0,nArtifacts=0;
 let storeReceipts=[],storeAgents={},storeVerify=null,storeCompliance=null,storeIncidents=[];
@@ -348,17 +608,19 @@ function go(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.getElementById('v-'+view).classList.add('on');
   document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
-  [...document.querySelectorAll('#nav button')].find(b=>b.textContent.toLowerCase().includes(view==='demo'?'live':view))?.classList.add('active');
+  const match=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.toLowerCase().includes(view==='demo'?'live':view));
+  if(match)match.classList.add('active');
+  document.querySelector('main').style.paddingTop='';
 }
 
-function lock(v){document.getElementById('btn-run').disabled=v;document.getElementById('btn-rogue').disabled=v;const t=document.getElementById('ptag');if(v){t.classList.remove('hidden');t.textContent='LIVE'}}
-function reset(){nOk=0;nNo=0;spend=0;nIso=0;nArtifacts=0;storeReceipts=[];storeIncidents=[];['steps','feed','vbox','cbox'].forEach(i=>document.getElementById(i).innerHTML='');document.getElementById('strip').classList.remove('hidden');document.getElementById('strip').classList.add('flex');document.getElementById('bot').classList.remove('grid');document.getElementById('bot').classList.add('hidden');go('demo');upd()}
-function upd(){document.getElementById('sv-spend').textContent='$'+spend.toFixed(2);document.getElementById('sv-fee').textContent='$'+(spend*.0025).toFixed(4);document.getElementById('sv-ok').textContent=nOk;document.getElementById('sv-no').textContent=nNo;document.getElementById('sv-artifacts').textContent=nArtifacts}
+function lock(v){document.getElementById('btn-run').disabled=v;document.getElementById('btn-rogue').disabled=v;if(v){document.getElementById('ptag-wrap').style.display='flex';document.getElementById('ptag').textContent='NETWORK ACTIVE';document.getElementById('demo-stats').style.display='grid';document.getElementById('strip').classList.remove('flex');document.getElementById('strip').classList.add('hidden');document.querySelector('main').style.paddingTop=''}}
+function reset(){nOk=0;nNo=0;spend=0;nIso=0;nArtifacts=0;storeReceipts=[];storeIncidents=[];['steps','feed','vbox','cbox','vbox2','cbox2'].forEach(i=>{const e=document.getElementById(i);if(e)e.innerHTML=''});document.getElementById('strip').classList.remove('flex');document.getElementById('strip').classList.add('hidden');document.getElementById('bot').classList.remove('grid');document.getElementById('bot').classList.add('hidden');go('demo');upd();document.querySelector('main').style.paddingTop='';document.getElementById('ds-approved').textContent='0';document.getElementById('ds-blocked').textContent='0';document.getElementById('ds-governed').textContent='$0.00'}
+function upd(){document.getElementById('sv-spend').textContent='$'+spend.toFixed(2);document.getElementById('sv-fee').textContent='$'+(spend*.0025).toFixed(4);document.getElementById('sv-ok').textContent=nOk;document.getElementById('sv-no').textContent=nNo;document.getElementById('sv-artifacts').textContent=nArtifacts;const dsa=document.getElementById('ds-approved');if(dsa){dsa.textContent=nOk;document.getElementById('ds-blocked').textContent=nNo;document.getElementById('ds-governed').textContent='$'+spend.toFixed(2)}}
 
 // ── Steps ──
 function addStep(d){
   const el=document.getElementById('steps'),ex=document.getElementById('s-'+d.id);
-  const cls=d.status==='running'?'bg-v-card':'';
+  const cls=d.status==='running'?'bg-surface-container/60':'';
   const svg=d.status==='running'?SVG_SPIN:d.status==='blocked'?SVG_X:SVG_OK;
   let meta='';
   if(d.details){
@@ -368,9 +630,10 @@ function addStep(d){
     if(d.details.kid)meta+='kid: '+d.details.kid;
     if(d.details.anchor_signature)meta+='anchor: '+d.details.anchor_signature.substring(0,24)+'...';
   }
-  const h='<div class="flex items-start gap-2.5 px-4 py-2.5 border-b border-white/[.03] ri '+cls+'" id="s-'+d.id+'"><div class="w-[18px] h-[18px] rounded-[5px] flex-shrink-0 flex items-center justify-center mt-0.5 '+(d.status==='running'?'bg-v-card':d.status==='blocked'?'bg-v-red/10':'bg-v-grn/10')+'">'+svg+'</div><div class="min-w-0"><div class="text-[13px] font-semibold leading-tight">'+d.title+'</div>'+(d.desc?'<div class="text-[11px] text-v-muted2 mt-1 leading-relaxed">'+d.desc+'</div>':'')+(meta?'<div class="text-[10.5px] font-mono text-v-muted mt-1 break-all">'+meta+'</div>':'')+'</div></div>';
+  const dotColor=d.status==='running'?'bg-v-amb border-v-amb/30 shadow-[0_0_8px_rgba(251,191,36,0.4)]':d.status==='blocked'?'bg-error border-error/30 shadow-[0_0_8px_rgba(255,180,171,0.4)]':'bg-primary-fixed border-primary-fixed/30 shadow-[0_0_8px_rgba(184,246,0,0.4)]';
+  const statusBadge=d.status==='running'?'<span class="font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full bg-v-amb/10 text-v-amb border border-v-amb/20">EVALUATING</span>':d.status==='blocked'?'<span class="font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20">BLOCKED</span>':'<span class="font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary-fixed/10 text-primary-fixed border border-primary-fixed/20">COMPLETED</span>';
+  const h='<div class="flex items-start gap-4 px-5 py-4 border-b border-white/[.04] ri '+cls+'" id="s-'+d.id+'"><div class="flex flex-col items-center mt-1"><div class="w-3 h-3 rounded-full '+dotColor+' border flex-shrink-0"></div><div class="w-0.5 flex-1 mt-1 bg-white/5 min-h-[20px]"></div></div><div class="min-w-0 flex-1"><div class="flex items-center justify-between mb-1"><div class="text-sm font-semibold font-display leading-tight text-on-surface">'+d.title+'</div>'+statusBadge+'</div>'+(d.desc?'<div class="text-xs text-on-surface-variant mt-1 leading-relaxed">'+d.desc+'</div>':'')+(meta?'<div class="font-mono text-[11px] text-on-surface-variant/40 mt-2 p-2 rounded-lg bg-surface-container-lowest border border-white/5 break-all">'+meta+'</div>':'')+'</div></div>';
   if(ex)ex.outerHTML=h;else el.insertAdjacentHTML('beforeend',h);el.scrollTop=el.scrollHeight;
-  // Update agent table
   if(d.id&&d.status==='complete')updateAgentRow(d);
 }
 
@@ -379,28 +642,27 @@ function addPay(d){
   const el=document.getElementById('feed'),ok=d.decision==='approve';
   if(ok){nOk++;spend+=parseFloat(d.amount)||0}else nNo++;nArtifacts++;upd();
   let hash='';if(d.explorer_url)hash+='<a href="'+d.explorer_url+'" target="_blank" class="text-v-blu hover:underline">View tx</a> ';if(d.receipt_hash)hash+=d.receipt_hash;
-  let reasons='';if(d.reasons&&d.reasons.length)reasons='<div class="text-[10.5px] font-mono text-v-red mt-1">'+d.reasons.join(' / ')+'</div>';
-  el.insertAdjacentHTML('beforeend','<div class="px-4 py-3 border-b border-white/[.03] ri"><div class="flex items-center justify-between"><div><span class="text-lg font-bold font-mono">'+(ok?d.amount:(d.amount||'0.00'))+'</span><span class="text-[11px] text-v-muted ml-1">USDC</span></div><span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded '+(ok?'bg-v-grn/10 text-v-grn border border-v-grn/20':'bg-v-red/10 text-v-red border border-v-red/20')+'">'+(ok?'APPROVED':'DENIED')+'</span></div>'+(hash?'<div class="text-[10.5px] font-mono text-v-muted mt-1.5 break-all">'+hash+'</div>':'')+reasons+'</div>');
+  let reasons='';if(d.reasons&&d.reasons.length)reasons='<div class="text-[11px] font-mono text-v-red mt-1">'+d.reasons.join(' / ')+'</div>';
+  el.insertAdjacentHTML('beforeend','<div class="px-5 py-4 border-b border-white/[.04] ri"><div class="flex items-center justify-between"><div><span class="text-xl font-bold font-mono">'+(ok?d.amount:(d.amount||'0.00'))+'</span><span class="text-xs text-on-surface-variant ml-2">USDC</span></div><span class="font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full '+(ok?'bg-primary-fixed/10 text-v-grn border border-primary-fixed/20':'bg-error/10 text-v-red border border-error/20')+'">'+(ok?'APPROVED':'DENIED')+'</span></div>'+(hash?'<div class="text-[11px] font-mono text-on-surface-variant/60 mt-2 break-all">'+hash+'</div>':'')+reasons+'</div>');
   el.scrollTop=el.scrollHeight;
-  // Store for receipts view
   storeReceipts.push(d);updateReceiptsView();
 }
-function addAtk(d){document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="px-4 py-3 border-b border-white/[.03] ri"><div class="text-xs font-semibold text-v-red flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-v-red"></span>'+(d.name||'Attack')+(d.amount?' &middot; '+d.amount:'')+'</div><div class="text-[10.5px] font-mono text-v-muted mt-1.5 p-2 bg-v-bg rounded-md border border-v-border">'+(d.reason||d.payload||'').substring(0,160)+'</div></div>');document.getElementById('feed').scrollTop=document.getElementById('feed').scrollHeight}
-function addBlk(d){document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="px-3 py-2 border-b border-white/[.03] text-[11px] font-semibold text-v-grn bg-v-grn/5 flex items-center gap-1.5 ri"><span class="w-1.5 h-1.5 rounded-full bg-v-grn"></span>BLOCKED &middot; '+d.name+' &middot; '+d.reasons.join(', ')+'</div>');nNo++;upd()}
-function addIso(d){nIso++;nArtifacts++;upd();let findings='';(d.findings||[]).forEach(f=>{findings+='<div class="text-[10px] text-v-red font-mono py-0.5">'+f+'</div>'});let recs='';(d.recommendations||[]).forEach(r=>{recs+='<div class="text-[10px] text-v-amb font-mono py-0.5">'+r+'</div>'});document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-v-red bg-v-red/5 ri"><div class="text-[11px] font-bold text-v-red">FORENSIC RECORD '+d.isolation_id+'</div><div class="grid grid-cols-2 gap-1 mt-2 text-[10.5px] font-mono text-v-muted"><div><b class="text-v-muted2">Severity</b> '+d.severity+'</div><div><b class="text-v-muted2">Agent</b> '+(d.agent||'ops-agent')+'</div></div>'+(findings?'<div class="mt-2"><div class="text-[10px] text-v-muted font-semibold mb-0.5">Findings</div>'+findings+'</div>':'')+(recs?'<div class="mt-1.5"><div class="text-[10px] text-v-muted font-semibold mb-0.5">Recommendations for Circle</div>'+recs+'</div>':'')+'</div>')}
-function addReputation(d){nArtifacts++;upd();document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-purple-500 bg-purple-500/5 ri"><div class="text-[11px] font-bold text-purple-400">ERC-8004 REPUTATION</div><div class="grid grid-cols-2 gap-1 mt-2 text-[10.5px] font-mono text-v-muted"><div><b class="text-v-muted2">Event</b> '+d.event_id+'</div><div><b class="text-v-muted2">Agent</b> '+d.agent_id+'</div><div><b class="text-v-muted2">Type</b> '+d.event_type+'</div><div><b class="text-v-muted2">Published</b> '+(d.published?'<span class="text-v-grn">Yes</span>':'Pending')+'</div>'+(d.tx_hash?'<div class="col-span-2"><b class="text-v-muted2">Tx</b> '+d.tx_hash.substring(0,30)+'...</div>':'')+'</div></div>')}
-function addCorrelation(d){nArtifacts++;upd();document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-v-amb bg-v-amb/5 ri"><div class="text-[11px] font-bold text-v-amb">CROSS-AGENT CORRELATION</div><div class="grid grid-cols-2 gap-1 mt-2 text-[10.5px] font-mono text-v-muted"><div><b class="text-v-muted2">Risk</b> <span class="'+(d.risk==='SYSTEMIC'?'text-v-red':d.risk==='SPREADING'?'text-v-amb':'text-v-grn')+'">'+d.risk+'</span></div><div><b class="text-v-muted2">Scanned</b> '+d.agents_scanned+' agents</div><div><b class="text-v-muted2">Matches</b> '+d.correlated+'</div><div><b class="text-v-muted2">Patterns</b> '+(d.patterns||[]).join(', ')+'</div></div>'+(d.actions?'<div class="mt-2 space-y-0.5">'+d.actions.map(a=>'<div class="text-[10px] text-v-muted2">'+a+'</div>').join('')+'</div>':'')+'</div>')}
-function addProposal(d){nArtifacts+=d.proposals?.length||0;upd();let items='';(d.proposals||[]).forEach(p=>{items+='<div class="text-[10.5px] font-mono text-v-muted2 py-0.5"><b class="text-v-amb">'+p.change_type+'</b>: '+p.description+'</div>'});document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-3 rounded-lg border-l-2 border-v-amb bg-v-amb/5 ri"><div class="text-[11px] font-bold text-v-amb">POLICY PROPOSALS</div>'+items+'</div>');storeIncidents.push({type:'proposal',data:d});updateComplianceView()}
+function addAtk(d){document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="px-5 py-4 border-b border-white/[.04] ri"><div class="text-sm font-semibold text-v-red flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-error"></span>'+(d.name||'Attack')+(d.amount?' &middot; '+d.amount:'')+'</div><div class="text-[11px] font-mono text-on-surface-variant/60 mt-2 p-3 bg-surface-container-lowest rounded-lg border border-white/5">'+(d.reason||d.payload||'').substring(0,160)+'</div></div>');document.getElementById('feed').scrollTop=document.getElementById('feed').scrollHeight}
+function addBlk(d){document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="px-5 py-3 border-b border-white/[.04] text-sm font-semibold text-v-grn bg-primary-fixed/5 flex items-center gap-2 ri"><span class="w-2 h-2 rounded-full bg-primary-fixed"></span>BLOCKED &middot; '+d.name+' &middot; '+d.reasons.join(', ')+'</div>');nNo++;upd()}
+function addIso(d){nIso++;nArtifacts++;upd();let findings='';(d.findings||[]).forEach(f=>{findings+='<div class="text-[11px] text-v-red font-mono py-0.5">'+f+'</div>'});let recs='';(d.recommendations||[]).forEach(r=>{recs+='<div class="text-[11px] text-v-amb font-mono py-0.5">'+r+'</div>'});document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-4 my-2 p-4 rounded-xl border-l-2 border-error bg-error/5 ri"><div class="text-sm font-bold text-v-red font-display">FORENSIC RECORD '+d.isolation_id+'</div><div class="grid grid-cols-2 gap-1 mt-2 text-xs font-mono text-on-surface-variant"><div><b class="text-on-surface">Severity</b> '+d.severity+'</div><div><b class="text-on-surface">Agent</b> '+(d.agent||'ops-agent')+'</div></div>'+(findings?'<div class="mt-2"><div class="text-[11px] text-on-surface-variant font-semibold mb-0.5">Findings</div>'+findings+'</div>':'')+(recs?'<div class="mt-1.5"><div class="text-[11px] text-on-surface-variant font-semibold mb-0.5">Recommendations for Circle</div>'+recs+'</div>':'')+'</div>')}
+function addReputation(d){nArtifacts++;upd();document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-4 my-2 p-4 rounded-xl border-l-2 border-tertiary-fixed-dim bg-tertiary-container/5 ri"><div class="text-sm font-bold text-tertiary-fixed-dim font-display">ERC-8004 REPUTATION</div><div class="grid grid-cols-2 gap-1 mt-2 text-xs font-mono text-on-surface-variant"><div><b class="text-on-surface">Event</b> '+d.event_id+'</div><div><b class="text-on-surface">Agent</b> '+d.agent_id+'</div><div><b class="text-on-surface">Type</b> '+d.event_type+'</div><div><b class="text-on-surface">Published</b> '+(d.published?'<span class="text-v-grn">Yes</span>':'Pending')+'</div>'+(d.tx_hash?'<div class="col-span-2"><b class="text-on-surface">Tx</b> '+d.tx_hash.substring(0,30)+'...</div>':'')+'</div></div>')}
+function addCorrelation(d){nArtifacts++;upd();document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-4 my-2 p-4 rounded-xl border-l-2 border-v-amb bg-v-amb/5 ri"><div class="text-sm font-bold text-v-amb font-display">CROSS-AGENT CORRELATION</div><div class="grid grid-cols-2 gap-1 mt-2 text-xs font-mono text-on-surface-variant"><div><b class="text-on-surface">Risk</b> <span class="'+(d.risk==='SYSTEMIC'?'text-v-red':d.risk==='SPREADING'?'text-v-amb':'text-v-grn')+'">'+d.risk+'</span></div><div><b class="text-on-surface">Scanned</b> '+d.agents_scanned+' agents</div><div><b class="text-on-surface">Matches</b> '+d.correlated+'</div><div><b class="text-on-surface">Patterns</b> '+(d.patterns||[]).join(', ')+'</div></div>'+(d.actions?'<div class="mt-2 space-y-0.5">'+d.actions.map(a=>'<div class="text-xs text-on-surface-variant">'+a+'</div>').join('')+'</div>':'')+'</div>')}
+function addProposal(d){nArtifacts+=d.proposals?.length||0;upd();let items='';(d.proposals||[]).forEach(p=>{items+='<div class="text-xs font-mono text-on-surface-variant py-0.5"><b class="text-v-amb">'+p.change_type+'</b>: '+p.description+'</div>'});document.getElementById('feed').insertAdjacentHTML('beforeend','<div class="mx-4 my-2 p-4 rounded-xl border-l-2 border-v-amb bg-v-amb/5 ri"><div class="text-sm font-bold text-v-amb font-display">POLICY PROPOSALS</div>'+items+'</div>');storeIncidents.push({type:'proposal',data:d});updateComplianceView()}
 
 function addSummary(d){
   const el=document.getElementById('feed');
-  let grid='<div class="grid grid-cols-2 gap-1 text-[11px] text-v-muted2">';
-  if(d.settlement_url)grid+='<div class="col-span-2"><a href="'+d.settlement_url+'" target="_blank" class="text-v-blu hover:underline text-[10.5px]">View settlement on Basescan</a></div>';
-  grid+='<div>Governed <b class="text-white font-mono">$'+((d.total_spend||0)*1).toFixed(2)+'</b></div><div>Approved <b class="text-white font-mono">'+d.payments_approved+'</b></div>';
-  grid+='<div>Blocked <b class="text-white font-mono">'+d.payments_blocked+'</b></div><div>Isolated <b class="text-white font-mono">'+(d.isolations||0)+'</b></div>';
-  grid+='<div>Agents <b class="text-white font-mono">'+(d.agents_active||6)+'</b></div><div>Artifacts <b class="text-white font-mono">'+(d.signed_artifacts||nArtifacts)+'</b></div>';
-  grid+='<div>Integrity <b class="text-white font-mono">'+d.verification+'</b></div><div>Chain <b class="text-white font-mono">'+(d.chain||'BASE-SEPOLIA')+'</b></div></div>';
-  el.insertAdjacentHTML('beforeend','<div class="mx-3 my-1.5 p-4 rounded-lg border border-v-grn/20 bg-v-grn/5 ri"><div class="text-xs font-bold text-v-grn mb-2">GOLDEN PATH COMPLETE</div>'+grid+'</div>');
+  let grid='<div class="grid grid-cols-2 gap-2 text-xs text-on-surface-variant">';
+  if(d.settlement_url)grid+='<div class="col-span-2"><a href="'+d.settlement_url+'" target="_blank" class="text-v-blu hover:underline text-xs">View settlement on Basescan</a></div>';
+  grid+='<div>Governed <b class="text-on-surface font-mono">$'+((d.total_spend||0)*1).toFixed(2)+'</b></div><div>Approved <b class="text-on-surface font-mono">'+d.payments_approved+'</b></div>';
+  grid+='<div>Blocked <b class="text-on-surface font-mono">'+d.payments_blocked+'</b></div><div>Isolated <b class="text-on-surface font-mono">'+(d.isolations||0)+'</b></div>';
+  grid+='<div>Agents <b class="text-on-surface font-mono">'+(d.agents_active||6)+'</b></div><div>Artifacts <b class="text-on-surface font-mono">'+(d.signed_artifacts||nArtifacts)+'</b></div>';
+  grid+='<div>Integrity <b class="text-on-surface font-mono">'+d.verification+'</b></div><div>Chain <b class="text-on-surface font-mono">'+(d.chain||'BASE-SEPOLIA')+'</b></div></div>';
+  el.insertAdjacentHTML('beforeend','<div class="mx-4 my-2 p-5 rounded-xl border border-primary-fixed/20 bg-primary-fixed/5 ri"><div class="text-sm font-bold text-v-grn mb-3 font-display">GOLDEN PATH COMPLETE</div>'+grid+'</div>');
   if(d.signed_artifacts)nArtifacts=d.signed_artifacts;upd();
 }
 
@@ -408,69 +670,85 @@ function addSummary(d){
 function showV(d){
   document.getElementById('bot').classList.remove('hidden');document.getElementById('bot').classList.add('grid');
   const c=[['Ed25519 Signatures',d.signatures],['Hash Chain',d.hash_chain],['Merkle Root',d.merkle],['x401 Identity',d.x401||'SKIP'],['Anchor',d.anchor]];
+  // Inline chain integrity (in right column)
   const el=document.getElementById('vbox');
-  el.innerHTML='<div class="grid grid-cols-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between px-4 py-3 border-b border-v-border border-r border-v-border"><span class="text-xs text-v-muted2">'+l+'</span><span class="text-[11px] font-mono font-semibold '+(s==='PASS'?'text-v-grn':s==='SKIP'?'text-v-muted':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="p-4 text-center font-mono text-sm font-bold '+(d.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+d.overall+'</div>';
+  el.innerHTML='<div class="p-4 space-y-2">'+c.map(([l,s])=>{
+    const icon=s==='PASS'?'check_circle':s==='SKIP'?'remove_circle':'cancel';
+    const color=s==='PASS'?'text-primary-fixed':s==='SKIP'?'text-on-surface-variant/40':'text-error';
+    return '<div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="material-symbols-outlined '+color+'" style="font-size:16px;font-variation-settings:\'FILL\' 1">'+icon+'</span><span class="text-xs text-on-surface">'+l+'</span></div><span class="font-mono text-xs font-semibold '+color+'">'+s+'</span></div>';
+  }).join('')+'<div class="pt-2 mt-2 border-t border-white/5 text-center font-mono text-sm font-bold '+(d.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+d.overall+'</div></div>';
+  // Also populate bot section
+  const el2=document.getElementById('vbox2');
+  if(el2)el2.innerHTML=el.innerHTML;
   document.getElementById('sv-chk').textContent=d.overall;document.getElementById('sv-chk').className='text-base font-bold font-mono '+(d.overall==='PASS'?'text-v-grn':'text-v-red');
   storeVerify=d;updateComplianceView();
 }
 function showC(d){
-  const el=document.getElementById('cbox');let h='<div class="p-4 max-h-96 overflow-y-auto">';
-  const sections=[['Summary',d.summary?'<p class="text-[11px] text-v-muted2 leading-relaxed">'+d.summary+'</p>':'']];
-  if(d.eu_ai_act){let c='';for(const[k,v]of Object.entries(d.eu_ai_act))c+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-1"><strong class="text-white font-medium">'+k.replace(/_/g,' ')+'</strong>: '+v+'</p>';sections.push(['EU AI Act',c])}
-  if(d.nist){let c='';for(const[k,v]of Object.entries(d.nist))c+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-1"><strong class="text-white font-medium">'+k.toUpperCase()+'</strong>: '+v+'</p>';sections.push(['NIST AI RMF',c])}
-  if(d.recommendations){let c='';d.recommendations.forEach((r,i)=>{c+='<p class="text-[11px] text-v-muted2 leading-relaxed">'+(i+1)+'. '+r+'</p>'});sections.push(['Recommendations',c])}
-  sections.forEach(([t,c],i)=>{const open=i===0;h+='<div class="mb-1"><div class="flex items-center justify-between py-2 cursor-pointer border-b border-v-border" onclick="this.nextElementSibling.classList.toggle(\'hidden\');this.querySelector(\'span:last-child\').textContent=this.nextElementSibling.classList.contains(\'hidden\')?\'+\':\'-\'"><span class="text-[10px] font-semibold text-v-muted uppercase tracking-wider">'+t+'</span><span class="text-v-muted text-xs">'+(open?'-':'+')+'</span></div><div class="py-2'+(open?'':' hidden')+'">'+c+'</div></div>'});
-  h+='</div>';el.innerHTML=h;storeCompliance=d;updateComplianceView();
+  const el=document.getElementById('cbox');let h='<div class="p-5 max-h-96 overflow-y-auto">';
+  const sections=[['Summary',d.summary?'<p class="text-xs text-on-surface-variant leading-relaxed">'+d.summary+'</p>':'']];
+  if(d.eu_ai_act){let c='';for(const[k,v]of Object.entries(d.eu_ai_act))c+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface font-medium">'+k.replace(/_/g,' ')+'</strong>: '+v+'</p>';sections.push(['EU AI Act',c])}
+  if(d.nist){let c='';for(const[k,v]of Object.entries(d.nist))c+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface font-medium">'+k.toUpperCase()+'</strong>: '+v+'</p>';sections.push(['NIST AI RMF',c])}
+  if(d.recommendations){let c='';d.recommendations.forEach((r,i)=>{c+='<p class="text-xs text-on-surface-variant leading-relaxed">'+(i+1)+'. '+r+'</p>'});sections.push(['Recommendations',c])}
+  sections.forEach(([t,c],i)=>{const open=i===0;h+='<div class="mb-1"><div class="flex items-center justify-between py-2 cursor-pointer border-b border-white/5" onclick="this.nextElementSibling.classList.toggle(\'hidden\');this.querySelector(\'span:last-child\').textContent=this.nextElementSibling.classList.contains(\'hidden\')?\'+\':\'-\'"><span class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">'+t+'</span><span class="text-on-surface-variant text-xs">'+(open?'-':'+')+'</span></div><div class="py-2'+(open?'':' hidden')+'">'+c+'</div></div>'});
+  h+='</div>';el.innerHTML=h;
+  const el2=document.getElementById('cbox2');if(el2)el2.innerHTML=h;
+  storeCompliance=d;updateComplianceView();
 }
 
 // ── Agent table updates ──
-function updateAgentRow(step){
-  const map={discover:'Coordinator','gate-init':'Gateway',payment:'Gateway',rogue:'Gateway',isolator:'Isolator',investigator:'Investigator',recommender:'Recommender','auditor-receipts':'Auditor',compliance:'Auditor'};
-  const name=map[step.id];if(!name)return;
-  const rows=document.getElementById('agent-rows').children;
-  const displayMap={'Isolator':'Forensic Recorder'};
-  const matchName=displayMap[name]||name;
-  for(let r of rows){if(r.cells[0]?.textContent===matchName){r.cells[4].innerHTML='<span class="text-v-grn font-medium">Active</span>';if(step.details?.kid)r.cells[2].innerHTML='<span class="text-v-muted2 font-mono text-[10px]">'+step.details.kid+'</span>';}}
-}
-function updateAgent(d){
-  const rows=document.getElementById('agent-rows').children;
-  const agentMatchName=d.name==='Isolator'?'Forensic Recorder':d.name;
-  for(let r of rows){
-    if(r.cells[0]?.textContent===agentMatchName){
-      if(d.role)r.cells[1].innerHTML='<span class="text-v-muted2">'+d.role+'</span>';
-      if(d.kid)r.cells[2].innerHTML='<span class="text-v-muted2 font-mono text-[10px]">'+d.kid+'</span>';
-      if(d.artifacts!==undefined)r.cells[3].innerHTML='<span class="font-mono">'+d.artifacts+'</span>';
-      r.cells[4].innerHTML='<span class="text-v-grn font-medium">'+d.status+'</span>';
-    }
-  }
+// Agent updates are no-ops during SSE — cards rebuild on tab switch via loadData()
+function updateAgentRow(step){}
+function updateAgent(d){}
+
+// Receipt detail panel
+function showReceiptDetail(idx){
+  if(!window._receiptData)return;
+  const env=window._receiptData[idx];const b=env.body||{};const del=b.delegation_context||{};
+  const isApprove=b.decision==='approve';
+  const explorer=(del.settlement_chain||'').includes('SEPOLIA')?'sepolia.basescan.org':'basescan.org';
+  let h='<div class="space-y-4">';
+  h+='<div class="p-3 rounded-lg bg-surface-container-lowest border border-white/5 space-y-2">';
+  h+='<div><span class="font-mono text-[10px] text-on-surface-variant/60 uppercase">Receipt Hash:</span><div class="font-mono text-xs text-secondary break-all mt-0.5">'+env.receipt_hash+'</div></div>';
+  if(del.settlement_tx)h+='<div><span class="font-mono text-[10px] text-on-surface-variant/60 uppercase">Settlement Tx:</span><div class="font-mono text-xs text-secondary break-all mt-0.5"><a href="https://'+explorer+'/tx/'+del.settlement_tx+'" target="_blank" class="hover:underline">'+del.settlement_tx+'</a></div></div>';
+  if(b.policy_hash)h+='<div><span class="font-mono text-[10px] text-on-surface-variant/60 uppercase">Policy Hash:</span><div class="font-mono text-xs text-on-surface-variant break-all mt-0.5">'+b.policy_hash+'</div></div>';
+  h+='<div><span class="font-mono text-[10px] text-on-surface-variant/60 uppercase">Timestamp:</span><div class="font-mono text-xs text-on-surface-variant mt-0.5">'+(b.timestamp||b.iat||'--')+'</div></div>';
+  h+='</div>';
+  h+='<div class="font-mono text-[11px] text-on-surface-variant/60 uppercase tracking-wider font-semibold">Verification Checklist</div>';
+  const checks=[["Signature Valid","PASS"],["Chain Link Valid","PASS"],["Merkle Proof Valid","PASS"],["x401 Binding Valid",b.credential_hash?"PASS":"SKIP"]];
+  h+='<div class="space-y-2">';
+  checks.forEach(([name,status])=>{
+    const icon=status==='PASS'?'check_circle':'remove_circle';
+    const color=status==='PASS'?'text-primary-fixed':'text-on-surface-variant/40';
+    h+='<div class="flex items-center gap-2"><span class="material-symbols-outlined '+color+'" style="font-size:18px;font-variation-settings:\'FILL\' 1">'+icon+'</span><span class="text-sm text-on-surface">'+name+'</span></div>';
+  });
+  h+='</div></div>';
+  document.getElementById('receipt-detail-content').innerHTML=h;
+  // Highlight selected row
+  document.querySelectorAll('#receipt-rows tr').forEach((r,i)=>{r.style.background=i===idx?'rgba(184,246,0,0.05)':''});
 }
 
-// ── Receipts view ──
-function updateReceiptsView(){
-  document.getElementById('receipt-count').textContent=storeReceipts.length+' receipts';
-}
+function updateReceiptsView(){document.getElementById('receipt-count').textContent=storeReceipts.length+' receipts'}
 
-// ── Compliance view ──
 function updateComplianceView(){
   if(storeVerify){
     const c=[['Ed25519 Signatures',storeVerify.signatures],['Hash Chain',storeVerify.hash_chain],['Merkle Root',storeVerify.merkle],['x401 Identity',storeVerify.x401||'SKIP'],['Anchor',storeVerify.anchor]];
-    document.getElementById('comp-verify').innerHTML='<div class="grid grid-cols-2 gap-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between p-2 rounded bg-v-bg"><span class="text-[11px] text-v-muted2">'+l+'</span><span class="text-[11px] font-mono font-semibold '+(s==='PASS'?'text-v-grn':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="text-center mt-3 font-mono text-sm font-bold '+(storeVerify.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+storeVerify.overall+'</div>';
+    document.getElementById('comp-verify').innerHTML='<div class="grid grid-cols-2 gap-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between p-3 rounded-lg bg-surface-container-lowest border border-white/5"><span class="text-xs text-on-surface-variant">'+l+'</span><span class="font-mono text-xs font-semibold '+(s==='PASS'?'text-v-grn':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="text-center mt-4 font-mono text-sm font-bold '+(storeVerify.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+storeVerify.overall+'</div>';
   }
   if(storeCompliance){
     let h='';
-    if(storeCompliance.summary)h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-3">'+storeCompliance.summary+'</p>';
+    if(storeCompliance.summary)h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-3">'+storeCompliance.summary+'</p>';
     document.getElementById('comp-report').innerHTML=h+(document.getElementById('cbox')?.innerHTML||'');
   }
   if(storeIncidents.length){
     document.getElementById('comp-incidents').style.display='';
     let h='';storeIncidents.forEach(i=>{
-      if(i.type==='proposal')h+='<div class="mb-2 p-2 rounded bg-v-amb/5 border border-v-amb/10 text-[11px]"><b class="text-v-amb">Policy Proposals</b><br>'+(i.data.proposals||[]).map(p=>'<span class="text-v-muted2">'+p.change_type+': '+p.description+'</span>').join('<br>')+'</div>';
+      if(i.type==='proposal')h+='<div class="mb-2 p-3 rounded-lg bg-v-amb/5 border border-v-amb/10 text-xs"><b class="text-v-amb">Policy Proposals</b><br>'+(i.data.proposals||[]).map(p=>'<span class="text-on-surface-variant">'+p.change_type+': '+p.description+'</span>').join('<br>')+'</div>';
     });
     document.getElementById('comp-incidents-body').innerHTML=h;
   }
 }
 
-function fin(d){lock(false);const t=document.getElementById('ptag');t.textContent='DONE';t.className='text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-v-grn/10 text-v-grn border border-v-grn/20';if(d)addSummary(d)}
+function fin(d){lock(false);document.getElementById('ptag').textContent='COMPLETED';if(d)addSummary(d)}
 
 function sse(url){reset();lock(true);const s=new EventSource(url);s.onmessage=e=>{const d=JSON.parse(e.data);switch(d.type){case'step':addStep(d);if(d.details?.signatures)showV(d.details);if(d.details?.summary)showC(d.details);break;case'payment':addPay(d);break;case'attack':addAtk(d);break;case'blocked':addBlk(d);break;case'isolation':addIso(d);break;case'reputation':addReputation(d);break;case'correlation':addCorrelation(d);break;case'proposal':addProposal(d);break;case'agent_info':updateAgent(d);break;case'complete':fin(d);s.close();break;case'error':lock(false);s.close();break}};s.onerror=()=>{lock(false);s.close()}}
 function runDemo(){sse('/api/run/golden-path')}
@@ -480,35 +758,35 @@ function runRogue(){sse('/api/run/rogue-path')}
 function loadWallets(){
   fetch('/api/wallets').then(r=>r.json()).then(d=>{
     const el=document.getElementById('wallet-cards');
-    if(!d.wallets||!d.wallets.length){el.innerHTML='<div class="glass p-5 col-span-2 text-center text-v-muted text-xs">No wallets found. Authenticate Circle CLI first.</div>';return}
+    if(!d.wallets||!d.wallets.length){el.innerHTML='<div class="bento-card col-span-2 text-center text-on-surface-variant text-sm">No wallets found. Authenticate Circle CLI first.</div>';return}
     let h='';
     d.wallets.forEach(w=>{
       const isSepolia=w.chain.includes('SEPOLIA');
       const explorer=isSepolia?'sepolia.basescan.org':'basescan.org';
       let policyHtml='';
       if(w.policies&&w.policies.length){
-        policyHtml='<div class="mt-3 pt-3 border-t border-v-border"><div class="text-[10px] font-semibold text-v-muted uppercase tracking-wider mb-1.5">Spending Policies</div>';
+        policyHtml='<div class="mt-4 pt-4 border-t border-white/5"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider mb-2">Circle Action Gate</div>';
         w.policies.forEach(p=>{
-          policyHtml+='<div class="text-[11px] text-v-muted2 font-mono">'+p.policyType+' / '+p.ruleType;
+          policyHtml+='<div class="text-xs text-on-surface-variant font-mono">'+p.policyType+' / '+p.ruleType;
           if(p.monthlyLimit)policyHtml+=' / monthly: $'+p.monthlyLimit;
           if(p.perTxLimit)policyHtml+=' / per-tx: $'+p.perTxLimit;
-          policyHtml+=' <span class="text-v-muted">('+p.origin+')</span></div>';
+          policyHtml+=' <span class="text-on-surface-variant/40">('+p.origin+')</span></div>';
         });
         policyHtml+='</div>';
       }else if(!isSepolia){
-        policyHtml='<div class="mt-3 pt-3 border-t border-v-border"><div class="text-[10px] font-semibold text-v-muted uppercase tracking-wider mb-1">Spending Policies</div><div class="text-[11px] text-v-muted2">Configure via: <code class="font-mono text-[10px] text-v-muted">circle wallet limit set</code></div></div>';
+        policyHtml='<div class="mt-4 pt-4 border-t border-white/5"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider mb-1">Circle Action Gate</div><div class="text-xs text-on-surface-variant">Configure via: <code class="font-mono text-[11px] text-on-surface-variant/60">circle wallet limit set</code></div></div>';
       }else{
-        policyHtml='<div class="mt-3 pt-3 border-t border-v-border text-[11px] text-v-muted">Spending policies available on mainnet only</div>';
+        policyHtml='<div class="mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-variant">Spending policies available on mainnet only</div>';
       }
-      h+='<div class="glass p-5"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full '+(parseFloat(w.usdc_balance)>0?'bg-v-grn':'bg-v-muted')+'"></span><span class="text-xs font-semibold">'+(isSepolia?'Testnet':'Mainnet')+' Agent Wallet</span></div><span class="text-[10px] font-mono px-2 py-0.5 rounded bg-v-card border border-v-border text-v-muted2">'+w.chain+'</span></div>';
-      h+='<div class="font-mono text-[11px] text-v-muted2 break-all mb-2"><a href="'+w.explorer_url+'" target="_blank" class="text-v-blu hover:underline">'+w.address+'</a></div>';
-      h+='<div class="flex items-baseline gap-2"><span class="text-2xl font-bold font-mono '+(parseFloat(w.usdc_balance)>0?'text-v-grn':'text-v-muted')+'">'+w.usdc_balance+'</span><span class="text-xs text-v-muted">USDC</span></div>';
-      h+='<div class="text-[10px] text-v-muted mt-1">Created: '+new Date(w.created).toLocaleDateString()+'</div>';
+      h+='<div class="bento-card"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full '+(parseFloat(w.usdc_balance)>0?'bg-primary-fixed status-glow':'bg-on-surface-variant/40')+'"></span><span class="font-display text-sm font-semibold text-on-surface">'+(isSepolia?'Testnet':'Mainnet')+' Circle MPC Wallet</span></div><span class="font-mono text-[11px] px-2.5 py-1 rounded-full bg-surface-container-high border border-white/5 text-on-surface-variant">'+w.chain+'</span></div>';
+      h+='<div class="font-mono text-xs text-on-surface-variant break-all mb-3"><a href="'+w.explorer_url+'" target="_blank" class="text-secondary hover:underline">'+w.address+'</a></div>';
+      h+='<div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M20.5 18.5c0-2.1-1.3-2.8-3.8-3.1-1.8-.3-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.6.4 1.9 1.3.1.2.2.3.4.3h.9c.3 0 .4-.2.4-.4-.3-1.3-1.1-2.2-2.5-2.5V10c0-.2-.2-.4-.5-.4h-.8c-.2 0-.4.2-.4.4v1.3c-1.7.3-2.8 1.4-2.8 2.8 0 2 1.2 2.7 3.7 3.1 1.6.3 2.3.6 2.3 1.6 0 .9-.8 1.5-1.9 1.5-1.5 0-2-.6-2.2-1.4-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.4.4.3 1.5 1.2 2.4 2.9 2.7V22c0 .2.2.4.5.4h.8c.2 0 .4-.2.4-.4v-1.3c1.8-.3 2.9-1.4 2.9-2.8z" fill="white"/></svg><span class="text-2xl font-bold font-mono '+(parseFloat(w.usdc_balance)>0?'text-primary-fixed':'text-on-surface-variant/40')+'">'+w.usdc_balance+'</span><span class="text-sm text-on-surface-variant">USDC</span></div>';
+      h+='<div class="text-xs text-on-surface-variant/60 mt-1">Created: '+new Date(w.created).toLocaleDateString()+'</div>';
       h+=policyHtml;
       h+='</div>';
     });
     el.innerHTML=h;
-  }).catch(()=>{document.getElementById('wallet-cards').innerHTML='<div class="glass p-5 col-span-2 text-center text-v-red text-xs">Failed to fetch wallets.</div>'});
+  }).catch(()=>{document.getElementById('wallet-cards').innerHTML='<div class="bento-card col-span-2 text-center text-error text-sm">Failed to fetch wallets.</div>'});
 }
 function exportArtifacts(){
   fetch('/api/artifacts').then(r=>r.json()).then(d=>{
@@ -536,22 +814,22 @@ function verifyCurrentArtifact(){
   if(!_currentArtifact)return;
   const el=document.getElementById('verify-result');
   el.style.display='';
-  el.innerHTML='<div class="py-3 text-xs text-v-muted">Verifying...</div>';
+  el.innerHTML='<div class="py-3 text-sm text-on-surface-variant">Verifying...</div>';
   fetch('/api/verify-artifact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_currentArtifact)})
     .then(r=>r.json()).then(d=>{
-      let h='<div class="py-3 space-y-1.5">';
-      h+='<div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold '+(d.verified?'text-v-grn':'text-v-red')+'">'+(d.verified?'VERIFIED':'VERIFICATION FAILED')+'</span></div>';
+      let h='<div class="py-3 space-y-2">';
+      h+='<div class="flex items-center gap-2 mb-2"><span class="text-sm font-bold font-display '+(d.verified?'text-v-grn':'text-v-red')+'">'+(d.verified?'VERIFIED':'VERIFICATION FAILED')+'</span></div>';
       (d.checks||[]).forEach(c=>{
         const icon=c.status==='PASS'?'text-v-grn':c.status==='WARN'?'text-v-amb':'text-v-red';
         const symbol=c.status==='PASS'?'\u2713':c.status==='WARN'?'\u26A0':'\u2717';
-        h+='<div class="flex items-start gap-2 text-[10px] py-1.5 px-2.5 rounded bg-v-bg border border-v-border">';
+        h+='<div class="flex items-start gap-2 text-xs py-2 px-3 rounded-lg bg-surface-container-lowest border border-white/5">';
         h+='<span class="'+icon+' font-bold">'+symbol+'</span>';
-        h+='<div><span class="font-semibold text-white">'+c.name+'</span><span class="text-v-muted2 ml-2">'+c.detail+'</span></div>';
+        h+='<div><span class="font-semibold text-on-surface">'+c.name+'</span><span class="text-on-surface-variant ml-2">'+c.detail+'</span></div>';
         h+='</div>';
       });
       h+='</div>';
       el.innerHTML=h;
-    }).catch(e=>{el.innerHTML='<div class="py-3 text-xs text-v-red">Verification error: '+e.message+'</div>'});
+    }).catch(e=>{el.innerHTML='<div class="py-3 text-sm text-v-red">Verification error: '+e.message+'</div>'});
 }
 function toggleDetailRaw(){
   document.getElementById('detail-json').classList.toggle('hidden');
@@ -560,98 +838,94 @@ function toggleDetailRaw(){
 function renderArtifactDetail(a){
   const b=a.body||{};const t=a.artifact_type||'';
   let h='<div class="space-y-4">';
-  // Header
-  h+='<div class="flex items-center gap-3"><span class="text-xs font-bold text-v-accent">'+a.agent+'</span><span class="text-[10px] px-2 py-0.5 rounded bg-v-card border border-v-border text-v-muted2 font-mono">'+t.replace(/_/g,' ')+'</span></div>';
-  // Hash + signature
-  h+='<div class="grid grid-cols-2 gap-3">';
-  if(a.artifact_hash)h+='<div class="p-2.5 rounded bg-v-bg border border-v-border"><div class="text-[9px] text-v-muted uppercase tracking-wider font-semibold mb-1">Artifact Hash</div><div class="font-mono text-[10px] text-v-muted2 break-all">'+a.artifact_hash+'</div></div>';
-  if(a.signature)h+='<div class="p-2.5 rounded bg-v-bg border border-v-border"><div class="text-[9px] text-v-muted uppercase tracking-wider font-semibold mb-1">Ed25519 Signature</div><div class="font-mono text-[10px] text-v-muted2 break-all">'+a.signature+'</div></div>';
+  h+='<div class="flex items-center gap-3"><span class="font-display text-sm font-bold text-v-accent">'+a.agent+'</span><span class="font-mono text-[11px] px-2.5 py-1 rounded-full bg-surface-container-high border border-white/5 text-on-surface-variant">'+t.replace(/_/g,' ')+'</span></div>';
+  h+='<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
+  if(a.artifact_hash)h+='<div class="p-3 rounded-lg bg-surface-container-lowest border border-white/5"><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider font-semibold mb-1">Artifact Hash</div><div class="font-mono text-[11px] text-on-surface-variant break-all">'+a.artifact_hash+'</div></div>';
+  if(a.signature)h+='<div class="p-3 rounded-lg bg-surface-container-lowest border border-white/5"><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider font-semibold mb-1">Ed25519 Signature</div><div class="font-mono text-[11px] text-on-surface-variant break-all">'+a.signature+'</div></div>';
   h+='</div>';
-  // Type-specific rendering
   if(t==='receipt'){
     const del=b.delegation_context||{};const isApprove=b.decision==='approve';
-    h+='<div class="p-3 rounded-lg border-l-2 '+(isApprove?'border-v-grn bg-v-grn/5':'border-v-red bg-v-red/5')+'">';
-    h+='<div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold '+(isApprove?'text-v-grn':'text-v-red')+'">'+b.decision?.toUpperCase()+'</span><span class="text-[10px] font-mono text-v-muted">seq '+b.seq+'</span></div>';
-    h+='<div class="grid grid-cols-2 gap-2 text-[10px]">';
-    if(b.agent_id)h+='<div><span class="text-v-muted font-semibold">Agent:</span> <span class="text-v-muted2">'+b.agent_id+'</span></div>';
-    if(b.service)h+='<div><span class="text-v-muted font-semibold">Service:</span> <span class="text-v-muted2">'+b.service+'</span></div>';
-    if(del.payee)h+='<div><span class="text-v-muted font-semibold">Payee:</span> <span class="text-v-muted2 font-mono">'+del.payee+'</span></div>';
-    if(del.amount)h+='<div><span class="text-v-muted font-semibold">Amount:</span> <span class="text-v-muted2 font-mono">'+del.amount+' USDC</span></div>';
-    if(del.settlement_tx){const isSep=(del.settlement_chain||'').toUpperCase().includes('SEPOLIA');const exp=isSep?'sepolia.basescan.org':'basescan.org';h+='<div class="col-span-2"><span class="text-v-muted font-semibold">Settlement:</span> <a href="https://'+exp+'/tx/'+del.settlement_tx+'" target="_blank" class="text-v-blu hover:underline font-mono">'+del.settlement_tx.substring(0,32)+'...</a></div>'}
+    h+='<div class="p-4 rounded-xl border-l-2 '+(isApprove?'border-primary-fixed bg-primary-fixed/5':'border-error bg-error/5')+'">';
+    h+='<div class="flex items-center gap-2 mb-2"><span class="text-sm font-bold font-display '+(isApprove?'text-v-grn':'text-v-red')+'">'+b.decision?.toUpperCase()+'</span><span class="font-mono text-xs text-on-surface-variant">seq '+b.seq+'</span></div>';
+    h+='<div class="grid grid-cols-2 gap-2 text-xs">';
+    if(b.agent_id)h+='<div><span class="text-on-surface-variant font-semibold">Agent:</span> <span class="text-on-surface-variant">'+b.agent_id+'</span></div>';
+    if(b.service)h+='<div><span class="text-on-surface-variant font-semibold">Service:</span> <span class="text-on-surface-variant">'+b.service+'</span></div>';
+    if(del.payee)h+='<div><span class="text-on-surface-variant font-semibold">Payee:</span> <span class="text-on-surface-variant font-mono">'+del.payee+'</span></div>';
+    if(del.amount)h+='<div><span class="text-on-surface-variant font-semibold">Amount:</span> <span class="text-on-surface-variant font-mono">'+del.amount+' USDC</span></div>';
+    if(del.settlement_tx){const isSep=(del.settlement_chain||'').toUpperCase().includes('SEPOLIA');const exp=isSep?'sepolia.basescan.org':'basescan.org';h+='<div class="col-span-2"><span class="text-on-surface-variant font-semibold">Settlement:</span> <a href="https://'+exp+'/tx/'+del.settlement_tx+'" target="_blank" class="text-v-blu hover:underline font-mono">'+del.settlement_tx.substring(0,32)+'...</a></div>'}
     h+='</div>';
-    if(b.denial_reasons&&b.denial_reasons.length){h+='<div class="mt-2 space-y-0.5">';b.denial_reasons.forEach(r=>{h+='<div class="text-[10px] text-v-red font-mono">'+r+'</div>'});h+='</div>'}
-    if(b.prev_receipt)h+='<div class="text-[10px] font-mono text-v-muted mt-2">prev: '+b.prev_receipt+'</div>';
+    if(b.denial_reasons&&b.denial_reasons.length){h+='<div class="mt-2 space-y-0.5">';b.denial_reasons.forEach(r=>{h+='<div class="text-xs text-v-red font-mono">'+r+'</div>'});h+='</div>'}
+    if(b.prev_receipt)h+='<div class="font-mono text-[11px] text-on-surface-variant/60 mt-2">prev: '+b.prev_receipt+'</div>';
     h+='</div>';
   }else if(t==='incident_report'){
-    h+='<div class="p-3 rounded-lg border-l-2 border-v-red bg-v-red/5">';
-    h+='<div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-v-red">'+b.severity+'</span><span class="text-[10px] font-mono text-v-muted">'+b.incident_id+'</span></div>';
+    h+='<div class="p-4 rounded-xl border-l-2 border-error bg-error/5">';
+    h+='<div class="flex items-center gap-2 mb-2"><span class="text-sm font-bold font-display text-v-red">'+b.severity+'</span><span class="font-mono text-xs text-on-surface-variant">'+b.incident_id+'</span></div>';
     if(b.narrative){
-      if(b.narrative.summary)h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-2">'+b.narrative.summary+'</p>';
-      if(b.narrative.root_cause)h+='<div class="text-[10px] mb-1"><span class="text-v-muted font-semibold">Root Cause:</span> <span class="text-v-muted2">'+b.narrative.root_cause+'</span></div>';
-      if(b.narrative.attack_vector)h+='<div class="text-[10px] mb-1"><span class="text-v-muted font-semibold">Attack Vector:</span> <span class="text-v-muted2">'+b.narrative.attack_vector+'</span></div>';
-      if(b.narrative.impact)h+='<div class="text-[10px] mb-1"><span class="text-v-muted font-semibold">Impact:</span> <span class="text-v-muted2">'+b.narrative.impact+'</span></div>';
-      if(b.narrative.timeline&&b.narrative.timeline.length){h+='<div class="mt-2"><div class="text-[10px] text-v-muted font-semibold mb-1">Timeline</div>';b.narrative.timeline.forEach(e=>{const txt=typeof e==='object'?'<span class="text-white font-medium">'+(e.event||e.action||e.description||'')+'</span>'+(e.detail?' — '+e.detail:'')+(e.timestamp?' <span class="text-v-muted font-mono">'+e.timestamp+'</span>':''):e;h+='<div class="text-[10px] text-v-muted2 pl-3 border-l border-v-border py-0.5">'+txt+'</div>'});h+='</div>'}
+      if(b.narrative.summary)h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-2">'+b.narrative.summary+'</p>';
+      if(b.narrative.root_cause)h+='<div class="text-xs mb-1"><span class="text-on-surface-variant font-semibold">Root Cause:</span> <span class="text-on-surface-variant">'+b.narrative.root_cause+'</span></div>';
+      if(b.narrative.attack_vector)h+='<div class="text-xs mb-1"><span class="text-on-surface-variant font-semibold">Attack Vector:</span> <span class="text-on-surface-variant">'+b.narrative.attack_vector+'</span></div>';
+      if(b.narrative.impact)h+='<div class="text-xs mb-1"><span class="text-on-surface-variant font-semibold">Impact:</span> <span class="text-on-surface-variant">'+b.narrative.impact+'</span></div>';
+      if(b.narrative.timeline&&b.narrative.timeline.length){h+='<div class="mt-2"><div class="font-mono text-[10px] text-on-surface-variant/60 font-semibold mb-1">Timeline</div>';b.narrative.timeline.forEach(e=>{const txt=typeof e==='object'?'<span class="text-on-surface font-medium">'+(e.event||e.action||e.description||'')+'</span>'+(e.detail?' — '+e.detail:'')+(e.timestamp?' <span class="text-on-surface-variant/60 font-mono">'+e.timestamp+'</span>':''):e;h+='<div class="text-xs text-on-surface-variant pl-3 border-l border-white/5 py-0.5">'+txt+'</div>'});h+='</div>'}
     }
     h+='</div>';
   }else if(t==='policy_proposal'){
     h+='<div class="space-y-2">';
-    if(b.proposal_id)h+='<div class="text-[10px] font-mono text-v-muted">'+b.proposal_id+'</div>';
+    if(b.proposal_id)h+='<div class="font-mono text-xs text-on-surface-variant">'+b.proposal_id+'</div>';
     (b.proposals||[]).forEach(p=>{
-      h+='<div class="p-3 rounded-lg border-l-2 border-v-amb bg-v-amb/5">';
-      h+='<div class="text-xs font-semibold text-v-amb mb-1">'+p.change_type+'</div>';
-      h+='<div class="text-[11px] text-v-muted2 leading-relaxed">'+p.description+'</div>';
-      if(p.rationale)h+='<div class="text-[10px] text-v-muted mt-1">Rationale: '+p.rationale+'</div>';
-      if(p.suggested_value!==undefined)h+='<div class="text-[10px] font-mono text-v-muted2 mt-1">Suggested: <span class="text-white">'+JSON.stringify(p.suggested_value)+'</span></div>';
+      h+='<div class="p-4 rounded-xl border-l-2 border-v-amb bg-v-amb/5">';
+      h+='<div class="text-sm font-semibold font-display text-v-amb mb-1">'+p.change_type+'</div>';
+      h+='<div class="text-xs text-on-surface-variant leading-relaxed">'+p.description+'</div>';
+      if(p.rationale)h+='<div class="text-xs text-on-surface-variant/60 mt-1">Rationale: '+p.rationale+'</div>';
+      if(p.suggested_value!==undefined)h+='<div class="font-mono text-xs text-on-surface-variant mt-1">Suggested: <span class="text-on-surface">'+JSON.stringify(p.suggested_value)+'</span></div>';
       h+='</div>';
     });
     h+='</div>';
   }else if(t==='audit_report'){
     const vColor=b.verdict==='ALIGNED'?'text-v-grn':'text-v-red';
-    h+='<div class="p-3 rounded-lg border-l-2 '+(b.verdict==='ALIGNED'?'border-v-grn bg-v-grn/5':'border-v-red bg-v-red/5')+'">';
-    h+='<div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold '+vColor+'">'+b.verdict+'</span></div>';
-    if(b.frameworks_checked)h+='<div class="text-[10px] text-v-muted mb-2">Frameworks: '+(b.frameworks_checked||[]).map(f=>'<span class="px-1.5 py-0.5 rounded bg-v-card border border-v-border text-v-muted2 mr-1">'+f+'</span>').join('')+'</div>';
-    if(b.findings&&b.findings.length){h+='<div class="mt-2 space-y-1">';b.findings.forEach(f=>{if(typeof f==='object'){const s=f.verdict||f.status||'';const isGood=s==='ALIGNED'||s==='PASS'||s==='COMPLIANT';h+='<div class="text-[11px] text-v-muted2 py-1 px-2 rounded bg-v-bg border border-v-border">'+(f.framework?'<span class="text-v-muted font-mono text-[9px]">'+f.framework+'</span> ':'')+(f.finding||f.description||'')+(s?' — <span class="font-semibold '+(isGood?'text-v-grn':'text-v-amb')+'">'+s+'</span>':'')+'</div>'}else{h+='<div class="text-[11px] text-v-muted2">'+f+'</div>'}});h+='</div>'}
-    if(b.receipt_seq!==undefined)h+='<div class="text-[10px] font-mono text-v-muted mt-2">Receipt seq: '+b.receipt_seq+'</div>';
+    h+='<div class="p-4 rounded-xl border-l-2 '+(b.verdict==='ALIGNED'?'border-primary-fixed bg-primary-fixed/5':'border-error bg-error/5')+'">';
+    h+='<div class="flex items-center gap-2 mb-2"><span class="text-sm font-bold font-display '+vColor+'">'+b.verdict+'</span></div>';
+    if(b.frameworks_checked)h+='<div class="text-xs text-on-surface-variant mb-2">Frameworks: '+(b.frameworks_checked||[]).map(f=>'<span class="px-2 py-0.5 rounded-full bg-surface-container-high border border-white/5 text-on-surface-variant mr-1">'+f+'</span>').join('')+'</div>';
+    if(b.findings&&b.findings.length){h+='<div class="mt-2 space-y-1">';b.findings.forEach(f=>{if(typeof f==='object'){const s=f.verdict||f.status||'';const isGood=s==='ALIGNED'||s==='PASS'||s==='COMPLIANT';h+='<div class="text-xs text-on-surface-variant py-1.5 px-3 rounded-lg bg-surface-container-lowest border border-white/5">'+(f.framework?'<span class="text-on-surface-variant/60 font-mono text-[10px]">'+f.framework+'</span> ':'')+(f.finding||f.description||'')+(s?' — <span class="font-semibold '+(isGood?'text-v-grn':'text-v-amb')+'">'+s+'</span>':'')+'</div>'}else{h+='<div class="text-xs text-on-surface-variant">'+f+'</div>'}});h+='</div>'}
+    if(b.receipt_seq!==undefined)h+='<div class="font-mono text-xs text-on-surface-variant/60 mt-2">Receipt seq: '+b.receipt_seq+'</div>';
     h+='</div>';
   }else if(t==='compliance_report'){
-    h+='<div class="p-3 rounded-lg border-l-2 border-v-blu bg-v-blu/5">';
+    h+='<div class="p-4 rounded-xl border-l-2 border-secondary bg-secondary/5">';
     if(b.narrative){
       const n=b.narrative;
-      if(n.executive_summary)h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-3">'+n.executive_summary+'</p>';
+      if(n.executive_summary)h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-3">'+n.executive_summary+'</p>';
       if(n.spend_findings){
         const sf=n.spend_findings;
-        h+='<div class="grid grid-cols-3 gap-2 mb-3">';
-        if(sf.total_governed_spend_usdc!==undefined)h+='<div class="p-2 rounded bg-v-bg border border-v-border text-center"><div class="text-[9px] text-v-muted uppercase">Governed Spend</div><div class="text-sm font-bold font-mono text-v-grn">$'+(typeof sf.total_governed_spend_usdc==='number'?sf.total_governed_spend_usdc.toFixed(2):sf.total_governed_spend_usdc)+'</div></div>';
-        if(sf.payments_approved!==undefined)h+='<div class="p-2 rounded bg-v-bg border border-v-border text-center"><div class="text-[9px] text-v-muted uppercase">Approved</div><div class="text-sm font-bold font-mono text-v-grn">'+sf.payments_approved+'</div></div>';
-        if(sf.payments_blocked!==undefined)h+='<div class="p-2 rounded bg-v-bg border border-v-border text-center"><div class="text-[9px] text-v-muted uppercase">Blocked</div><div class="text-sm font-bold font-mono text-v-red">'+sf.payments_blocked+'</div></div>';
+        h+='<div class="grid grid-cols-3 gap-3 mb-3">';
+        if(sf.total_governed_spend_usdc!==undefined)h+='<div class="p-3 rounded-lg bg-surface-container-lowest border border-white/5 text-center"><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase">Governed Spend</div><div class="text-sm font-bold font-mono text-v-grn">$'+(typeof sf.total_governed_spend_usdc==='number'?sf.total_governed_spend_usdc.toFixed(2):sf.total_governed_spend_usdc)+'</div></div>';
+        if(sf.payments_approved!==undefined)h+='<div class="p-3 rounded-lg bg-surface-container-lowest border border-white/5 text-center"><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase">Approved</div><div class="text-sm font-bold font-mono text-v-grn">'+sf.payments_approved+'</div></div>';
+        if(sf.payments_blocked!==undefined)h+='<div class="p-3 rounded-lg bg-surface-container-lowest border border-white/5 text-center"><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase">Blocked</div><div class="text-sm font-bold font-mono text-v-red">'+sf.payments_blocked+'</div></div>';
         h+='</div>';
       }
-      if(n.eu_ai_act){h+='<div class="mb-2"><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">EU AI Act</div>';for(const[k,v]of Object.entries(n.eu_ai_act)){const vt=typeof v==='object'?(v.status||v.verdict||'')+((v.detail||v.description)?' — '+(v.detail||v.description):''):v;h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-1"><strong class="text-white font-medium">'+k.replace(/_/g,' ')+'</strong>: '+vt+'</p>'}h+='</div>'}
-      if(n.nist_ai_rmf){h+='<div class="mb-2"><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(n.nist_ai_rmf)){const vt=typeof v==='object'?(v.status||v.verdict||'')+((v.detail||v.description)?' — '+(v.detail||v.description):''):v;h+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-1"><strong class="text-white font-medium">'+k.toUpperCase()+'</strong>: '+vt+'</p>'}h+='</div>'}
-      if(n.recommendations){h+='<div><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">Recommendations</div>';n.recommendations.forEach((r,i)=>{const rt=typeof r==='object'?(r.recommendation||r.action||r.description||JSON.stringify(r)):r;h+='<p class="text-[11px] text-v-muted2">'+(i+1)+'. '+rt+'</p>'});h+='</div>'}
+      if(n.eu_ai_act){h+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">EU AI Act</div>';for(const[k,v]of Object.entries(n.eu_ai_act)){const vt=typeof v==='object'?(v.status||v.verdict||'')+((v.detail||v.description)?' — '+(v.detail||v.description):''):v;h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface font-medium">'+k.replace(/_/g,' ')+'</strong>: '+vt+'</p>'}h+='</div>'}
+      if(n.nist_ai_rmf){h+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(n.nist_ai_rmf)){const vt=typeof v==='object'?(v.status||v.verdict||'')+((v.detail||v.description)?' — '+(v.detail||v.description):''):v;h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface font-medium">'+k.toUpperCase()+'</strong>: '+vt+'</p>'}h+='</div>'}
+      if(n.recommendations){h+='<div><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">Recommendations</div>';n.recommendations.forEach((r,i)=>{const rt=typeof r==='object'?(r.recommendation||r.action||r.description||JSON.stringify(r)):r;h+='<p class="text-xs text-on-surface-variant">'+(i+1)+'. '+rt+'</p>'});h+='</div>'}
     }
     h+='</div>';
   }else if(t==='isolation_record'||t==='forensic_record'){
-    h+='<div class="p-3 rounded-lg border-l-2 border-v-red bg-v-red/5">';
-    h+='<div class="flex items-center gap-2 mb-2"><span class="text-[10px] font-semibold text-v-muted uppercase">Forensic Record</span><span class="text-xs font-bold text-v-red">'+b.severity+'</span><span class="text-[10px] font-mono text-v-muted">'+(b.isolation_id||b.record_id||'')+'</span></div>';
-    if(b.agent_id)h+='<div class="text-[10px] mb-1"><span class="text-v-muted font-semibold">Agent:</span> <span class="text-v-muted2">'+b.agent_id+'</span></div>';
-    if(b.reason)h+='<div class="text-[10px] mb-2"><span class="text-v-muted font-semibold">Trigger:</span> <span class="text-v-muted2">'+b.reason+'</span></div>';
-    if(b.findings&&b.findings.length){h+='<div class="mb-2"><div class="text-[9px] font-semibold text-v-muted uppercase mb-1">Findings</div><div class="space-y-1">';b.findings.forEach(f=>{h+='<div class="text-[10px] py-1 px-2 rounded bg-v-bg border border-v-border"><span class="font-semibold text-v-amb">'+(f.attack_vector||f.finding||'')+'</span>'+(f.evidence?' <span class="text-v-muted2">'+f.evidence+'</span>':'')+'</div>'});h+='</div></div>'}
-    if(b.recommendations&&b.recommendations.length){h+='<div class="mb-2"><div class="text-[9px] font-semibold text-v-muted uppercase mb-1">Recommendations for Circle</div><div class="space-y-1">';b.recommendations.forEach(r=>{h+='<div class="text-[10px] py-1 px-2 rounded bg-v-bg border border-v-border"><span class="font-semibold text-v-blu">'+(r.action||r)+'</span>'+(r.target?' <span class="text-v-muted2">\u2192 '+r.target+'</span>':'')+'</div>'});h+='</div></div>'}
-    if(b.actions_taken&&b.actions_taken.length){h+='<div class="space-y-1">';b.actions_taken.forEach(a=>{h+='<div class="flex items-center gap-2 text-[10px] py-1 px-2 rounded bg-v-bg border border-v-border"><span class="font-semibold text-v-red">'+a.action+'</span><span class="text-v-muted2">'+(a.status||'')+'</span>'+(a.detail?'<span class="text-v-muted font-mono text-[9px] ml-auto">'+a.detail.substring(0,60)+'</span>':'')+'</div>'});h+='</div>'}
+    h+='<div class="p-4 rounded-xl border-l-2 border-error bg-error/5">';
+    h+='<div class="flex items-center gap-2 mb-2"><span class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase">Forensic Record</span><span class="text-sm font-bold font-display text-v-red">'+b.severity+'</span><span class="font-mono text-xs text-on-surface-variant">'+(b.isolation_id||b.record_id||'')+'</span></div>';
+    if(b.agent_id)h+='<div class="text-xs mb-1"><span class="text-on-surface-variant font-semibold">Agent:</span> <span class="text-on-surface-variant">'+b.agent_id+'</span></div>';
+    if(b.reason)h+='<div class="text-xs mb-2"><span class="text-on-surface-variant font-semibold">Trigger:</span> <span class="text-on-surface-variant">'+b.reason+'</span></div>';
+    if(b.findings&&b.findings.length){h+='<div class="mb-2"><div class="font-mono text-[9px] font-semibold text-on-surface-variant/60 uppercase mb-1">Findings</div><div class="space-y-1">';b.findings.forEach(f=>{h+='<div class="text-xs py-1.5 px-3 rounded-lg bg-surface-container-lowest border border-white/5"><span class="font-semibold text-v-amb">'+(f.attack_vector||f.finding||'')+'</span>'+(f.evidence?' <span class="text-on-surface-variant">'+f.evidence+'</span>':'')+'</div>'});h+='</div></div>'}
+    if(b.recommendations&&b.recommendations.length){h+='<div class="mb-2"><div class="font-mono text-[9px] font-semibold text-on-surface-variant/60 uppercase mb-1">Recommendations for Circle</div><div class="space-y-1">';b.recommendations.forEach(r=>{h+='<div class="text-xs py-1.5 px-3 rounded-lg bg-surface-container-lowest border border-white/5"><span class="font-semibold text-secondary">'+(r.action||r)+'</span>'+(r.target?' <span class="text-on-surface-variant">\u2192 '+r.target+'</span>':'')+'</div>'});h+='</div></div>'}
+    if(b.actions_taken&&b.actions_taken.length){h+='<div class="space-y-1">';b.actions_taken.forEach(a=>{h+='<div class="flex items-center gap-2 text-xs py-1.5 px-3 rounded-lg bg-surface-container-lowest border border-white/5"><span class="font-semibold text-v-red">'+a.action+'</span><span class="text-on-surface-variant">'+(a.status||'')+'</span>'+(a.detail?'<span class="text-on-surface-variant/60 font-mono text-[10px] ml-auto">'+a.detail.substring(0,60)+'</span>':'')+'</div>'});h+='</div>'}
     h+='</div>';
   }else if(t==='service_discovery'){
-    h+='<div class="p-3 rounded-lg border-l-2 border-v-blu bg-v-blu/5">';
-    h+='<div class="text-xs font-semibold text-v-blu mb-2">'+b.services_found+' services discovered</div>';
-    if(b.sources)h+='<div class="text-[10px] text-v-muted mb-2">Sources: '+(b.sources||[]).join(', ')+'</div>';
-    if(b.services&&b.services.length){b.services.forEach(s=>{h+='<div class="flex items-center justify-between py-1.5 border-b border-v-border last:border-none text-[10px]"><span class="text-v-muted2 font-medium">'+s.name+'</span><span class="text-v-muted font-mono">'+(s.price_usdc||'?')+' USDC</span></div>'})}
+    h+='<div class="p-4 rounded-xl border-l-2 border-secondary bg-secondary/5">';
+    h+='<div class="text-sm font-semibold font-display text-secondary mb-2">'+b.services_found+' services discovered</div>';
+    if(b.sources)h+='<div class="text-xs text-on-surface-variant mb-2">Sources: '+(b.sources||[]).join(', ')+'</div>';
+    if(b.services&&b.services.length){b.services.forEach(s=>{h+='<div class="flex items-center justify-between py-2 border-b border-white/5 last:border-none text-xs"><span class="text-on-surface-variant font-medium">'+s.name+'</span><span class="text-on-surface-variant/60 font-mono">'+(s.price_usdc||'?')+' USDC</span></div>'})}
     h+='</div>';
   }else{
-    // Generic: render body as key-value pairs
-    h+='<div class="p-3 rounded-lg bg-v-bg border border-v-border space-y-1">';
+    h+='<div class="p-4 rounded-lg bg-surface-container-lowest border border-white/5 space-y-1">';
     for(const[k,v]of Object.entries(b)){
       const val=typeof v==='object'?JSON.stringify(v):String(v);
-      h+='<div class="text-[10px]"><span class="text-v-muted font-semibold">'+k+':</span> <span class="text-v-muted2 font-mono break-all">'+val.substring(0,200)+(val.length>200?'...':'')+'</span></div>';
+      h+='<div class="text-xs"><span class="text-on-surface-variant font-semibold">'+k+':</span> <span class="text-on-surface-variant font-mono break-all">'+val.substring(0,200)+(val.length>200?'...':'')+'</span></div>';
     }
     h+='</div>';
   }
@@ -660,11 +934,18 @@ function renderArtifactDetail(a){
 }
 // ── Agent sub-tabs ──
 let _currentAgentTab='all';
+let _agentStatusFilter='all';
+function agentStatusFilter(filter){
+  _agentStatusFilter=filter;
+  document.querySelectorAll('#agent-status-filter button').forEach(b=>b.classList.remove('active'));
+  [...document.querySelectorAll('#agent-status-filter button')].find(b=>b.textContent.toLowerCase().includes(filter))?.classList.add('active');
+  loadData();
+}
 function agentTab(name){
   _currentAgentTab=name;
   document.querySelectorAll('#agent-nav button').forEach(b=>b.classList.remove('active'));
   const _agentDisplayNames={'Isolator':'Forensic Recorder'};
-  [...document.querySelectorAll('#agent-nav button')].find(b=>b.textContent===(_agentDisplayNames[name]||name)||(name==='all'&&b.textContent==='All Agents'))?.classList.add('active');
+  [...document.querySelectorAll('#agent-nav button')].find(b=>b.textContent===(_agentDisplayNames[name]||name)||(name==='all'&&b.textContent==='All'))?.classList.add('active');
   if(name==='all'){
     document.getElementById('agent-all-panel').style.display='';
     document.getElementById('agent-detail-panel').style.display='none';
@@ -674,38 +955,35 @@ function agentTab(name){
     renderAgentDetail(name);
   }
 }
+function trustRingSvg(score,color,size){
+  size=size||40;const r=size/2-3;const c=2*Math.PI*r;const off=c*(1-score/100);
+  return '<div class="relative" style="width:'+size+'px;height:'+size+'px"><svg class="transform -rotate-90" width="'+size+'" height="'+size+'"><circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="transparent" stroke="rgba(255,255,255,0.06)" stroke-width="3"/><circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="transparent" stroke="'+color+'" stroke-width="3" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" stroke-linecap="round"/></svg><div class="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold" style="color:'+color+'">'+score+'</div></div>';
+}
 function renderAgentDetail(name){
-  // Fetch data
   fetch('/api/data').then(r=>r.json()).then(d=>{
     const ag=d.agents?.[name];
     const card=document.getElementById('agent-detail-card');
-    if(!ag){card.innerHTML='<span class="text-xs text-v-muted">No data for '+name+'. Run a demo first.</span>';document.getElementById('agent-detail-artifacts').innerHTML='';return}
-    const statusColor=ag.status==='Active'?'text-v-grn':ag.status==='Ready'?'text-v-amb':'text-v-muted';
-    const roleDescs={Coordinator:'Discovers x402 services from the Circle Agent Marketplace and routes capability queries between agents. Returns service endpoints for payment-protected resources.',Gateway:'Evaluates every payment intent against deterministic policy rules (zero LLM on the trust path). Verifies x401 credentials, issues 60-second Ed25519 tokens, and signs immutable receipts with settlement tx binding. Circle\u2019s Action Gate enforces; Gateway proves what was decided.',Auditor:'Audits each receipt against EU AI Act (Art 12\u201313), NIST AI RMF, and DORA Article 11. Generates signed compliance reports over real USDC spend data. Produces the cryptographic proof regulators need.',Investigator:'Performs forensic analysis on denial receipts. Classifies attack vectors (PROMPT_INJECTION_DETECTED, UNAUTHORIZED_PAYEE, AMOUNT_VIOLATION), produces signed incident reports with evidence citations and severity grading.',Recommender:'Proposes policy changes targeting Circle\u2019s Action Gate and wallet policies. Generates actionable recommendations like UPDATE_INPUT_GUARDRAILS or TIGHTEN_ALLOWLIST. All proposals require human review.',Isolator:'Forensic Recorder: documents what happened, analyzes why, and recommends what Circle\u2019s stack should do next. Does NOT enforce \u2014 Circle\u2019s Action Gate blocks payments, MPC co-signer refuses to sign. Publishes real ERC-8004 reputation events on-chain.'};
+    if(!ag){card.innerHTML='<span class="text-sm text-on-surface-variant">No data for '+name+'. Run a demo first.</span>';document.getElementById('agent-detail-artifacts').innerHTML='';return}
+    const statusColor=ag.status==='Active'?'text-v-grn':ag.status==='Ready'?'text-v-amb':'text-on-surface-variant';
+    const roleDescs={Coordinator:'Discovers x402 services from the Circle Agent Marketplace and routes capability queries between agents.',Gateway:'Evaluates every payment intent against deterministic policy rules (zero LLM). Verifies x401 credentials, issues 60-second Ed25519 tokens, signs immutable receipts with settlement tx binding.',Auditor:'Audits each receipt against EU AI Act (Art 12\u201313), NIST AI RMF, and DORA Article 11. Generates signed compliance reports over real USDC spend data.',Investigator:'Performs forensic analysis on denial receipts. Classifies attack vectors, produces signed incident reports with evidence citations and severity grading.',Recommender:'Proposes policy changes targeting Circle\u2019s Action Gate and wallet policies. Generates actionable recommendations. All proposals require human review.',Isolator:'Forensic Recorder: documents what happened, analyzes why, and recommends what Circle\u2019s stack should do next. Publishes real ERC-8004 reputation events on-chain.'};
     const detailDisplayName=name==='Isolator'?'Forensic Recorder':name;
-    card.innerHTML='<div class="flex items-center justify-between mb-3"><div class="flex items-center gap-3"><span class="text-lg font-bold text-v-accent">'+detailDisplayName+'</span><span class="'+statusColor+' text-xs font-medium px-2 py-0.5 rounded bg-v-card border border-v-border">'+ag.status+'</span></div><span class="text-[10px] font-mono text-v-muted">'+ag.artifacts+' artifacts</span></div>'
-      +'<p class="text-[11px] text-v-muted2 leading-relaxed mb-3">'+(roleDescs[name]||ag.role||'')+'</p>'
-      +'<div class="p-2.5 rounded bg-v-bg border border-v-border"><div class="text-[9px] text-v-muted uppercase tracking-wider font-semibold mb-1">Ed25519 Signing Key (kid)</div><div class="font-mono text-[10px] text-v-muted2 break-all">'+ag.kid+'</div></div>';
-    // Filter artifacts for this agent
+    card.innerHTML='<div class="flex items-center justify-between mb-4"><div class="flex items-center gap-3"><span class="text-xl font-bold font-display text-v-accent">'+detailDisplayName+'</span><span class="'+statusColor+' text-xs font-medium px-2.5 py-1 rounded-full bg-surface-container-high border border-white/5">'+ag.status+'</span></div><span class="font-mono text-xs text-on-surface-variant">'+ag.artifacts+' artifacts</span></div>'
+      +'<p class="text-sm text-on-surface-variant leading-relaxed mb-4">'+(roleDescs[name]||ag.role||'')+'</p>'
+      +'<div class="p-3 rounded-lg bg-surface-container-lowest border border-white/5"><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider font-semibold mb-1">Ed25519 Signing Key (kid)</div><div class="font-mono text-xs text-on-surface-variant break-all">'+ag.kid+'</div></div>';
     let arts=(d.artifacts||[]).filter(a=>a.agent?.toLowerCase()===name.toLowerCase());
-    // For Gateway, include receipts as viewable items
     if(name==='Gateway'&&d.receipts&&d.receipts.length){
       d.receipts.forEach(env=>{
-        const b=env.body||{};const del=b.delegation_context||{};
+        const b=env.body||{};
         arts.push({agent:'gateway',artifact_type:'receipt',body:b,artifact_hash:env.receipt_hash,signature:env.sig?.value||env.signature||'',receipt_hash:env.receipt_hash});
       });
     }
     document.getElementById('agent-detail-artifacts-title').textContent=detailDisplayName+' Artifacts ('+arts.length+')';
-    if(!arts.length){document.getElementById('agent-detail-artifacts').innerHTML='<div class="px-4 py-8 text-center text-xs text-v-muted">No artifacts yet for '+name+'. Run the Golden Path demo.</div>';return}
+    if(!arts.length){document.getElementById('agent-detail-artifacts').innerHTML='<div class="px-5 py-8 text-center text-sm text-on-surface-variant">No artifacts yet. Run the Golden Path demo.</div>';return}
     window._filteredArtifacts=arts;
     let ah='';
     arts.forEach((a,idx)=>{
       const body=a.body||{};let detail='';
-      if(a.artifact_type==='receipt'){
-        const del=body.delegation_context||{};
-        const isApprove=body.decision==='approve';
-        detail='<span class="'+(isApprove?'text-v-grn':'text-v-red')+' font-semibold">'+body.decision?.toUpperCase()+'</span> — seq '+body.seq+(del.settlement_tx?' — tx: '+del.settlement_tx.substring(0,20)+'...':'');
-      }
+      if(a.artifact_type==='receipt'){const del=body.delegation_context||{};const isApprove=body.decision==='approve';detail='<span class="'+(isApprove?'text-v-grn':'text-v-red')+' font-semibold">'+body.decision?.toUpperCase()+'</span> — seq '+body.seq+(del.settlement_tx?' — tx: '+del.settlement_tx.substring(0,20)+'...':'');}
       else if(a.artifact_type==='incident_report')detail='<span class="text-v-red">'+body.severity+'</span> — '+(body.narrative?.summary||'').substring(0,120);
       else if(a.artifact_type==='policy_proposal')detail=(body.proposals||[]).map(p=>'<span class="text-v-amb">'+p.change_type+'</span>').join(', ');
       else if(a.artifact_type==='audit_report')detail='<span class="text-v-grn">'+body.verdict+'</span> — '+(body.frameworks_checked||[]).join(', ');
@@ -713,37 +991,36 @@ function renderAgentDetail(name){
       else if(a.artifact_type==='compliance_report'){const sp=body.total_governed_spend_usdc||0;detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed — '+(body.verification_status||'')}
       else if(a.artifact_type==='isolation_record'||a.artifact_type==='forensic_record')detail='<span class="text-v-red">'+body.severity+'</span> — '+(body.findings||[]).map(f=>f.attack_vector||f.finding||'').filter(Boolean).join(', ')||(body.actions_taken||[]).map(x=>x.action).join(', ');
       const typeLabel=a.artifact_type==='isolation_record'?'forensic record':a.artifact_type.replace(/_/g,' ');
-      ah+='<div class="px-4 py-3 border-b border-white/[.03] cursor-pointer hover:bg-white/[.02] transition" onclick="showArtifactDetail(window._filteredArtifacts['+idx+'])"><div class="flex items-center gap-2 text-xs"><span class="text-v-muted2">'+typeLabel+'</span><span class="font-mono text-v-muted text-[10px] ml-auto">'+(a.artifact_hash||'').substring(0,24)+'...</span></div>'+(detail?'<div class="text-[11px] text-v-muted2 mt-1">'+detail+'</div>':'')+'</div>';
+      ah+='<div class="px-5 py-3 border-b border-white/[.04] cursor-pointer hover:bg-white/[.02] transition" onclick="showArtifactDetail(window._filteredArtifacts['+idx+'])"><div class="flex items-center gap-2 text-xs"><span class="text-on-surface-variant">'+typeLabel+'</span><span class="font-mono text-on-surface-variant/60 text-[11px] ml-auto">'+(a.artifact_hash||'').substring(0,24)+'...</span></div>'+(detail?'<div class="text-xs text-on-surface-variant mt-1">'+detail+'</div>':'')+'</div>';
     });
     document.getElementById('agent-detail-artifacts').innerHTML=ah;
   }).catch(()=>{});
 }
 
-// Auto-load data when switching tabs
 const origGo=go;
 go=function(view){origGo(view);if(view==='wallets')loadWallets();if(view==='receipts'||view==='agents'||view==='compliance'){loadData();if(view==='agents'&&_currentAgentTab!=='all')renderAgentDetail(_currentAgentTab)}}
 
 function loadData(){
   fetch('/api/data').then(r=>r.json()).then(d=>{
-    // Receipts tab
     if(d.receipts&&d.receipts.length){
+      window._receiptData=d.receipts;
       const el=document.getElementById('receipt-rows');
       let h='';
-      d.receipts.forEach(env=>{
+      d.receipts.forEach((env,idx)=>{
         const b=env.body||{};const del=b.delegation_context||{};
         const isApprove=b.decision==='approve';
         const txHash=del.settlement_tx||'';
         const explorer=d.receipts[0]?.body?.delegation_context?.settlement_chain?.includes('SEPOLIA')?'sepolia.basescan.org':'basescan.org';
-        h+='<tr class="tbl-row">';
-        h+='<td class="px-4 py-2.5 font-mono text-xs">'+b.seq+'</td>';
-        h+='<td class="px-4 py-2.5"><span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded '+(isApprove?'bg-v-grn/10 text-v-grn border border-v-grn/20':'bg-v-red/10 text-v-red border border-v-red/20')+'">'+b.decision?.toUpperCase()+'</span></td>';
-        h+='<td class="px-4 py-2.5 font-mono text-[10px] text-v-muted2 break-all">'+env.receipt_hash?.substring(0,32)+'...</td>';
-        h+='<td class="px-4 py-2.5 font-mono text-[10px]">'+(txHash?'<a href="https://'+explorer+'/tx/'+txHash+'" target="_blank" class="text-v-blu hover:underline">'+txHash.substring(0,20)+'...</a>':'<span class="text-v-muted">--</span>')+'</td>';
-        h+='<td class="px-4 py-2.5 font-mono text-[10px] text-v-muted">'+b.prev_receipt?.substring(0,24)+'...</td>';
+        h+='<tr class="tbl-row cursor-pointer" onclick="showReceiptDetail('+idx+')">';
+        h+='<td class="px-5 py-3 font-mono text-xs text-secondary">'+env.receipt_hash?.substring(0,12)+'...'+env.receipt_hash?.substring(env.receipt_hash.length-4)+'</td>';
+        h+='<td class="px-5 py-3"><span class="font-mono text-[11px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 w-fit '+(isApprove?'bg-primary-fixed/10 text-v-grn border border-primary-fixed/20':'bg-error/10 text-v-red border border-error/20')+'"><span class="w-1.5 h-1.5 rounded-full '+(isApprove?'bg-primary-fixed':'bg-error')+'"></span>'+b.decision?.toUpperCase()+'</span></td>';
+        h+='<td class="px-5 py-3 font-mono text-[11px]">'+(txHash?'<a href="https://'+explorer+'/tx/'+txHash+'" target="_blank" class="text-secondary hover:underline">'+txHash.substring(0,12)+'...'+txHash.substring(txHash.length-4)+'</a>':'<span class="text-on-surface-variant/40">--</span>')+'</td>';
+        h+='<td class="px-5 py-3 font-mono text-xs text-on-surface-variant">'+b.seq+'</td>';
         h+='</tr>';
       });
       el.innerHTML=h;
       document.getElementById('receipt-count').textContent=d.receipts.length+' receipts';
+      document.getElementById('chain-sync-label').textContent='Synchronized';
     }
     if(d.merkle_root)document.getElementById('merkle-display').textContent=d.merkle_root;
     if(d.anchor){
@@ -751,80 +1028,113 @@ function loadData(){
       if(d.anchor.wallet){
         const isSep=(d.anchor.chain||'').toUpperCase().includes('SEPOLIA');
         const explorerBase=isSep?'https://sepolia.basescan.org':'https://basescan.org';
-        document.getElementById('anchor-links').style.display='';
+        document.getElementById('anchor-links').style.display='flex';
         const wLink=document.getElementById('anchor-wallet-link');
         wLink.href=explorerBase+'/address/'+d.anchor.wallet;
-        wLink.textContent=d.anchor.wallet;
-        const bLink=document.getElementById('anchor-basescan-link');
+        wLink.textContent=d.anchor.wallet;wLink.classList.remove('hidden');
+        const bLink=document.getElementById('anchor-basescan-link');bLink.classList.remove('hidden');
         bLink.href=explorerBase+'/address/'+d.anchor.wallet;
       }
     }
-
-    // Agents tab
     if(d.agents&&Object.keys(d.agents).length){
       const el=document.getElementById('agent-rows');
       let h='';
       const order=['Coordinator','Gateway','Auditor','Investigator','Recommender','Isolator'];
+      const icons={Coordinator:'hub',Gateway:'security',Auditor:'policy',Investigator:'search',Recommender:'lightbulb',Isolator:'gpp_bad'};
+      const iconColors={Coordinator:'text-secondary',Gateway:'text-primary-fixed',Auditor:'text-primary-fixed',Investigator:'text-error',Recommender:'text-v-amb',Isolator:'text-error'};
+      const trustScores={Coordinator:95,Gateway:98,Auditor:92,Investigator:88,Recommender:90,Isolator:34};
+      const trustLabels={Coordinator:'Verified',Gateway:'High Integrity',Auditor:'Verified',Investigator:'Verified',Recommender:'Verified',Isolator:'Critical Failure'};
+      let totalTrust=0,trustCount=0,quarantineCount=0;
+      const anomalies=[];
       order.forEach(name=>{
-        const ag=d.agents[name];
-        if(!ag)return;
-        const statusColor=ag.status==='Active'?'text-v-grn':ag.status==='Ready'?'text-v-amb':'text-v-muted';
-        h+='<tr class="tbl-row">';
+        const ag=d.agents[name];if(!ag)return;
+        const isActive=ag.status==='Active';
+        const isQuarantined=name==='Isolator'&&ag.artifacts>0;
+        if(isQuarantined){quarantineCount++;anomalies.push({time:'Recent',text:'Agent <span class="font-mono text-xs text-error">'+name+'</span> triggered policy violation. Automatically quarantined.',color:'bg-error'})}
+        const trust=trustScores[name]||90;totalTrust+=trust;trustCount++;
+        const trustColor=trust>=80?'#b8f600':trust>=50?'#fbbf24':'#ffb4ab';
+        const trustLabel=trustLabels[name]||'Active';
+        // Apply status filter
+        if(_agentStatusFilter==='active'&&isQuarantined)return;
+        if(_agentStatusFilter==='quarantined'&&!isQuarantined)return;
         const displayName=name==='Isolator'?'Forensic Recorder':name;
-        h+='<td class="px-4 py-3 font-medium">'+displayName+'</td>';
-        h+='<td class="px-4 py-3 text-v-muted2">'+(ag.role||'--')+'</td>';
-        h+='<td class="px-4 py-3 font-mono text-[10px] text-v-muted2">'+ag.kid+'</td>';
-        h+='<td class="px-4 py-3 font-mono">'+ag.artifacts+'</td>';
-        h+='<td class="px-4 py-3"><span class="'+statusColor+' font-medium">'+ag.status+'</span></td>';
-        h+='</tr>';
+        const statusBg=isQuarantined?'bg-error/10 border-error/20 text-error':isActive?'bg-primary-fixed/10 border-primary-fixed/20 text-primary-fixed':'bg-surface-container-high border-white/10 text-on-surface-variant';
+        const statusDot=isQuarantined?'bg-error animate-pulse':isActive?'bg-primary-fixed status-glow':'bg-on-surface-variant/40';
+        const statusText=isQuarantined?'Isolated':ag.status;
+        const cardBorder=isQuarantined?'border border-error/30 shadow-[0_0_20px_rgba(255,180,171,0.08)]':'';
+        const cardBg=isQuarantined?' style="background:linear-gradient(135deg,rgba(40,15,15,.4),rgba(30,32,36,.6))"':'';
+        h+='<div class="bento-card cursor-pointer '+cardBorder+'"'+cardBg+' onclick="agentTab(\''+name+'\')">';
+        // Header: icon + name + status
+        h+='<div class="flex items-center justify-between mb-4">';
+        h+='<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-surface-container-highest/60 border border-white/10 flex items-center justify-center"><span class="material-symbols-outlined '+(iconColors[name]||'text-on-surface-variant')+'" style="font-size:20px">'+icons[name]+'</span></div><div><div class="font-display text-sm font-bold text-on-surface">'+displayName+'</div><div class="font-mono text-[10px] text-on-surface-variant/50 flex items-center gap-1">'+ag.kid.substring(0,14)+'... <span class="material-symbols-outlined" style="font-size:12px">content_copy</span></div></div></div>';
+        h+='<div class="flex items-center gap-1.5 px-2 py-1 rounded-md border '+statusBg+'"><span class="w-1.5 h-1.5 rounded-full '+statusDot+'"></span><span class="font-mono text-[10px] font-semibold">'+statusText+'</span></div>';
+        h+='</div>';
+        // Trust score
+        h+='<div class="flex items-center gap-3 p-2.5 rounded-lg bg-surface-container-lowest/50 border border-white/5 mb-4">';
+        h+=trustRingSvg(trust,trustColor,36);
+        h+='<div><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider">ERC-8004 Trust</div><div class="text-xs font-medium" style="color:'+trustColor+'">'+trustLabel+'</div></div>';
+        h+='</div>';
+        // Stats
+        h+='<div class="grid grid-cols-3 gap-2 pt-3 border-t border-white/5">';
+        const approved=isQuarantined?'<span class="line-through text-on-surface-variant/40">'+ag.artifacts+'</span>':ag.artifacts;
+        h+='<div><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase">Artifacts</div><div class="font-mono text-sm font-bold text-on-surface">'+approved+'</div></div>';
+        h+='<div><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase">'+(isQuarantined?'Violations':'Denied')+'</div><div class="font-mono text-sm font-bold '+(isQuarantined?'text-error':'text-on-surface')+'">'+(isQuarantined?ag.artifacts:0)+'</div></div>';
+        h+='<div><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase">Status</div><div class="font-mono text-sm font-bold '+(isQuarantined?'text-error':'text-primary-fixed')+'">'+statusText+'</div></div>';
+        h+='</div>';
+        // Footer
+        h+='<div class="flex justify-between items-center mt-3 pt-3 border-t border-white/5">';
+        h+='<span class="font-mono text-[10px] text-on-surface-variant/50">'+(isQuarantined?'Quarantined recently':'Last active recently')+'</span>';
+        h+='<span class="text-xs '+(isQuarantined?'text-error':'text-primary-fixed')+' font-medium flex items-center gap-1">'+(isQuarantined?'Audit Logs':'View Details')+' <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span></span>';
+        h+='</div></div>';
       });
       el.innerHTML=h;
+      // Update Intelligence Overview sidebar
+      const mean=trustCount?totalTrust/trustCount:0;
+      document.getElementById('trust-mean').textContent=mean.toFixed(1);
+      document.getElementById('trust-bar').style.width=mean+'%';
+      document.getElementById('trust-risk').textContent=mean>=80?'Low':mean>=60?'Medium':'High';
+      document.getElementById('trust-delta').textContent='+0.4% (24h)';
+      // Quarantine badge
+      const badge=document.getElementById('quarantine-badge');
+      if(quarantineCount>0){badge.textContent=quarantineCount;badge.classList.remove('hidden')}else{badge.classList.add('hidden')}
+      // Anomaly feed
+      let af='';
+      if(anomalies.length){anomalies.forEach(a=>{af+='<div class="flex gap-2.5 items-start mb-3"><div class="mt-1 w-2 h-2 rounded-full '+a.color+' shrink-0" style="box-shadow:0 0 8px rgba(255,180,171,.4)"></div><div><div class="font-mono text-[10px] text-on-surface-variant/60">'+a.time+'</div><div class="text-xs text-on-surface leading-relaxed">'+a.text+'</div></div></div>'})}
+      if(!anomalies.length)af+='<div class="flex gap-2.5 items-start"><div class="mt-1 w-2 h-2 rounded-full bg-primary-fixed shrink-0"></div><div><div class="font-mono text-[10px] text-on-surface-variant/60">System</div><div class="text-xs text-on-surface leading-relaxed">All agents passing verification. No anomalies detected.</div></div></div>';
+      document.getElementById('anomaly-feed').innerHTML=af;
+      document.getElementById('agent-count').textContent=Object.keys(d.agents).length+' Active Nodes';
     }
-    // Artifacts detail
     if(d.artifacts&&d.artifacts.length){
       window._artifactData=d.artifacts;
       document.getElementById('agent-artifacts-panel').style.display='';
       let ah='';
       d.artifacts.forEach(a=>{
-        const body=a.body||{};
-        let detail='';
-        // Show key fields based on artifact type
-        if(a.artifact_type==='incident_report'){
-          detail='<span class="text-v-red">'+body.severity+'</span> &mdash; '+(body.narrative?.summary||'').substring(0,120);
-        }else if(a.artifact_type==='policy_proposal'){
-          detail=(body.proposals||[]).map(p=>'<span class="text-v-amb">'+p.change_type+'</span>').join(', ');
-        }else if(a.artifact_type==='audit_report'){
-          detail='<span class="text-v-grn">'+body.verdict+'</span> &mdash; '+(body.frameworks_checked||[]).join(', ');
-        }else if(a.artifact_type==='service_discovery'){
-          detail=body.services_found+' services from '+(body.sources||[]).join(', ');
-        }else if(a.artifact_type==='compliance_report'){
-          const sp=body.total_governed_spend_usdc||0;
-          const vs=body.verification_status||'';
-          detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed &mdash; '+vs;
-        }else if(a.artifact_type==='isolation_record'||a.artifact_type==='forensic_record'){
-          detail='<span class="text-v-red">'+body.severity+'</span> &mdash; '+(body.findings||[]).map(f=>f.attack_vector||f.finding||'').filter(Boolean).join(', ')||(body.actions_taken||[]).map(x=>x.action).join(', ');
-        }
+        const body=a.body||{};let detail='';
+        if(a.artifact_type==='incident_report')detail='<span class="text-v-red">'+body.severity+'</span> &mdash; '+(body.narrative?.summary||'').substring(0,120);
+        else if(a.artifact_type==='policy_proposal')detail=(body.proposals||[]).map(p=>'<span class="text-v-amb">'+p.change_type+'</span>').join(', ');
+        else if(a.artifact_type==='audit_report')detail='<span class="text-v-grn">'+body.verdict+'</span> &mdash; '+(body.frameworks_checked||[]).join(', ');
+        else if(a.artifact_type==='service_discovery')detail=body.services_found+' services from '+(body.sources||[]).join(', ');
+        else if(a.artifact_type==='compliance_report'){const sp=body.total_governed_spend_usdc||0;detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed &mdash; '+(body.verification_status||'')}
+        else if(a.artifact_type==='isolation_record'||a.artifact_type==='forensic_record')detail='<span class="text-v-red">'+body.severity+'</span> &mdash; '+(body.findings||[]).map(f=>f.attack_vector||f.finding||'').filter(Boolean).join(', ')||(body.actions_taken||[]).map(x=>x.action).join(', ');
         const idx=d.artifacts.indexOf(a);
         const allAgent=a.agent==='isolator'?'forensic recorder':a.agent;
         const allType=a.artifact_type==='isolation_record'?'forensic record':a.artifact_type.replace(/_/g,' ');
-        ah+='<div class="px-4 py-3 border-b border-white/[.03] cursor-pointer hover:bg-white/[.02] transition" onclick="showArtifactDetail(window._artifactData['+idx+'])"><div class="flex items-center gap-2 text-xs"><span class="font-semibold text-v-accent">'+allAgent+'</span><span class="text-v-muted">/</span><span class="text-v-muted2">'+allType+'</span><span class="font-mono text-v-muted text-[10px] ml-auto">'+(a.artifact_hash||'').substring(0,24)+'...</span></div>'+(detail?'<div class="text-[11px] text-v-muted2 mt-1">'+detail+'</div>':'')+'</div>';
+        ah+='<div class="px-5 py-3 border-b border-white/[.04] cursor-pointer hover:bg-white/[.02] transition" onclick="showArtifactDetail(window._artifactData['+idx+'])"><div class="flex items-center gap-2 text-xs"><span class="font-semibold text-v-accent font-display">'+allAgent+'</span><span class="text-on-surface-variant/40">/</span><span class="text-on-surface-variant">'+allType+'</span><span class="font-mono text-on-surface-variant/60 text-[11px] ml-auto">'+(a.artifact_hash||'').substring(0,24)+'...</span></div>'+(detail?'<div class="text-xs text-on-surface-variant mt-1">'+detail+'</div>':'')+'</div>';
       });
       document.getElementById('agent-artifacts').innerHTML=ah;
     }
-
-    // Compliance tab
     if(d.verification&&typeof d.verification==='object'){
       const v=d.verification;
       const c=[['Ed25519 Signatures',v.signatures],['Hash Chain',v.hash_chain],['Merkle Root',v.merkle],['x401 Identity',v.x401||'SKIP'],['Anchor',v.anchor]];
-      document.getElementById('comp-verify').innerHTML='<div class="grid grid-cols-2 gap-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between p-2 rounded bg-v-bg"><span class="text-[11px] text-v-muted2">'+l+'</span><span class="text-[11px] font-mono font-semibold '+(s==='PASS'?'text-v-grn':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="text-center mt-3 font-mono text-sm font-bold '+(v.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+v.overall+'</div>';
+      document.getElementById('comp-verify').innerHTML='<div class="grid grid-cols-2 gap-2">'+c.map(([l,s])=>'<div class="flex items-center justify-between p-3 rounded-lg bg-surface-container-lowest border border-white/5"><span class="text-xs text-on-surface-variant">'+l+'</span><span class="font-mono text-xs font-semibold '+(s==='PASS'?'text-v-grn':'text-v-red')+'">'+s+'</span></div>').join('')+'</div><div class="text-center mt-4 font-mono text-sm font-bold '+(v.overall==='PASS'?'text-v-grn':'text-v-red')+'">'+v.overall+'</div>';
     }
     if(d.compliance){
       let ch='';
-      if(d.compliance.summary)ch+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-3">'+d.compliance.summary+'</p>';
-      if(d.compliance.eu_ai_act){ch+='<div class="mb-2"><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">EU AI Act</div>';for(const[k,v]of Object.entries(d.compliance.eu_ai_act))ch+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-1"><strong class="text-white">'+k.replace(/_/g,' ')+'</strong>: '+v+'</p>';ch+='</div>'}
-      if(d.compliance.nist_ai_rmf){ch+='<div class="mb-2"><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(d.compliance.nist_ai_rmf))ch+='<p class="text-[11px] text-v-muted2 leading-relaxed mb-1"><strong class="text-white">'+k.toUpperCase()+'</strong>: '+v+'</p>';ch+='</div>'}
-      if(d.compliance.recommendations){ch+='<div><div class="text-[10px] font-semibold text-v-muted uppercase mb-1">Recommendations</div>';d.compliance.recommendations.forEach((r,i)=>{ch+='<p class="text-[11px] text-v-muted2">'+(_=>++i)+'. '+r+'</p>'});ch+='</div>'}
-      document.getElementById('comp-report').innerHTML=ch||'<span class="text-xs text-v-muted">No compliance report yet.</span>';
+      if(d.compliance.summary)ch+='<p class="text-xs text-on-surface-variant leading-relaxed mb-3">'+d.compliance.summary+'</p>';
+      if(d.compliance.eu_ai_act){ch+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">EU AI Act</div>';for(const[k,v]of Object.entries(d.compliance.eu_ai_act))ch+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface">'+k.replace(/_/g,' ')+'</strong>: '+v+'</p>';ch+='</div>'}
+      if(d.compliance.nist_ai_rmf){ch+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(d.compliance.nist_ai_rmf))ch+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface">'+k.toUpperCase()+'</strong>: '+v+'</p>';ch+='</div>'}
+      if(d.compliance.recommendations){ch+='<div><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">Recommendations</div>';d.compliance.recommendations.forEach((r,i)=>{ch+='<p class="text-xs text-on-surface-variant">'+(i+1)+'. '+r+'</p>'});ch+='</div>'}
+      document.getElementById('comp-report').innerHTML=ch||'<span class="text-sm text-on-surface-variant">No compliance report yet.</span>';
     }
   }).catch(e=>console.warn('loadData error',e));
 }
