@@ -1010,7 +1010,7 @@ async def _rogue_path_stream():
                 yield _sse("isolation", {
                     "isolation_id": record.record_id,
                     "severity": record.severity,
-                    "actions": [a["action"] for a in record.actions_taken],
+                    "actions": [r.get("action", r.get("recommendation", "")) for r in record.recommendations],
                 })
                 await asyncio.sleep(0.8)
 
