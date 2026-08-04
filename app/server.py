@@ -1008,7 +1008,7 @@ async def _rogue_path_stream():
             )
             if record:
                 yield _sse("isolation", {
-                    "isolation_id": record.isolation_id,
+                    "isolation_id": record.record_id,
                     "severity": record.severity,
                     "actions": [a["action"] for a in record.actions_taken],
                 })
