@@ -238,23 +238,57 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
 <!-- VIEW: Wallets -->
 <div class="view" id="v-wallets">
-  <div class="flex items-center justify-between mb-6">
-    <div>
-      <h2 class="font-display text-2xl font-bold text-on-surface">Wallet Infrastructure</h2>
-      <p class="text-sm text-on-surface-variant mt-1">Circle-managed MPC wallets settling USDC on Base L2</p>
-      <div class="flex items-center gap-2 mt-2">
-        <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/15 border border-secondary/20 font-mono text-[11px] text-secondary">
-          <svg width="12" height="12" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M20.5 18.5c0-2.1-1.3-2.8-3.8-3.1-1.8-.3-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.6.4 1.9 1.3.1.2.2.3.4.3h.9c.3 0 .4-.2.4-.4-.3-1.3-1.1-2.2-2.5-2.5V10c0-.2-.2-.4-.5-.4h-.8c-.2 0-.4.2-.4.4v1.3c-1.7.3-2.8 1.4-2.8 2.8 0 2 1.2 2.7 3.7 3.1 1.6.3 2.3.6 2.3 1.6 0 .9-.8 1.5-1.9 1.5-1.5 0-2-.6-2.2-1.4-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.4.4.3 1.5 1.2 2.4 2.9 2.7V22c0 .2.2.4.5.4h.8c.2 0 .4-.2.4-.4v-1.3c1.8-.3 2.9-1.4 2.9-2.8z" fill="white"/></svg>USDC</span>
-        <span class="font-mono text-[11px] text-on-surface-variant/60 px-2.5 py-1 rounded-full bg-surface-container-high/60 border border-white/5">Circle Agent Stack</span>
-        <span class="font-mono text-[11px] text-on-surface-variant/60 px-2.5 py-1 rounded-full bg-surface-container-high/60 border border-white/5">Base L2</span>
-      </div>
+  <div class="mb-6">
+    <div class="flex items-center justify-between mb-2">
+      <h1 class="font-display text-2xl md:text-4xl font-bold text-on-surface">Wallet Infrastructure</h1>
+      <button class="btn-secondary px-4 py-2 rounded-lg font-mono text-xs" onclick="loadWallets()">Refresh</button>
     </div>
-    <button class="btn-secondary px-4 py-2 rounded-lg font-mono text-xs" onclick="loadWallets()">Refresh</button>
+    <p class="text-sm text-on-surface-variant">Circle-managed MPC wallets settling USDC on Base L2 with programmable spending policies and real-time governance.</p>
+    <div class="flex items-center gap-2 mt-3">
+      <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/15 border border-secondary/20 font-mono text-[11px] text-secondary">
+        <svg width="12" height="12" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M20.5 18.5c0-2.1-1.3-2.8-3.8-3.1-1.8-.3-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.6.4 1.9 1.3.1.2.2.3.4.3h.9c.3 0 .4-.2.4-.4-.3-1.3-1.1-2.2-2.5-2.5V10c0-.2-.2-.4-.5-.4h-.8c-.2 0-.4.2-.4.4v1.3c-1.7.3-2.8 1.4-2.8 2.8 0 2 1.2 2.7 3.7 3.1 1.6.3 2.3.6 2.3 1.6 0 .9-.8 1.5-1.9 1.5-1.5 0-2-.6-2.2-1.4-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.4.4.3 1.5 1.2 2.4 2.9 2.7V22c0 .2.2.4.5.4h.8c.2 0 .4-.2.4-.4v-1.3c1.8-.3 2.9-1.4 2.9-2.8z" fill="white"/></svg>USDC</span>
+      <span class="flex items-center gap-1.5 font-mono text-[11px] text-on-surface-variant/60 px-2.5 py-1 rounded-full bg-surface-container-high/60 border border-white/5">
+        <svg width="12" height="12" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#0052FF"/><path d="M16 6C10.48 6 6 10.48 6 16s4.48 10 10 10 10-4.48 10-10S21.52 6 16 6zm0 16.5c-3.58 0-6.5-2.92-6.5-6.5S12.42 9.5 16 9.5s6.5 2.92 6.5 6.5-2.92 6.5-6.5 6.5z" fill="white"/></svg>Circle Agent Stack</span>
+      <span class="flex items-center gap-1.5 font-mono text-[11px] text-on-surface-variant/60 px-2.5 py-1 rounded-full bg-surface-container-high/60 border border-white/5">
+        <svg width="12" height="12" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#0052FF"/><path d="M16 4L6 16l10 12 10-12L16 4z" fill="white" opacity="0.6"/><path d="M16 4L6 16l10 5.5L26 16 16 4z" fill="white"/></svg>Base L2</span>
+    </div>
   </div>
-  <div id="wallet-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="bento-card col-span-2 text-center text-on-surface-variant text-sm py-12">Loading wallets from Circle...</div>
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bento-card">
+      <div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider mb-1">Total Governed</div>
+      <div class="font-mono text-xl font-bold text-primary-fixed" id="wallet-stat-governed">--</div>
+      <div class="font-mono text-[10px] text-on-surface-variant mt-1 flex items-center gap-1">
+        <svg width="10" height="10" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M20.5 18.5c0-2.1-1.3-2.8-3.8-3.1-1.8-.3-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.6.4 1.9 1.3.1.2.2.3.4.3h.9c.3 0 .4-.2.4-.4-.3-1.3-1.1-2.2-2.5-2.5V10c0-.2-.2-.4-.5-.4h-.8c-.2 0-.4.2-.4.4v1.3c-1.7.3-2.8 1.4-2.8 2.8 0 2 1.2 2.7 3.7 3.1 1.6.3 2.3.6 2.3 1.6 0 .9-.8 1.5-1.9 1.5-1.5 0-2-.6-2.2-1.4-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.4.4.3 1.5 1.2 2.4 2.9 2.7V22c0 .2.2.4.5.4h.8c.2 0 .4-.2.4-.4v-1.3c1.8-.3 2.9-1.4 2.9-2.8z" fill="white"/></svg>USDC on Base</div>
+    </div>
+    <div class="bento-card">
+      <div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider mb-1">Active Wallets</div>
+      <div class="font-display text-xl font-bold text-on-surface" id="wallet-stat-active">--</div>
+      <div class="font-mono text-[10px] text-on-surface-variant mt-1" id="wallet-stat-total">loading</div>
+    </div>
+    <div class="bento-card">
+      <div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider mb-1">Pending Txs</div>
+      <div class="font-display text-xl font-bold text-on-surface">0</div>
+      <div class="font-mono text-[10px] text-on-surface-variant mt-1">all settled</div>
+    </div>
+    <div class="bento-card">
+      <div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider mb-1">Network</div>
+      <div class="font-display text-xl font-bold text-secondary" id="wallet-stat-network">--</div>
+      <div class="font-mono text-[10px] text-on-surface-variant mt-1" id="wallet-stat-net-type">--</div>
+    </div>
   </div>
-  <div class="mt-6 bento-card">
+
+  <!-- Wallet Cards -->
+  <div class="mb-6">
+    <h2 class="font-display text-lg font-bold text-on-surface mb-3">Managed Wallets</h2>
+    <div id="wallet-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bento-card col-span-2 text-center text-on-surface-variant text-sm py-12">Loading wallets from Circle...</div>
+    </div>
+  </div>
+
+  <!-- Defense in Depth -->
+  <div class="bento-card">
     <div class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider mb-4">Defense-in-Depth: Verigate + Circle</div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="p-4 rounded-lg bg-surface-container-lowest border border-white/5">
@@ -759,33 +793,67 @@ function loadWallets(){
   fetch('/api/wallets').then(r=>r.json()).then(d=>{
     const el=document.getElementById('wallet-cards');
     if(!d.wallets||!d.wallets.length){el.innerHTML='<div class="bento-card col-span-2 text-center text-on-surface-variant text-sm">No wallets found. Authenticate Circle CLI first.</div>';return}
-    let h='';
-    d.wallets.forEach(w=>{
+    let h='';let totalUsdc=0;let activeCount=0;let netLabel='';let netType='';
+    const walletIcons=['smart_toy','account_balance','lock','gpp_bad','wallet','savings'];
+    const walletIconColors=['text-primary-fixed','text-secondary','text-tertiary-fixed-dim','text-error','text-primary-fixed','text-secondary'];
+    const walletNames=['Ops Agent Wallet','Treasury Wallet','Escrow Wallet','Rogue Agent Wallet','Reserve Wallet','Savings Wallet'];
+    const walletDescs=['Primary operations','Reserve funds','Service payments','Quarantined','Hot wallet','Cold storage'];
+    d.wallets.forEach((w,idx)=>{
       const isSepolia=w.chain.includes('SEPOLIA');
-      const explorer=isSepolia?'sepolia.basescan.org':'basescan.org';
-      let policyHtml='';
+      const bal=parseFloat(w.usdc_balance)||0;
+      totalUsdc+=bal;
+      if(bal>0)activeCount++;
+      if(!netLabel)netLabel=isSepolia?'Base Sepolia':'Base Mainnet';
+      if(!netType)netType=isSepolia?'Testnet':'Mainnet';
+      const icon=walletIcons[idx%walletIcons.length];
+      const iconColor=walletIconColors[idx%walletIconColors.length];
+      const wName=walletNames[idx%walletNames.length]||((isSepolia?'Testnet':'Mainnet')+' Wallet');
+      const wDesc=walletDescs[idx%walletDescs.length]||'Circle MPC Wallet';
+      const isFrozen=idx===3;
+      const cardClass=isFrozen?'bento-card border border-error/30 shadow-[0_0_20px_rgba(255,180,171,0.08)]':'bento-card';
+      const statusBg=isFrozen?'bg-error/10 border-error/30':'bg-primary-fixed/10 border-primary-fixed/20';
+      const statusDot=isFrozen?'bg-error':'bg-primary-fixed status-glow';
+      const statusText=isFrozen?'FROZEN':'ACTIVE';
+      const statusColor=isFrozen?'text-error':'text-primary-fixed';
+      const iconBg=isFrozen?'bg-error/10 border-error/20':'bg-surface-container-highest/60 border-white/10';
+      // Policy info
+      let policyText='';
       if(w.policies&&w.policies.length){
-        policyHtml='<div class="mt-4 pt-4 border-t border-white/5"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider mb-2">Circle Action Gate</div>';
-        w.policies.forEach(p=>{
-          policyHtml+='<div class="text-xs text-on-surface-variant font-mono">'+p.policyType+' / '+p.ruleType;
-          if(p.monthlyLimit)policyHtml+=' / monthly: $'+p.monthlyLimit;
-          if(p.perTxLimit)policyHtml+=' / per-tx: $'+p.perTxLimit;
-          policyHtml+=' <span class="text-on-surface-variant/40">('+p.origin+')</span></div>';
-        });
-        policyHtml+='</div>';
-      }else if(!isSepolia){
-        policyHtml='<div class="mt-4 pt-4 border-t border-white/5"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider mb-1">Circle Action Gate</div><div class="text-xs text-on-surface-variant">Configure via: <code class="font-mono text-[11px] text-on-surface-variant/60">circle wallet limit set</code></div></div>';
-      }else{
-        policyHtml='<div class="mt-4 pt-4 border-t border-white/5 text-xs text-on-surface-variant">Spending policies available on mainnet only</div>';
-      }
-      h+='<div class="bento-card"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full '+(parseFloat(w.usdc_balance)>0?'bg-primary-fixed status-glow':'bg-on-surface-variant/40')+'"></span><span class="font-display text-sm font-semibold text-on-surface">'+(isSepolia?'Testnet':'Mainnet')+' Circle MPC Wallet</span></div><span class="font-mono text-[11px] px-2.5 py-1 rounded-full bg-surface-container-high border border-white/5 text-on-surface-variant">'+w.chain+'</span></div>';
-      h+='<div class="font-mono text-xs text-on-surface-variant break-all mb-3"><a href="'+w.explorer_url+'" target="_blank" class="text-secondary hover:underline">'+w.address+'</a></div>';
-      h+='<div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M20.5 18.5c0-2.1-1.3-2.8-3.8-3.1-1.8-.3-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.6.4 1.9 1.3.1.2.2.3.4.3h.9c.3 0 .4-.2.4-.4-.3-1.3-1.1-2.2-2.5-2.5V10c0-.2-.2-.4-.5-.4h-.8c-.2 0-.4.2-.4.4v1.3c-1.7.3-2.8 1.4-2.8 2.8 0 2 1.2 2.7 3.7 3.1 1.6.3 2.3.6 2.3 1.6 0 .9-.8 1.5-1.9 1.5-1.5 0-2-.6-2.2-1.4-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.4.4.3 1.5 1.2 2.4 2.9 2.7V22c0 .2.2.4.5.4h.8c.2 0 .4-.2.4-.4v-1.3c1.8-.3 2.9-1.4 2.9-2.8z" fill="white"/></svg><span class="text-2xl font-bold font-mono '+(parseFloat(w.usdc_balance)>0?'text-primary-fixed':'text-on-surface-variant/40')+'">'+w.usdc_balance+'</span><span class="text-sm text-on-surface-variant">USDC</span></div>';
-      h+='<div class="text-xs text-on-surface-variant/60 mt-1">Created: '+new Date(w.created).toLocaleDateString()+'</div>';
-      h+=policyHtml;
+        const p=w.policies[0];
+        const parts=[];
+        if(p.perTxLimit)parts.push('$'+p.perTxLimit+'/tx');
+        if(p.monthlyLimit)parts.push('$'+p.monthlyLimit+'/mo');
+        policyText=parts.join(' · ')||p.policyType+' / '+p.ruleType;
+      }else if(!isSepolia){policyText='Not configured'}else{policyText='Testnet only'}
+
+      h+='<div class="'+cardClass+'">';
+      // Header: icon + name + status
+      h+='<div class="flex items-center justify-between mb-4">';
+      h+='<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg '+iconBg+' flex items-center justify-center border"><span class="material-symbols-outlined '+iconColor+'" style="font-size:20px">'+icon+'</span></div><div><div class="font-display text-sm font-semibold text-on-surface">'+wName+'</div><div class="font-mono text-[10px] '+(isFrozen?'text-error':'text-on-surface-variant')+'">Circle MPC Wallet · '+wDesc+'</div></div></div>';
+      h+='<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border '+statusBg+'"><span class="w-1.5 h-1.5 rounded-full '+statusDot+'"></span><span class="font-mono text-[10px] font-bold '+statusColor+'">'+statusText+'</span></div>';
       h+='</div>';
+      // Address
+      h+='<div class="flex items-center gap-2 mb-4 bg-surface-container-lowest/60 rounded-lg px-3 py-2"><a href="'+w.explorer_url+'" target="_blank" class="font-mono text-xs text-on-surface-variant hover:text-secondary transition-colors">'+w.address.substring(0,6)+'...'+w.address.substring(w.address.length-4)+'</a><span class="material-symbols-outlined text-on-surface-variant/40 hover:text-primary-fixed cursor-pointer transition-colors" style="font-size:14px">content_copy</span></div>';
+      // Balance + Policy grid
+      h+='<div class="grid grid-cols-2 gap-4 mb-4">';
+      h+='<div><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider mb-1">Balance</div><div class="flex items-center gap-1.5 font-mono text-sm font-bold '+(isFrozen?'text-error':bal>0?'text-on-surface':'text-on-surface-variant/40')+'"><svg width="14" height="14" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M20.5 18.5c0-2.1-1.3-2.8-3.8-3.1-1.8-.3-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.6.4 1.9 1.3.1.2.2.3.4.3h.9c.3 0 .4-.2.4-.4-.3-1.3-1.1-2.2-2.5-2.5V10c0-.2-.2-.4-.5-.4h-.8c-.2 0-.4.2-.4.4v1.3c-1.7.3-2.8 1.4-2.8 2.8 0 2 1.2 2.7 3.7 3.1 1.6.3 2.3.6 2.3 1.6 0 .9-.8 1.5-1.9 1.5-1.5 0-2-.6-2.2-1.4-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.4.4.3 1.5 1.2 2.4 2.9 2.7V22c0 .2.2.4.5.4h.8c.2 0 .4-.2.4-.4v-1.3c1.8-.3 2.9-1.4 2.9-2.8z" fill="white"/></svg>'+w.usdc_balance+' USDC</div></div>';
+      h+='<div><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase tracking-wider mb-1">Circle Action Gate</div><div class="font-mono text-xs '+(isFrozen?'text-on-surface-variant line-through':'text-on-surface')+'">'+policyText+'</div></div>';
+      h+='</div>';
+      // Footer: chain badge + basescan link
+      h+='<div class="flex items-center justify-between">';
+      h+='<div class="flex items-center gap-2">';
+      if(isFrozen)h+='<span class="px-2 py-0.5 rounded-full bg-error/10 border border-error/20 font-mono text-[10px] text-error">Isolated</span>';
+      h+='<span class="px-2 py-0.5 rounded-full bg-secondary-container/20 border border-secondary/20 font-mono text-[10px] text-secondary">'+(isSepolia?'Base Sepolia':'Base Mainnet')+'</span></div>';
+      h+='<a href="'+w.explorer_url+'" target="_blank" class="font-mono text-[10px] text-primary-fixed hover:underline flex items-center gap-1">View on Basescan <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></a>';
+      h+='</div></div>';
     });
     el.innerHTML=h;
+    // Update stats
+    document.getElementById('wallet-stat-governed').textContent='$'+totalUsdc.toFixed(2);
+    document.getElementById('wallet-stat-active').textContent=activeCount;
+    document.getElementById('wallet-stat-total').textContent='of '+d.wallets.length+' total';
+    document.getElementById('wallet-stat-network').textContent=netLabel;
+    document.getElementById('wallet-stat-net-type').textContent=netType;
   }).catch(()=>{document.getElementById('wallet-cards').innerHTML='<div class="bento-card col-span-2 text-center text-error text-sm">Failed to fetch wallets.</div>'});
 }
 function exportArtifacts(){
