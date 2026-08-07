@@ -109,7 +109,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
     <h1 class="text-4xl md:text-5xl font-display font-extrabold tracking-tight mb-6 text-on-surface leading-tight">Your AI agent just spent <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-fixed to-secondary">$50,000.</span> Can you prove why?</h1>
     <p class="text-on-surface-variant text-base leading-relaxed mb-2 max-w-2xl mx-auto">Circle controls <em>whether</em> agents can pay. <span class="text-on-surface font-medium">Verigate proves <em>why</em> they did.</span></p>
-    <p class="text-on-surface-variant/60 text-sm leading-relaxed mb-3 max-w-2xl mx-auto">Every authorization decision is Ed25519 signed, hash-chained, Merkle-anchored, and independently verifiable — creating an irrefutable audit trail for regulators, auditors, and dispute resolution.</p>
+    <p class="text-on-surface-variant/60 text-sm leading-relaxed mb-3 max-w-2xl mx-auto">Every authorization decision is Ed25519 signed, hash-chained, Merkle-anchored, and independently verifiable. This creates an irrefutable audit trail for regulators, auditors, and dispute resolution.</p>
     <div class="flex flex-wrap gap-2 justify-center mb-8">
       <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">x401 Identity</span>
       <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">ERC-8004</span>
@@ -127,10 +127,10 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <div class="bento-card p-5 mb-4 text-left">
       <div class="flex items-center gap-2 mb-4"><span class="font-display text-sm font-semibold text-primary-fixed">What Verigate Adds to Circle's Stack</span></div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div><div class="text-sm font-semibold text-on-surface mb-1">x401 Identity Binding</div><div class="text-xs text-on-surface-variant leading-relaxed">Verifiable credentials bound into every receipt — proves WHO authorized the agent</div></div>
-        <div><div class="text-sm font-semibold text-on-surface mb-1">Cryptographic Receipts</div><div class="text-xs text-on-surface-variant leading-relaxed">Ed25519 signed, hash-chained, settlement-bound — independently verifiable offline</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">x401 Identity Binding</div><div class="text-xs text-on-surface-variant leading-relaxed">Verifiable credentials bound into every receipt. Proves WHO authorized the agent</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">Cryptographic Receipts</div><div class="text-xs text-on-surface-variant leading-relaxed">Ed25519 signed, hash-chained, settlement-bound. Independently verifiable offline</div></div>
         <div><div class="text-sm font-semibold text-on-surface mb-1">ERC-8004 Reputation</div><div class="text-xs text-on-surface-variant leading-relaxed">Isolation events published to on-chain registry for portable agent trust</div></div>
-        <div><div class="text-sm font-semibold text-on-surface mb-1">Dispute Resolution</div><div class="text-xs text-on-surface-variant leading-relaxed">Export receipt chain for third-party arbiters — zero trust, zero network needed</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">Dispute Resolution</div><div class="text-xs text-on-surface-variant leading-relaxed">Export receipt chain for third-party arbiters. Zero trust, zero network needed</div></div>
       </div>
     </div>
 
@@ -139,7 +139,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div><div class="text-sm font-semibold text-on-surface mb-1">Agent Wallets</div><div class="text-xs text-on-surface-variant leading-relaxed">MPC-secured USDC wallets with Action Gate, spending caps, and allowlists</div></div>
         <div><div class="text-sm font-semibold text-on-surface mb-1">x402 Protocol</div><div class="text-xs text-on-surface-variant leading-relaxed">HTTP 402 + EIP-3009 for pay-per-request service access</div></div>
-        <div><div class="text-sm font-semibold text-on-surface mb-1">Recibo</div><div class="text-xs text-on-surface-variant leading-relaxed">Bi-directional settlement binding — receipt hash embedded in on-chain transfer</div></div>
+        <div><div class="text-sm font-semibold text-on-surface mb-1">Recibo</div><div class="text-xs text-on-surface-variant leading-relaxed">Bi-directional settlement binding. Receipt hash embedded in on-chain transfer</div></div>
         <div><div class="text-sm font-semibold text-on-surface mb-1">Circle CLI</div><div class="text-xs text-on-surface-variant leading-relaxed">Wallet ops, transfers, signing, policy management</div></div>
       </div>
     </div>
@@ -164,8 +164,8 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
 <span class="text-on-surface">gate</span> <span class="text-on-surface-variant/50">=</span> <span class="text-on-surface">Gate</span><span class="text-on-surface-variant/50">(</span><span class="text-on-surface">wallet</span><span class="text-on-surface-variant/50">=</span><span class="text-primary-fixed">"circle://agent-wallet"</span><span class="text-on-surface-variant/50">,</span> <span class="text-on-surface">policy</span><span class="text-on-surface-variant/50">=</span><span class="text-primary-fixed">"policy.yaml"</span><span class="text-on-surface-variant/50">)</span>
 <span class="text-on-surface">receipt</span> <span class="text-on-surface-variant/50">=</span> <span class="text-on-surface">gate</span><span class="text-on-surface-variant/50">.</span><span class="text-on-surface">authorize</span><span class="text-on-surface-variant/50">(</span><span class="text-on-surface">intent</span><span class="text-on-surface-variant/50">)</span>  <span class="text-on-surface-variant/40"># signed receipt with settlement binding</span>
-<span class="text-on-surface">gate</span><span class="text-on-surface-variant/50">.</span><span class="text-on-surface">verify</span><span class="text-on-surface-variant/50">()</span>                  <span class="text-on-surface-variant/40"># offline verification — no network needed</span></code></pre>
-      <p class="text-xs text-on-surface-variant/60 mt-2">Every <code class="font-mono text-[11px] text-secondary">authorize()</code> call produces a cryptographic receipt — Ed25519 signed, hash-chained, Merkle-anchored, with x401 identity + settlement tx binding. Receipts are independently verifiable by any third party, offline, forever.</p>
+<span class="text-on-surface">gate</span><span class="text-on-surface-variant/50">.</span><span class="text-on-surface">verify</span><span class="text-on-surface-variant/50">()</span>                  <span class="text-on-surface-variant/40"># offline verification, no network needed</span></code></pre>
+      <p class="text-xs text-on-surface-variant/60 mt-2">Every <code class="font-mono text-[11px] text-secondary">authorize()</code> call produces a cryptographic receipt: Ed25519 signed, hash-chained, Merkle-anchored, with x401 identity + settlement tx binding. Receipts are independently verifiable by any third party, offline, forever.</p>
     </div>
 
     <!-- The problem section -->
@@ -178,7 +178,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
         <div class="p-3 rounded-lg bg-error/5 border border-error/10">
           <div class="text-sm font-semibold text-on-surface mb-1">Prompt Injection = Theft</div>
-          <div class="text-xs text-on-surface-variant leading-relaxed">A single prompt injection can override an LLM-based gate. Verigate's deterministic policy engine is immune — zero LLM in the decision path.</div>
+          <div class="text-xs text-on-surface-variant leading-relaxed">A single prompt injection can override an LLM-based gate. Verigate's deterministic policy engine is immune. Zero LLM in the decision path.</div>
         </div>
         <div class="p-3 rounded-lg bg-error/5 border border-error/10">
           <div class="text-sm font-semibold text-on-surface mb-1">EU AI Act Compliance</div>
@@ -765,7 +765,7 @@ function showC(d){
 }
 
 // ── Agent table updates ──
-// Agent updates are no-ops during SSE — cards rebuild on tab switch via loadData()
+// Agent updates are no-ops during SSE.cards rebuild on tab switch via loadData()
 function updateAgentRow(step){}
 function updateAgent(d){}
 
@@ -968,7 +968,7 @@ function renderArtifactDetail(a){
       if(b.narrative.root_cause)h+='<div class="text-xs mb-1"><span class="text-on-surface-variant font-semibold">Root Cause:</span> <span class="text-on-surface-variant">'+b.narrative.root_cause+'</span></div>';
       if(b.narrative.attack_vector)h+='<div class="text-xs mb-1"><span class="text-on-surface-variant font-semibold">Attack Vector:</span> <span class="text-on-surface-variant">'+b.narrative.attack_vector+'</span></div>';
       if(b.narrative.impact)h+='<div class="text-xs mb-1"><span class="text-on-surface-variant font-semibold">Impact:</span> <span class="text-on-surface-variant">'+b.narrative.impact+'</span></div>';
-      if(b.narrative.timeline&&b.narrative.timeline.length){h+='<div class="mt-2"><div class="font-mono text-[10px] text-on-surface-variant/60 font-semibold mb-1">Timeline</div>';b.narrative.timeline.forEach(e=>{const txt=typeof e==='object'?'<span class="text-on-surface font-medium">'+(e.event||e.action||e.description||'')+'</span>'+(e.detail?' — '+e.detail:'')+(e.timestamp?' <span class="text-on-surface-variant/60 font-mono">'+e.timestamp+'</span>':''):e;h+='<div class="text-xs text-on-surface-variant pl-3 border-l border-white/5 py-0.5">'+txt+'</div>'});h+='</div>'}
+      if(b.narrative.timeline&&b.narrative.timeline.length){h+='<div class="mt-2"><div class="font-mono text-[10px] text-on-surface-variant/60 font-semibold mb-1">Timeline</div>';b.narrative.timeline.forEach(e=>{const txt=typeof e==='object'?'<span class="text-on-surface font-medium">'+(e.event||e.action||e.description||'')+'</span>'+(e.detail?'.'+e.detail:'')+(e.timestamp?' <span class="text-on-surface-variant/60 font-mono">'+e.timestamp+'</span>':''):e;h+='<div class="text-xs text-on-surface-variant pl-3 border-l border-white/5 py-0.5">'+txt+'</div>'});h+='</div>'}
     }
     h+='</div>';
   }else if(t==='policy_proposal'){
@@ -988,7 +988,7 @@ function renderArtifactDetail(a){
     h+='<div class="p-4 rounded-xl border-l-2 '+(b.verdict==='ALIGNED'?'border-primary-fixed bg-primary-fixed/5':'border-error bg-error/5')+'">';
     h+='<div class="flex items-center gap-2 mb-2"><span class="text-sm font-bold font-display '+vColor+'">'+b.verdict+'</span></div>';
     if(b.frameworks_checked)h+='<div class="text-xs text-on-surface-variant mb-2">Frameworks: '+(b.frameworks_checked||[]).map(f=>'<span class="px-2 py-0.5 rounded-full bg-surface-container-high border border-white/5 text-on-surface-variant mr-1">'+f+'</span>').join('')+'</div>';
-    if(b.findings&&b.findings.length){h+='<div class="mt-2 space-y-1">';b.findings.forEach(f=>{if(typeof f==='object'){const s=f.verdict||f.status||'';const isGood=s==='ALIGNED'||s==='PASS'||s==='COMPLIANT';h+='<div class="text-xs text-on-surface-variant py-1.5 px-3 rounded-lg bg-surface-container-lowest border border-white/5">'+(f.framework?'<span class="text-on-surface-variant/60 font-mono text-[10px]">'+f.framework+'</span> ':'')+(f.finding||f.description||'')+(s?' — <span class="font-semibold '+(isGood?'text-v-grn':'text-v-amb')+'">'+s+'</span>':'')+'</div>'}else{h+='<div class="text-xs text-on-surface-variant">'+f+'</div>'}});h+='</div>'}
+    if(b.findings&&b.findings.length){h+='<div class="mt-2 space-y-1">';b.findings.forEach(f=>{if(typeof f==='object'){const s=f.verdict||f.status||'';const isGood=s==='ALIGNED'||s==='PASS'||s==='COMPLIANT';h+='<div class="text-xs text-on-surface-variant py-1.5 px-3 rounded-lg bg-surface-container-lowest border border-white/5">'+(f.framework?'<span class="text-on-surface-variant/60 font-mono text-[10px]">'+f.framework+'</span> ':'')+(f.finding||f.description||'')+(s?'.<span class="font-semibold '+(isGood?'text-v-grn':'text-v-amb')+'">'+s+'</span>':'')+'</div>'}else{h+='<div class="text-xs text-on-surface-variant">'+f+'</div>'}});h+='</div>'}
     if(b.receipt_seq!==undefined)h+='<div class="font-mono text-xs text-on-surface-variant/60 mt-2">Receipt seq: '+b.receipt_seq+'</div>';
     h+='</div>';
   }else if(t==='compliance_report'){
@@ -1004,8 +1004,8 @@ function renderArtifactDetail(a){
         if(sf.payments_blocked!==undefined)h+='<div class="p-3 rounded-lg bg-surface-container-lowest border border-white/5 text-center"><div class="font-mono text-[9px] text-on-surface-variant/60 uppercase">Blocked</div><div class="text-sm font-bold font-mono text-v-red">'+sf.payments_blocked+'</div></div>';
         h+='</div>';
       }
-      if(n.eu_ai_act){h+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">EU AI Act</div>';for(const[k,v]of Object.entries(n.eu_ai_act)){const vt=typeof v==='object'?(v.status||v.verdict||'')+((v.detail||v.description)?' — '+(v.detail||v.description):''):v;h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface font-medium">'+k.replace(/_/g,' ')+'</strong>: '+vt+'</p>'}h+='</div>'}
-      if(n.nist_ai_rmf){h+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(n.nist_ai_rmf)){const vt=typeof v==='object'?(v.status||v.verdict||'')+((v.detail||v.description)?' — '+(v.detail||v.description):''):v;h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface font-medium">'+k.toUpperCase()+'</strong>: '+vt+'</p>'}h+='</div>'}
+      if(n.eu_ai_act){h+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">EU AI Act</div>';for(const[k,v]of Object.entries(n.eu_ai_act)){const vt=typeof v==='object'?(v.status||v.verdict||'')+((v.detail||v.description)?' / '+(v.detail||v.description):''):v;h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface font-medium">'+k.replace(/_/g,' ')+'</strong>: '+vt+'</p>'}h+='</div>'}
+      if(n.nist_ai_rmf){h+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(n.nist_ai_rmf)){const vt=typeof v==='object'?(v.status||v.verdict||'')+((v.detail||v.description)?' / '+(v.detail||v.description):''):v;h+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface font-medium">'+k.toUpperCase()+'</strong>: '+vt+'</p>'}h+='</div>'}
       if(n.recommendations){h+='<div><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">Recommendations</div>';n.recommendations.forEach((r,i)=>{const rt=typeof r==='object'?(r.recommendation||r.action||r.description||JSON.stringify(r)):r;h+='<p class="text-xs text-on-surface-variant">'+(i+1)+'. '+rt+'</p>'});h+='</div>'}
     }
     h+='</div>';
@@ -1086,13 +1086,13 @@ function renderAgentDetail(name){
     let ah='';
     arts.forEach((a,idx)=>{
       const body=a.body||{};let detail='';
-      if(a.artifact_type==='receipt'){const del=body.delegation_context||{};const isApprove=body.decision==='approve';detail='<span class="'+(isApprove?'text-v-grn':'text-v-red')+' font-semibold">'+body.decision?.toUpperCase()+'</span> — seq '+body.seq+(del.settlement_tx?' — tx: '+del.settlement_tx.substring(0,20)+'...':'');}
-      else if(a.artifact_type==='incident_report')detail='<span class="text-v-red">'+body.severity+'</span> — '+(body.narrative?.summary||'').substring(0,120);
+      if(a.artifact_type==='receipt'){const del=body.delegation_context||{};const isApprove=body.decision==='approve';detail='<span class="'+(isApprove?'text-v-grn':'text-v-red')+' font-semibold">'+body.decision?.toUpperCase()+'</span> / seq '+body.seq+(del.settlement_tx?' / tx: '+del.settlement_tx.substring(0,20)+'...':'');}
+      else if(a.artifact_type==='incident_report')detail='<span class="text-v-red">'+body.severity+'</span> / '+(body.narrative?.summary||'').substring(0,120);
       else if(a.artifact_type==='policy_proposal')detail=(body.proposals||[]).map(p=>'<span class="text-v-amb">'+p.change_type+'</span>').join(', ');
-      else if(a.artifact_type==='audit_report')detail='<span class="text-v-grn">'+body.verdict+'</span> — '+(body.frameworks_checked||[]).join(', ');
+      else if(a.artifact_type==='audit_report')detail='<span class="text-v-grn">'+body.verdict+'</span> / '+(body.frameworks_checked||[]).join(', ');
       else if(a.artifact_type==='service_discovery')detail=body.services_found+' services from '+(body.sources||[]).join(', ');
-      else if(a.artifact_type==='compliance_report'){const sp=body.total_governed_spend_usdc||0;detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed — '+(body.verification_status||'')}
-      else if(a.artifact_type==='isolation_record'||a.artifact_type==='forensic_record')detail='<span class="text-v-red">'+body.severity+'</span> — '+(body.findings||[]).map(f=>f.attack_vector||f.finding||'').filter(Boolean).join(', ')||(body.actions_taken||[]).map(x=>x.action).join(', ');
+      else if(a.artifact_type==='compliance_report'){const sp=body.total_governed_spend_usdc||0;detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed / '+(body.verification_status||'')}
+      else if(a.artifact_type==='isolation_record'||a.artifact_type==='forensic_record')detail='<span class="text-v-red">'+body.severity+'</span> / '+(body.findings||[]).map(f=>f.attack_vector||f.finding||'').filter(Boolean).join(', ')||(body.actions_taken||[]).map(x=>x.action).join(', ');
       const typeLabel=a.artifact_type==='isolation_record'?'forensic record':a.artifact_type.replace(/_/g,' ');
       ah+='<div class="px-5 py-3 border-b border-white/[.04] cursor-pointer hover:bg-white/[.02] transition" onclick="showArtifactDetail(window._filteredArtifacts['+idx+'])"><div class="flex items-center gap-2 text-xs"><span class="text-on-surface-variant">'+typeLabel+'</span><span class="font-mono text-on-surface-variant/60 text-[11px] ml-auto">'+(a.artifact_hash||'').substring(0,24)+'...</span></div>'+(detail?'<div class="text-xs text-on-surface-variant mt-1">'+detail+'</div>':'')+'</div>';
     });
@@ -1213,12 +1213,12 @@ function loadData(){
       let ah='';
       d.artifacts.forEach(a=>{
         const body=a.body||{};let detail='';
-        if(a.artifact_type==='incident_report')detail='<span class="text-v-red">'+body.severity+'</span> &mdash; '+(body.narrative?.summary||'').substring(0,120);
+        if(a.artifact_type==='incident_report')detail='<span class="text-v-red">'+body.severity+'</span> / '+(body.narrative?.summary||'').substring(0,120);
         else if(a.artifact_type==='policy_proposal')detail=(body.proposals||[]).map(p=>'<span class="text-v-amb">'+p.change_type+'</span>').join(', ');
-        else if(a.artifact_type==='audit_report')detail='<span class="text-v-grn">'+body.verdict+'</span> &mdash; '+(body.frameworks_checked||[]).join(', ');
+        else if(a.artifact_type==='audit_report')detail='<span class="text-v-grn">'+body.verdict+'</span> / '+(body.frameworks_checked||[]).join(', ');
         else if(a.artifact_type==='service_discovery')detail=body.services_found+' services from '+(body.sources||[]).join(', ');
-        else if(a.artifact_type==='compliance_report'){const sp=body.total_governed_spend_usdc||0;detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed &mdash; '+(body.verification_status||'')}
-        else if(a.artifact_type==='isolation_record'||a.artifact_type==='forensic_record')detail='<span class="text-v-red">'+body.severity+'</span> &mdash; '+(body.findings||[]).map(f=>f.attack_vector||f.finding||'').filter(Boolean).join(', ')||(body.actions_taken||[]).map(x=>x.action).join(', ');
+        else if(a.artifact_type==='compliance_report'){const sp=body.total_governed_spend_usdc||0;detail='$'+(typeof sp==='number'?sp.toFixed(2):sp)+' governed / '+(body.verification_status||'')}
+        else if(a.artifact_type==='isolation_record'||a.artifact_type==='forensic_record')detail='<span class="text-v-red">'+body.severity+'</span> / '+(body.findings||[]).map(f=>f.attack_vector||f.finding||'').filter(Boolean).join(', ')||(body.actions_taken||[]).map(x=>x.action).join(', ');
         const idx=d.artifacts.indexOf(a);
         const allAgent=a.agent==='isolator'?'forensic recorder':a.agent;
         const allType=a.artifact_type==='isolation_record'?'forensic record':a.artifact_type.replace(/_/g,' ');
