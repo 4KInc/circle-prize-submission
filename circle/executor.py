@@ -104,9 +104,11 @@ class PaymentExecutor:
         private_key: Ed25519PrivateKey | None = None,
         kid: str | None = None,
         x401_verifier: Any | None = None,
+        dry_run: bool = False,
     ):
         self.source_wallet = source_wallet
         self.tenant = tenant
+        self.dry_run = dry_run
 
         # Signing key (per-tenant)
         self._private_key = private_key or Ed25519PrivateKey.generate()
@@ -278,15 +280,27 @@ class PaymentExecutor:
                 logger.warning(f"x402 payment failed ({e}), falling back to direct transfer")
 
         # Direct transfer for on-chain settlement proof (JTI = idempotency key)
-        transfer = wallet_transfer(
-            source=self.source_wallet,
-            destination=intent.payee,
-            amount=intent.amount,
-            chain=intent.chain,
-            token_address=intent.token_address,
-            idempotency_key=token_jti,
-        )
-        logger.info(f"Transfer confirmed: tx={transfer.tx_hash[:16]}...")
+        if self.dry_run:
+            transfer = TransferResult(
+                tx_hash=f"0xdryrun_{uuid.uuid4().hex[:16]}",
+                state="DRY_RUN",
+                source=self.source_wallet,
+                destination=intent.payee,
+                amount=intent.amount,
+                block_height=0,
+                explorer_url="",
+            )
+            logger.info(f"Dry-run transfer: tx={transfer.tx_hash[:24]}...")
+        else:
+            transfer = wallet_transfer(
+                source=self.source_wallet,
+                destination=intent.payee,
+                amount=intent.amount,
+                chain=intent.chain,
+                token_address=intent.token_address,
+                idempotency_key=token_jti,
+            )
+            logger.info(f"Transfer confirmed: tx={transfer.tx_hash[:16]}...")
 
         # NOW sign receipt with settlement tx hash embedded
         delegation = {
