@@ -304,10 +304,22 @@ async def get_wallets():
     return {"wallets": wallets_out}
 
 
+def _is_demo_running() -> bool:
+    """Check if a demo is running, with a 120s auto-expire to prevent stale locks."""
+    if not state["running"]:
+        return False
+    started = state.get("running_since", 0)
+    if time.time() - started > 120:
+        logger.warning("Stale demo lock detected (>120s), auto-clearing")
+        state["running"] = False
+        return False
+    return True
+
+
 @app.get("/api/run/golden-path")
 async def run_golden_path():
     """Run the golden path and stream events via SSE."""
-    if state["running"]:
+    if _is_demo_running():
         return StreamingResponse(
             _error_stream("A demo is already running. Please wait."),
             media_type="text/event-stream",
@@ -322,7 +334,7 @@ async def run_golden_path():
 @app.get("/api/run/rogue-path")
 async def run_rogue_path():
     """Run the rogue agent scenario and stream events via SSE."""
-    if state["running"]:
+    if _is_demo_running():
         return StreamingResponse(
             _error_stream("A demo is already running. Please wait."),
             media_type="text/event-stream",
@@ -346,6 +358,7 @@ def _sse(event_type: str, data: dict) -> str:
 async def _golden_path_stream():
     """Stream the golden path execution as SSE events."""
     state["running"] = True
+    state["running_since"] = time.time()
     state["payments"] = []
     state["receipts"] = []
     state["isolations"] = []
@@ -923,6 +936,7 @@ async def _golden_path_stream():
 async def _rogue_path_stream():
     """Stream the rogue agent scenario as SSE events."""
     state["running"] = True
+    state["running_since"] = time.time()
 
     try:
         from circle.executor import PaymentExecutor, PaymentIntent, PaymentDenied
