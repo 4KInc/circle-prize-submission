@@ -117,9 +117,9 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
       <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">System Operational</span>
     </div>
-    <h1 class="text-4xl md:text-5xl font-display font-extrabold tracking-tight mb-6 text-on-surface leading-tight">Every agent payment, <span class="hero-gradient-text">proven and auditable.</span></h1>
-    <p class="text-on-surface-variant text-base leading-relaxed mb-2 max-w-2xl mx-auto flex items-center justify-center gap-2 flex-wrap"><span>Built on</span><svg width="20" height="20" viewBox="0 0 32 32" fill="none" class="inline"><circle cx="16" cy="16" r="16" fill="#0052FF"/><path d="M16 6C10.48 6 6 10.48 6 16s4.48 10 10 10 10-4.48 10-10S21.52 6 16 6zm0 16.5c-3.58 0-6.5-2.92-6.5-6.5S12.42 9.5 16 9.5s6.5 2.92 6.5 6.5-2.92 6.5-6.5 6.5z" fill="white"/></svg><span class="text-on-surface font-semibold">Circle</span><span class="text-on-surface-variant/60">|</span><span>Circle controls <em>whether</em> agents can pay.</span><span class="text-on-surface font-medium">Verigate proves <em>why</em> they did.</span></p>
-    <p class="text-on-surface-variant/60 text-sm leading-relaxed mb-3 max-w-2xl mx-auto">Signed receipts for every transaction. Automatic compliance reporting. Rogue agent containment. All verifiable by any third party, offline, forever.</p>
+    <h1 class="text-4xl md:text-5xl font-display font-extrabold tracking-tight mb-6 text-on-surface leading-tight">The security agent that <span class="hero-gradient-text">earns USDC for trust.</span></h1>
+    <p class="text-on-surface text-base leading-relaxed mb-2 max-w-2xl mx-auto">Verigate earns USDC to verify AI-agent transactions, then autonomously spends a controlled security budget to stop and prove threats.</p>
+    <p class="text-on-surface-variant/60 text-sm leading-relaxed mb-3 max-w-2xl mx-auto flex items-center justify-center gap-2 flex-wrap">Built on <svg width="16" height="16" viewBox="0 0 32 32" fill="none" class="inline"><circle cx="16" cy="16" r="16" fill="#0052FF"/><path d="M16 6C10.48 6 6 10.48 6 16s4.48 10 10 10 10-4.48 10-10S21.52 6 16 6zm0 16.5c-3.58 0-6.5-2.92-6.5-6.5S12.42 9.5 16 9.5s6.5 2.92 6.5 6.5-2.92 6.5-6.5 6.5z" fill="white"/></svg> <span class="text-on-surface-variant">Circle Agent Stack</span></p>
     <div class="flex flex-wrap gap-2 justify-center mb-8">
       <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">x401 Identity</span>
       <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">ERC-8004</span>
@@ -135,49 +135,75 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
 
-    <!-- 3 feature cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mb-6">
-      <div class="bento-card !p-5">
-        <div class="w-10 h-10 rounded-lg bg-primary-fixed/10 border border-primary-fixed/20 flex items-center justify-center mb-3"><span class="material-symbols-outlined text-primary-fixed" style="font-size:20px">security</span></div>
-        <div class="font-display text-sm font-bold text-on-surface mb-1">Zero-LLM Policy Gate</div>
-        <div class="text-xs text-on-surface-variant">Deterministic. Immune to prompt injection. No AI in the decision path.</div>
-      </div>
-      <div class="bento-card !p-5">
-        <div class="w-10 h-10 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center mb-3"><span class="material-symbols-outlined text-secondary" style="font-size:20px">receipt_long</span></div>
-        <div class="font-display text-sm font-bold text-on-surface mb-1">Signed Receipts</div>
-        <div class="text-xs text-on-surface-variant">Every payment decision signed, hash-chained, and verifiable offline. Forever.</div>
-      </div>
-      <div class="bento-card !p-5">
-        <div class="w-10 h-10 rounded-lg bg-error/10 border border-error/20 flex items-center justify-center mb-3"><span class="material-symbols-outlined text-error" style="font-size:20px">gpp_bad</span></div>
-        <div class="font-display text-sm font-bold text-on-surface mb-1">Rogue Containment</div>
-        <div class="text-xs text-on-surface-variant">Hijacked agent? Blocked, documented, reported on-chain. Automatically.</div>
+    <!-- How the money flows -->
+    <div class="bento-card !p-5 text-left mb-6">
+      <div class="font-display text-sm font-semibold text-primary-fixed mb-4">How the money flows</div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-primary-fixed" style="font-size:18px">arrow_downward</span>
+            <span class="font-display text-sm font-bold text-primary-fixed">Earns USDC</span>
+          </div>
+          <div class="space-y-1.5 text-xs text-on-surface-variant">
+            <div>$0.05 per transaction verification</div>
+            <div>$0.02 per compliance report</div>
+            <div>$0.10 per incident report</div>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-error" style="font-size:18px">arrow_upward</span>
+            <span class="font-display text-sm font-bold text-error">Spends USDC</span>
+          </div>
+          <div class="space-y-1.5 text-xs text-on-surface-variant">
+            <div>$0.01 per evidence validation (x402)</div>
+            <div>On-chain anchoring + reputation writes</div>
+            <div>Only when severity ≥ HIGH</div>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-secondary" style="font-size:18px">shield</span>
+            <span class="font-display text-sm font-bold text-secondary">Spending Policy</span>
+          </div>
+          <div class="space-y-1.5 text-xs text-on-surface-variant">
+            <div>Max $0.02 per incident</div>
+            <div>Daily cap: $1.00 USDC</div>
+            <div>Allowlisted recipients only</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Built on Circle + Code snippet side by side -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+    <!-- 3 feature cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mb-6">
       <div class="bento-card !p-5">
-        <div class="flex items-center gap-2 mb-4">
-          <svg width="20" height="20" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#0052FF"/><path d="M16 6C10.48 6 6 10.48 6 16s4.48 10 10 10 10-4.48 10-10S21.52 6 16 6zm0 16.5c-3.58 0-6.5-2.92-6.5-6.5S12.42 9.5 16 9.5s6.5 2.92 6.5 6.5-2.92 6.5-6.5 6.5z" fill="white"/></svg>
-          <span class="font-display text-sm font-semibold text-on-surface">Built on Circle Agent Stack</span>
-        </div>
-        <div class="space-y-2">
-          <div class="flex items-center gap-2 text-xs text-on-surface-variant"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>MPC wallets + Action Gate + spending policies</div>
-          <div class="flex items-center gap-2 text-xs text-on-surface-variant"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>x402 pay-per-request + Agent Marketplace</div>
-          <div class="flex items-center gap-2 text-xs text-on-surface-variant"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>Settlement binding on Base L2</div>
-          <div class="flex items-center gap-2 text-xs text-on-surface-variant"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>EU AI Act + NIST AI RMF compliance</div>
-        </div>
+        <div class="w-10 h-10 rounded-lg bg-primary-fixed/10 border border-primary-fixed/20 flex items-center justify-center mb-3"><span class="material-symbols-outlined text-primary-fixed" style="font-size:20px">account_balance_wallet</span></div>
+        <div class="font-display text-sm font-bold text-on-surface mb-1">Security Treasury</div>
+        <div class="text-xs text-on-surface-variant">Own Circle wallet. Earns for verification. Spends on threat response. Policy-bounded budget enforced by Circle.</div>
       </div>
       <div class="bento-card !p-5">
-        <div class="flex items-center justify-between mb-3">
-          <span class="font-display text-sm font-semibold text-on-surface">4 lines to integrate</span>
-          <span class="font-mono text-[10px] text-on-surface-variant/40 px-2 py-0.5 rounded bg-surface-container-high border border-white/5">Python</span>
-        </div>
-        <pre class="font-mono text-[11px] leading-relaxed p-3 rounded-lg bg-surface-container-lowest border border-white/5 overflow-x-auto"><code><span class="text-on-surface-variant/50">from</span> <span class="text-secondary">verigate</span> <span class="text-on-surface-variant/50">import</span> <span class="text-on-surface">Gate</span>
+        <div class="w-10 h-10 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center mb-3"><span class="material-symbols-outlined text-secondary" style="font-size:20px">verified</span></div>
+        <div class="font-display text-sm font-bold text-on-surface mb-1">Evidence Validator</div>
+        <div class="text-xs text-on-surface-variant">Independent x402 service. Verigate pays it to verify evidence before publishing on-chain. Separate wallet, separate keys.</div>
+      </div>
+      <div class="bento-card !p-5">
+        <div class="w-10 h-10 rounded-lg bg-error/10 border border-error/20 flex items-center justify-center mb-3"><span class="material-symbols-outlined text-error" style="font-size:20px">gpp_bad</span></div>
+        <div class="font-display text-sm font-bold text-on-surface mb-1">Autonomous Containment</div>
+        <div class="text-xs text-on-surface-variant">Threat detected? Verigate decides to spend, buys verification, anchors evidence, publishes reputation. No human in the loop.</div>
+      </div>
+    </div>
+
+    <!-- SDK + pip install -->
+    <div class="bento-card !p-5 text-left">
+      <div class="flex items-center justify-between mb-3">
+        <span class="font-display text-sm font-semibold text-on-surface">pip install verigate</span>
+        <span class="font-mono text-[10px] text-on-surface-variant/40 px-2 py-0.5 rounded bg-surface-container-high border border-white/5">Python</span>
+      </div>
+      <pre class="font-mono text-[11px] leading-relaxed p-3 rounded-lg bg-surface-container-lowest border border-white/5 overflow-x-auto"><code><span class="text-on-surface-variant/50">from</span> <span class="text-secondary">verigate</span> <span class="text-on-surface-variant/50">import</span> <span class="text-on-surface">Gate</span>
 <span class="text-on-surface">gate</span> <span class="text-on-surface-variant/50">=</span> <span class="text-on-surface">Gate</span><span class="text-on-surface-variant/50">(</span><span class="text-primary-fixed">"circle://wallet"</span><span class="text-on-surface-variant/50">)</span>
 <span class="text-on-surface">receipt</span> <span class="text-on-surface-variant/50">=</span> <span class="text-on-surface">gate</span><span class="text-on-surface-variant/50">.</span><span class="text-on-surface">authorize</span><span class="text-on-surface-variant/50">(</span><span class="text-on-surface">intent</span><span class="text-on-surface-variant/50">)</span>
 <span class="text-on-surface">gate</span><span class="text-on-surface-variant/50">.</span><span class="text-on-surface">verify</span><span class="text-on-surface-variant/50">()</span></code></pre>
-      </div>
     </div>
   </div>
 </div>
@@ -198,7 +224,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
   <!-- Stats cards row -->
-  <div class="grid grid-cols-3 gap-4 mb-6" id="demo-stats" style="display:none">
+  <div class="grid grid-cols-5 gap-4 mb-6" id="demo-stats" style="display:none">
     <div class="bento-card !py-4 text-center">
       <div class="font-mono text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold">Approved</div>
       <div class="font-mono text-2xl font-bold text-primary-fixed mt-1" id="ds-approved">0</div>
@@ -210,6 +236,14 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <div class="bento-card !py-4 text-center">
       <div class="font-mono text-[10px] text-on-surface-variant/60 uppercase tracking-wider font-semibold">Governed</div>
       <div class="font-mono text-2xl font-bold text-on-surface mt-1" id="ds-governed">$0.00</div>
+    </div>
+    <div class="bento-card !py-4 text-center border border-primary-fixed/20">
+      <div class="font-mono text-[10px] text-primary-fixed/80 uppercase tracking-wider font-semibold">Treasury Earned</div>
+      <div class="font-mono text-2xl font-bold text-primary-fixed mt-1" id="ds-earned">$0.00</div>
+    </div>
+    <div class="bento-card !py-4 text-center border border-error/20">
+      <div class="font-mono text-[10px] text-error/80 uppercase tracking-wider font-semibold">Treasury Spent</div>
+      <div class="font-mono text-2xl font-bold text-error mt-1" id="ds-spent">$0.00</div>
     </div>
   </div>
   <!-- Two-column: Execution Log + Receipt Inspector / Feed -->
@@ -812,7 +846,11 @@ function updateComplianceView(){
 
 function fin(d){lock(false);document.getElementById('ptag').textContent='COMPLETED';if(d)addSummary(d)}
 
-function sse(url){reset();lock(true);const s=new EventSource(url);s.onmessage=e=>{const d=JSON.parse(e.data);switch(d.type){case'step':addStep(d);if(d.details?.signatures)showV(d.details);if(d.details?.summary)showC(d.details);break;case'payment':addPay(d);break;case'attack':addAtk(d);break;case'blocked':addBlk(d);break;case'isolation':addIso(d);break;case'reputation':addReputation(d);break;case'correlation':addCorrelation(d);break;case'proposal':addProposal(d);break;case'agent_info':updateAgent(d);break;case'complete':fin(d);s.close();break;case'error':lock(false);s.close();break}};s.onerror=()=>{lock(false);s.close()}}
+function updateTreasury(d){
+  if(d.event==='earn'){document.getElementById('ds-earned').textContent='$'+d.earned_total}
+  if(d.event==='spend'){document.getElementById('ds-spent').textContent='$'+d.spent_total}
+}
+function sse(url){reset();lock(true);const s=new EventSource(url);s.onmessage=e=>{const d=JSON.parse(e.data);switch(d.type){case'step':addStep(d);if(d.details?.signatures)showV(d.details);if(d.details?.summary)showC(d.details);break;case'payment':addPay(d);break;case'attack':addAtk(d);break;case'blocked':addBlk(d);break;case'isolation':addIso(d);break;case'reputation':addReputation(d);break;case'correlation':addCorrelation(d);break;case'proposal':addProposal(d);break;case'agent_info':updateAgent(d);break;case'treasury':updateTreasury(d);break;case'complete':fin(d);s.close();break;case'error':lock(false);s.close();break}};s.onerror=()=>{lock(false);s.close()}}
 function runDemo(){sse('/api/run/golden-path')}
 function runRogue(){sse('/api/run/rogue-path')}
 
