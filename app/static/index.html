@@ -213,8 +213,8 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <!-- Header row -->
   <div class="flex items-start justify-between mb-6">
     <div>
-      <h1 class="font-display text-4xl font-extrabold text-on-surface">Live Demo Environment</h1>
-      <p class="text-on-surface-variant text-sm mt-1">Monitoring agent transactions and policy verifications in real-time.</p>
+      <h1 class="font-display text-4xl font-extrabold text-on-surface">Security Treasury Live</h1>
+      <p class="text-on-surface-variant text-sm mt-1">Watch Verigate earn USDC for verification and spend USDC to contain threats. Real transactions on Base Sepolia.</p>
     </div>
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2 bg-surface-container/60 px-4 py-2 rounded-full border border-primary-fixed/20" id="ptag-wrap" style="display:none">
@@ -302,10 +302,10 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 <div class="view" id="v-wallets">
   <div class="mb-6">
     <div class="flex items-center justify-between mb-2">
-      <h1 class="font-display text-2xl md:text-4xl font-bold text-on-surface">Wallet Infrastructure</h1>
+      <h1 class="font-display text-2xl md:text-4xl font-bold text-on-surface">Security Treasury</h1>
       <button class="btn-secondary px-4 py-2 rounded-lg font-mono text-xs" onclick="loadWallets()">Refresh</button>
     </div>
-    <p class="text-sm text-on-surface-variant">Circle-managed MPC wallets settling USDC on Base L2 with programmable spending policies and real-time governance.</p>
+    <p class="text-sm text-on-surface-variant">Three Circle Agent Wallets: Customer ops wallet, Verigate Security Treasury, and Evidence Validator. Each with independent spending policies.</p>
     <div class="flex items-center gap-2 mt-3">
       <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/15 border border-secondary/20 font-mono text-[11px] text-secondary">
         <svg width="12" height="12" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M20.5 18.5c0-2.1-1.3-2.8-3.8-3.1-1.8-.3-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.6.4 1.9 1.3.1.2.2.3.4.3h.9c.3 0 .4-.2.4-.4-.3-1.3-1.1-2.2-2.5-2.5V10c0-.2-.2-.4-.5-.4h-.8c-.2 0-.4.2-.4.4v1.3c-1.7.3-2.8 1.4-2.8 2.8 0 2 1.2 2.7 3.7 3.1 1.6.3 2.3.6 2.3 1.6 0 .9-.8 1.5-1.9 1.5-1.5 0-2-.6-2.2-1.4-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.4.4.3 1.5 1.2 2.4 2.9 2.7V22c0 .2.2.4.5.4h.8c.2 0 .4-.2.4-.4v-1.3c1.8-.3 2.9-1.4 2.9-2.8z" fill="white"/></svg>USDC</span>
@@ -351,24 +351,33 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
   <!-- Defense in Depth -->
   <div class="bento-card">
-    <div class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider mb-4">Defense-in-Depth: Verigate + Circle</div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider mb-4">Wallet Roles in the Security Economy</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="p-4 rounded-lg bg-surface-container-lowest border border-white/5">
-        <div class="font-display text-sm font-semibold text-primary-fixed mb-3">Layer 1: Verigate (Proof + Forensics)</div>
-        <div class="space-y-2 text-xs text-on-surface-variant">
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed flex-shrink-0"></span>x401 identity verification + credential binding</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed flex-shrink-0"></span>Ed25519 signed receipt chain (hash-linked, Merkle-anchored)</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed flex-shrink-0"></span>Settlement binding (tx hash in receipt body)</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed flex-shrink-0"></span>ERC-8004 reputation + cross-agent correlation</div>
+        <div class="font-display text-sm font-semibold text-on-surface mb-2">Customer Agent</div>
+        <div class="font-mono text-[10px] text-on-surface-variant/60 mb-2">Pays Verigate for protection</div>
+        <div class="space-y-1.5 text-xs text-on-surface-variant">
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>$0.05 per verification</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>$0.02 per compliance report</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>$0.10 per incident report</div>
+        </div>
+      </div>
+      <div class="p-4 rounded-lg bg-primary-fixed/5 border border-primary-fixed/20">
+        <div class="font-display text-sm font-semibold text-primary-fixed mb-2">Verigate Treasury</div>
+        <div class="font-mono text-[10px] text-on-surface-variant/60 mb-2">Earns and spends USDC autonomously</div>
+        <div class="space-y-1.5 text-xs text-on-surface-variant">
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>Max $0.02/incident spend</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>$1.00/day spending cap</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed shrink-0"></span>Allowlisted recipients only</div>
         </div>
       </div>
       <div class="p-4 rounded-lg bg-surface-container-lowest border border-white/5">
-        <div class="font-display text-sm font-semibold text-secondary mb-3">Layer 2: Circle Agent Stack (Enforcement)</div>
-        <div class="space-y-2 text-xs text-on-surface-variant">
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0"></span>Action Gate + MPC co-signer enforcement</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0"></span>Spending caps, allowlists, sanctions screening</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0"></span>Execution Harness (microVM isolation)</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0"></span>x401 / ERC-8004 / ERC-8183 trust stack</div>
+        <div class="font-display text-sm font-semibold text-secondary mb-2">Evidence Validator</div>
+        <div class="font-mono text-[10px] text-on-surface-variant/60 mb-2">Paid by Verigate for independent verification</div>
+        <div class="space-y-1.5 text-xs text-on-surface-variant">
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>$0.01 per validation</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>Separate wallet + signing key</div>
+          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>x402-compatible endpoint</div>
         </div>
       </div>
     </div>
@@ -379,8 +388,8 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 <div class="view" id="v-agents">
   <div class="flex items-center justify-between mb-2">
     <div>
-      <h1 class="font-display text-2xl md:text-4xl font-extrabold text-on-surface">Agent Swarm</h1>
-      <p class="font-mono text-sm text-on-surface-variant flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-primary-fixed status-glow"></span><span id="agent-count">6 Active Nodes</span> | System Load: Optimal</p>
+      <h1 class="font-display text-2xl md:text-4xl font-extrabold text-on-surface">Security Agent Network</h1>
+      <p class="font-mono text-sm text-on-surface-variant flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-primary-fixed status-glow"></span><span id="agent-count">6 Active Nodes</span> | Verigate Security Treasury active</p>
     </div>
     <div class="flex items-center gap-3">
       <button class="font-mono text-[11px] text-secondary hover:underline cursor-pointer bg-transparent border-none" onclick="exportArtifacts()">Export JSON</button>
@@ -424,9 +433,9 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <div class="bento-card sticky top-28 flex flex-col gap-6">
         <div>
           <h3 class="font-display text-base font-bold text-on-surface flex items-center gap-2 mb-1">
-            <span class="material-symbols-outlined text-primary-fixed" style="font-size:20px">radar</span> Intelligence Overview
+            <span class="material-symbols-outlined text-primary-fixed" style="font-size:20px">radar</span> Security Treasury
           </h3>
-          <p class="text-xs text-on-surface-variant">System-wide agent performance and reputation aggregation.</p>
+          <p class="text-xs text-on-surface-variant">Verigate earns USDC for trust and spends a controlled budget to investigate threats.</p>
         </div>
         <!-- Network Trust -->
         <div class="flex flex-col gap-2">
@@ -483,7 +492,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <div class="flex items-center justify-between mb-2">
     <div>
       <h1 class="font-display text-4xl font-extrabold text-on-surface">Proof Explorer</h1>
-      <p class="text-on-surface-variant text-sm mt-1">Cryptographic verification of agent operations.</p>
+      <p class="text-on-surface-variant text-sm mt-1">Every receipt Verigate earned USDC for. Tamper-evident, independently verifiable.</p>
     </div>
     <div class="flex items-center gap-2 bg-surface-container/60 px-4 py-2 rounded-full border border-primary-fixed/20">
       <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
@@ -553,7 +562,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 <div class="view" id="v-compliance">
   <div class="mb-6">
     <h2 class="font-display text-2xl md:text-4xl font-bold text-on-surface mb-2">Compliance & Audit</h2>
-    <p class="text-on-surface-variant text-sm">Automated regulatory reporting powered by Gemini. Cryptographic receipts provide the evidence layer.</p>
+    <p class="text-on-surface-variant text-sm">Verigate earns $0.02 USDC per compliance report. Automated regulatory analysis powered by Gemini over real USDC spend data.</p>
   </div>
 
   <!-- Compliance Frameworks -->
