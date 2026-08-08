@@ -697,7 +697,7 @@ async def _golden_path_stream():
 
             try:
                 validator_tx = wallet_transfer(
-                    source=TREASURY_WALLET, destination=VALIDATOR_WALLET, amount="0.01",
+                    source=wallet, destination=VALIDATOR_WALLET, amount="0.01",
                     chain=chain, token_address=USDC_ADDRESSES.get(chain),
                 )
                 state["treasury"]["spent"] += 0.01
