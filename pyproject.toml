@@ -1,26 +1,55 @@
 [project]
-name = "verigate-circle-prize"
-version = "1.0.0"
-description = "Verigate — Deterministic AI Agent Payment Authorization for Circle Agent Stack"
+name = "verigate"
+version = "0.1.0"
+description = "Signed receipts for every AI agent payment. Built on Circle's Agent Stack."
+readme = "README.md"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.12"
+authors = [
+    {name = "4K Inc"},
+]
+keywords = ["ai-agents", "circle", "usdc", "payments", "receipts", "compliance", "audit"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Office/Business :: Financial",
+]
 dependencies = [
     "cryptography>=43.0.0",
-    "PyJWT>=2.8.0",
     "PyYAML>=6.0.0",
-    "google-genai>=1.0.0",
-    "reportlab>=4.0.0",
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=8.0.0",
+gemini = ["google-genai>=1.0.0"]
+dashboard = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "reportlab>=4.0.0",
+    "google-genai>=1.0.0",
 ]
+dev = ["pytest>=8.0.0"]
+all = [
+    "google-genai>=1.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "reportlab>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/4KInc/circle-prize-submission"
+Repository = "https://github.com/4KInc/circle-prize-submission"
+Documentation = "https://github.com/4KInc/circle-prize-submission#readme"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["circle", "app"]
+packages = ["verigate", "circle", "engine/gateway"]
+
+[tool.hatch.build.targets.wheel.sources]
+"engine/gateway" = "gateway"
