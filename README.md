@@ -18,6 +18,10 @@ If an agent goes rogue, Verigate catches it before the money moves, documents ex
 
 ## Python SDK
 
+```bash
+pip install verigate
+```
+
 ```python
 from verigate import Gate, Intent
 
@@ -27,6 +31,8 @@ gate.verify()  # PASS — signatures, hash chain, merkle all verified
 ```
 
 Every `authorize()` call produces a signed receipt with settlement tx binding. Every `verify()` runs full offline verification. No network needed. See [`run_sdk_demo.py`](run_sdk_demo.py) for a complete end-to-end example with real USDC.
+
+[![PyPI](https://img.shields.io/pypi/v/verigate)](https://pypi.org/project/verigate/)
 
 ## The Business
 
