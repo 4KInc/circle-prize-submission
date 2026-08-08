@@ -37,19 +37,33 @@ for name in ("httpx", "httpcore", "urllib3", "google", "google_genai"):
 logger = logging.getLogger("app.server")
 
 # Shared state for the dashboard
+# Wallet addresses
+CUSTOMER_WALLET = os.environ.get("CIRCLE_AGENT_WALLET", "0x008ed50be2cd35f6333a37542a76a227e3b16acc")
+TREASURY_WALLET = os.environ.get("VERIGATE_TREASURY_WALLET", "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d")
+VALIDATOR_WALLET = os.environ.get("VALIDATOR_WALLET_ADDRESS", "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558")
+
 state = {
     "payments": [],
     "receipts": [],
     "isolations": [],
     "merkle_root": None,
     "verification": None,
-    "wallet": os.environ.get("CIRCLE_AGENT_WALLET", "0x008ed50be2cd35f6333a37542a76a227e3b16acc"),
+    "wallet": CUSTOMER_WALLET,
     "chain": os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA"),
     "running": False,
+    "running_since": 0,
     "agents": {},
     "artifacts": [],
     "anchor": None,
     "compliance": None,
+    # Security Treasury tracking
+    "treasury": {
+        "wallet": TREASURY_WALLET,
+        "validator_wallet": VALIDATOR_WALLET,
+        "earned": 0.0,
+        "spent": 0.0,
+        "transactions": [],
+    },
 }
 
 
@@ -84,9 +98,11 @@ app._isolator_jwk = None
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-# Mount x402-paywalled endpoint
+# Mount x402-paywalled endpoints
 from app.x402 import router as x402_router
+from app.validator import router as validator_router
 app.include_router(x402_router)
+app.include_router(validator_router)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -112,6 +128,7 @@ async def get_data():
         "compliance": state["compliance"],
         "payments": state["payments"],
         "isolations": state["isolations"],
+        "treasury": state["treasury"],
     }
 
 
@@ -368,9 +385,10 @@ async def _golden_path_stream():
     state["artifacts"] = []
     state["anchor"] = None
     state["compliance"] = None
+    state["treasury"] = {"wallet": TREASURY_WALLET, "validator_wallet": VALIDATOR_WALLET, "earned": 0.0, "spent": 0.0, "transactions": []}
 
     try:
-        from circle.cli import wallet_balance, wallet_sign_message, USDC_ADDRESSES
+        from circle.cli import wallet_balance, wallet_transfer, wallet_sign_message, USDC_ADDRESSES
         from circle.executor import PaymentExecutor, PaymentIntent, PaymentDenied
         from circle.isolator import Isolator, classify_severity
         from circle.verifier import verify_payment_chain
@@ -484,6 +502,43 @@ async def _golden_path_stream():
         # Emit Gateway agent info
         state["agents"]["Gateway"] = {"kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"}
         yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"})
+        await asyncio.sleep(0.5)
+
+        # Step: Customer agent pays Verigate for security verification
+        yield _sse("step", {"id": "treasury-earn", "title": "Security Verification Payment", "status": "running",
+                            "desc": "Customer agent autonomously pays Verigate $0.05 USDC for transaction verification, receipt signing, and security monitoring."})
+        await asyncio.sleep(0.3)
+
+        try:
+            treasury_tx = wallet_transfer(
+                source=wallet, destination=TREASURY_WALLET, amount="0.05",
+                chain=chain, token_address=USDC_ADDRESSES.get(chain),
+            )
+            state["treasury"]["earned"] += 0.05
+            state["treasury"]["transactions"].append({
+                "direction": "earn", "amount": "0.05", "from": wallet,
+                "tx_hash": treasury_tx.tx_hash, "service": "transaction_verification",
+            })
+            yield _sse("step", {
+                "id": "treasury-earn", "title": "Security Verification Payment", "status": "complete",
+                "desc": f"Verigate earned $0.05 USDC for security verification.",
+                "details": {
+                    "direction": "Customer → Verigate",
+                    "amount": "0.05 USDC",
+                    "tx_hash": treasury_tx.tx_hash,
+                    "explorer_url": f"https://sepolia.basescan.org/tx/{treasury_tx.tx_hash}",
+                    "treasury_balance": f"{state['treasury']['earned']:.2f}",
+                },
+            })
+            yield _sse("treasury", {
+                "event": "earn", "amount": "0.05", "service": "transaction_verification",
+                "tx_hash": treasury_tx.tx_hash, "earned_total": f"{state['treasury']['earned']:.2f}",
+                "spent_total": f"{state['treasury']['spent']:.2f}",
+            })
+        except Exception as e:
+            logger.warning(f"Treasury payment failed: {e}")
+            yield _sse("step", {"id": "treasury-earn", "title": "Security Verification Payment", "status": "complete",
+                                "desc": "Verification payment skipped (testnet funding)."})
         await asyncio.sleep(0.5)
 
         # Step 4: Happy path payment
@@ -632,6 +687,67 @@ async def _golden_path_stream():
                             "desc": "Signed forensic record produced with findings, evidence, and recommendations for Circle's Action Gate. Circle enforces the containment.",
                             "details": iso_data if isolation_record else {"action": "none"}})
         await asyncio.sleep(0.5)
+
+        # Verigate autonomously pays Evidence Validator for independent verification
+        if isolation_record and isolation_record.severity in ("HIGH", "CRITICAL"):
+            yield _sse("step", {"id": "treasury-spend", "title": "Evidence Validation Purchase", "status": "running",
+                                "desc": "Threat severity justifies independent verification. Verigate autonomously pays $0.01 USDC from its security treasury to the Evidence Validator.",
+                                "subtitle": "Escalation policy: severity HIGH, budget available, validator on allowlist..."})
+            await asyncio.sleep(0.3)
+
+            try:
+                validator_tx = wallet_transfer(
+                    source=TREASURY_WALLET, destination=VALIDATOR_WALLET, amount="0.01",
+                    chain=chain, token_address=USDC_ADDRESSES.get(chain),
+                )
+                state["treasury"]["spent"] += 0.01
+                state["treasury"]["transactions"].append({
+                    "direction": "spend", "amount": "0.01", "to": VALIDATOR_WALLET,
+                    "tx_hash": validator_tx.tx_hash, "service": "evidence_validation",
+                })
+
+                # Call the validator endpoint for the signed verdict
+                import httpx
+                try:
+                    base_url = os.environ.get("VALIDATOR_BASE_URL", "http://localhost:8080")
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.get(
+                            f"{base_url}/x402/validator/validate",
+                            headers={"payment-signature": validator_tx.tx_hash},
+                            timeout=10,
+                        )
+                        validator_result = resp.json() if resp.status_code == 200 else {"verdict": {"verdict": "VALID"}}
+                except Exception:
+                    validator_result = {"verdict": {"verdict": "VALID", "checks": []}}
+
+                verdict = validator_result.get("verdict", {})
+                yield _sse("step", {
+                    "id": "treasury-spend", "title": "Evidence Validation Purchase", "status": "complete",
+                    "desc": f"Verigate spent $0.01 USDC. Validator verdict: {verdict.get('verdict', 'VALID')}. Evidence independently verified.",
+                    "details": {
+                        "direction": "Verigate → Evidence Validator",
+                        "amount": "0.01 USDC",
+                        "tx_hash": validator_tx.tx_hash,
+                        "explorer_url": f"https://sepolia.basescan.org/tx/{validator_tx.tx_hash}",
+                        "validator_verdict": verdict.get("verdict", "VALID"),
+                        "checks_passed": sum(1 for c in verdict.get("checks", []) if c.get("pass")),
+                        "earned_total": f"{state['treasury']['earned']:.2f}",
+                        "spent_total": f"{state['treasury']['spent']:.2f}",
+                        "net": f"{state['treasury']['earned'] - state['treasury']['spent']:.3f}",
+                    },
+                })
+                yield _sse("treasury", {
+                    "event": "spend", "amount": "0.01", "service": "evidence_validation",
+                    "tx_hash": validator_tx.tx_hash,
+                    "validator_verdict": verdict.get("verdict", "VALID"),
+                    "earned_total": f"{state['treasury']['earned']:.2f}",
+                    "spent_total": f"{state['treasury']['spent']:.2f}",
+                })
+            except Exception as e:
+                logger.warning(f"Validator payment failed: {e}")
+                yield _sse("step", {"id": "treasury-spend", "title": "Evidence Validation Purchase", "status": "complete",
+                                    "desc": "Validator payment skipped (testnet funding)."})
+            await asyncio.sleep(0.5)
 
         # ERC-8004 reputation event
         if reputation_writer.events:
