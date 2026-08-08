@@ -2,49 +2,58 @@
 
 > Submission for the [$50K Circle Agentic Economy Prize](https://www.xprize.org/prizes/build-with-gemini) (Build with Gemini XPRIZE)
 
-## What does this do?
+## The Problem
 
-When you give an AI agent a Circle wallet, it can autonomously buy services with USDC. Circle's Agent Stack already protects the wallet — spending caps, allowlists, the Action Gate, MPC co-signing. That's the lock on the door.
+Your AI agent just spent $50,000 on cloud services at 3am. Your CFO asks: *What did it buy? Who authorized it? Can you prove it to our auditor?*
 
-**Verigate produces cryptographic proof of every authorization decision the agent makes.**
+Today, the answer is logs. Logs can be edited, deleted, or lost. They don't hold up in court. They don't satisfy the EU AI Act. They don't help when an agent gets prompt-injected and tries to drain a wallet.
 
-Every time your agent tries to spend money, Verigate creates a signed, hash-chained, Merkle-anchored receipt proving: WHO authorized the agent (x401 credential binding), WHAT policy governed the decision (policy hash binding), WHETHER it was approved or denied (deterministic evaluation), and WHERE the money went (settlement tx hash embedded in the receipt body).
+## What Verigate Does
 
-1. **The agent presents its x401 credential** — proving a verified human authorized it to act, with scoped permissions
-2. **Verigate evaluates the same policy** — not to enforce (Circle's Action Gate handles that independently), but to produce a signed receipt documenting the decision. Deterministic Python, zero-LLM.
-3. **If approved** — payment settles on-chain, and a receipt is signed AFTER settlement binding the tx hash into the receipt body. One object proves: identity → decision → authorization → settlement.
-4. **If denied** — Circle's Action Gate independently blocks the payment. Verigate produces the signed denial receipt proving it happened. If the attempt looks malicious, the Forensic Recorder analyzes the attack vector, publishes a reputation event to ERC-8004, runs cross-agent correlation, and recommends actions to Circle's enforcement layer.
+**Circle controls *whether* agents can pay. Verigate proves *why* they did.**
 
-The receipt chain is the product. Circle protects the wallet. **Verigate protects the operator.**
+Every time an AI agent makes a payment through Circle, Verigate produces a signed receipt — a single object that binds the agent's identity, the policy that was evaluated, and the settlement transaction. These receipts are hash-chained, Merkle-anchored, and independently verifiable by any third party, offline, forever.
 
-An independent verifier can check the whole chain offline — no network access, no trust in the operator or Circle. Just the public key and the receipts.
+If an agent goes rogue, Verigate catches it before the money moves, documents exactly what happened, and publishes the incident to an on-chain reputation registry.
 
-## How does this relate to Circle's Agent Stack?
+## Python SDK
 
-Circle's Agent Stack already provides spending caps, allowlists, the Action Gate, Input/Output Guardrails, and MPC co-signing. There IS overlap in policy enforcement — Circle does it at the infrastructure layer. Verigate adds what Circle's stack doesn't have: **cryptographic proof**.
+```python
+from verigate import Gate, Intent
 
-| Layer | Circle's Role | Verigate's Role |
+gate = Gate("circle://agent-wallet", allowed_payees=["0xabc..."], max_amount=1.0)
+receipt = gate.authorize(Intent(payee="0xabc...", amount=0.01, service="market-data"))
+gate.verify()  # PASS — signatures, hash chain, merkle all verified
+```
+
+Every `authorize()` call produces a signed receipt with settlement tx binding. Every `verify()` runs full offline verification. No network needed. See [`run_sdk_demo.py`](run_sdk_demo.py) for a complete end-to-end example with real USDC.
+
+## The Business
+
+**Customer:** Any company using AI agents to spend money. Today that's crypto-native startups and DeFi protocols. By 2027, it's every enterprise running agentic workflows — procurement, media buying, cloud infrastructure, freelancer payments.
+
+**Revenue model:** Per-receipt pricing. A company running 100 agents making 1,000 payments/day generates 30,000 receipts/month.
+
+**Why Circle:** Verigate can't exist without Circle. Without Circle wallets, there's no payment. Without Circle CLI, there's no settlement. Without Agent Marketplace, there's no service discovery. Circle is the infrastructure. Verigate is the audit layer on top.
+
+## How It Works
+
+1. **Agent presents x401 credential** — proves a verified human authorized it with scoped permissions
+2. **Gate evaluates policy** — deterministic Python, zero-LLM, immune to prompt injection
+3. **If approved** — payment settles via Circle CLI, receipt signed AFTER settlement with tx hash embedded
+4. **If denied** — signed denial receipt produced, forensic analysis triggered, ERC-8004 reputation event published on-chain
+
+## Circle Integration
+
+Circle's Agent Stack provides the infrastructure (wallets, spending caps, Action Gate, MPC co-signing). Verigate adds what Circle doesn't have: **cryptographic proof**.
+
+| What | Circle | Verigate |
 |---|---|---|
-| **Identity** | x401 verifiable credentials | Verify + bind credential hash into receipt |
-| **Policy enforcement** | Action Gate + MPC co-signer | Deterministic second wall (defense in depth) |
-| **Settlement** | USDC transfer on-chain | Bind tx hash into signed receipt |
-| **Audit trail** | Internal audit records | Cryptographic, independently verifiable receipt chain |
-| **Incident response** | Preventive microVM isolation | Reactive quarantine + signed forensic evidence |
-| **Reputation** | ERC-8004 registry | Write isolation events to registry |
-| **Compliance** | Transaction history | Automated EU AI Act / NIST reports |
-| **Dispute resolution** | N/A | Self-contained proof chain for third-party arbiters |
-
-**Circle protects the wallet. Verigate protects the operator.**
-
-The operator needs to:
-
-- **"Prove to our auditor that every payment was authorized by policy"** — Verigate receipts (Ed25519 signed, hash-chained), not Circle tx history
-- **"Show exactly what happened when our agent got compromised"** — Signed isolation records with forensic evidence chain + cross-agent correlation
-- **"Demonstrate EU AI Act compliance"** — Automated compliance reports referencing actual USDC spend data
-- **"Resolve a dispute with cryptographic evidence"** — Export the receipt chain, hand it to the arbiter: `python -m circle.dispute verify chain-export.json`
-- **"Prove which policy was in effect when a decision was made"** — Every receipt includes the policy hash that was active
-
-The receipt chain is the product — not the policy engine.
+| **Enforcement** | Action Gate blocks bad payments | Deterministic second wall (defense in depth) |
+| **Audit trail** | Internal records | Signed, hash-chained, Merkle-anchored receipts |
+| **Incident response** | MicroVM isolation | Forensic evidence + ERC-8004 reputation on-chain |
+| **Compliance** | Transaction history | Automated EU AI Act / NIST AI RMF reports |
+| **Disputes** | N/A | Exportable proof chain for third-party arbiters |
 
 ## Quick Start
 
