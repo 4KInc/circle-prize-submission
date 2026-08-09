@@ -270,11 +270,11 @@ def build():
         ],
         [
             PB("ERC-8004 Reputation"),
-            P("When the Forensic Recorder documents an incident, it publishes a signed "
-              "reputation event to the ERC-8004 on-chain registry. Other operators can "
-              "check an agent's track record before transacting."),
-            P("Writes TO Circle's reputation registry. Makes Verigate's forensic records "
-              "portable across the ecosystem. Simulated on testnet, real on mainnet."),
+            P("When the Forensic Recorder documents an incident, it publishes a REAL "
+              "on-chain reputation event to the deployed AgentReputation contract on "
+              "Base Sepolia. Viewable on Basescan. Other operators can query the contract."),
+            P("Real deployed contract at 0xf5FE7BF0...E145AA on Base Sepolia. "
+              "Every reputation event is a real on-chain tx with a clickable Basescan link."),
         ],
         [
             PB("Cross-Agent Correlation"),
@@ -372,7 +372,7 @@ def build():
         [P("\"A regulator/insurer needs to verify our agent's behavior\""), P("They'd need to trust Circle's API"), P("python -m circle.dispute verify export.json (offline, zero trust)")],
         [P("\"Which policy was active when this decision was made?\""), P("Policies are mutable via Console, no audit trail"), P("Every receipt is bound to the policy_version hash")],
         [P("\"Demonstrate EU AI Act / NIST compliance\""), P("No automated compliance reporting"), P("Gemini-powered compliance reports over real USDC spend data")],
-        [P("\"Flag this agent's reputation across the ecosystem\""), P("ERC-8004 registry exists but no automated writes"), P("Forensic Recorder auto-publishes reputation events to ERC-8004")],
+        [P("\"Flag this agent's reputation across the ecosystem\""), P("ERC-8004 registry exists but no automated writes"), P("Real on-chain contract deployed. Forensic Recorder auto-publishes. Tx viewable on Basescan.")],
     ]
     col_prob = [38 * mm, 50 * mm, 56 * mm]
     tprob = Table(problems, colWidths=col_prob, repeatRows=1)
@@ -410,7 +410,7 @@ def build():
         [PB("Settlement"), P("USDC transfer on-chain via EIP-3009"), P("Bind tx hash into signed receipt (+ Recibo reverse binding)")],
         [PB("Audit trail"), P("Internal audit records (not independently verifiable)"), P("Cryptographic receipt chain (Ed25519, hash-linked, Merkle-anchored)")],
         [PB("Incident response"), P("Preventive microVM isolation (enforcement)"), P("Forensic Recorder: signed evidence + findings + recommendations for Circle")],
-        [PB("Reputation"), P("ERC-8004 registry (standard)"), P("Auto-publish forensic events to registry (implementation)")],
+        [PB("Reputation"), P("ERC-8004 registry (standard)"), P("Real deployed contract on Base Sepolia. Auto-publish forensic events on-chain.")],
         [PB("Compliance"), P("Transaction history + Developer Console"), P("Automated EU AI Act / NIST reports over real spend data")],
         [PB("Dispute resolution"), P("N/A"), P("Self-contained proof chain for third-party arbiters (offline, zero trust)")],
     ]
@@ -458,7 +458,7 @@ def build():
         [P("Produces an \"isolation record\" claiming enforcement"), P("Produces a signed forensic record with findings and evidence")],
         [P("No analysis of attack vectors"), P("Analyzes attack vector: PROMPT_INJECTION_DETECTED, UNAUTHORIZED_PAYEE, AMOUNT_VIOLATION")],
         [P("No recommendations"), P("Generates actionable recommendations targeting Circle's Action Gate and wallet policies")],
-        [P("Reputation publish was an afterthought"), P("ERC-8004 reputation publish is a core output with forensic context")],
+        [P("Reputation publish was simulated (fake tx hash)"), P("Real on-chain contract. Every event is a Basescan-verifiable transaction.")],
     ]
     col_fr = [PAGE_W / 2, PAGE_W / 2]
     tfr = Table(fr_data, colWidths=col_fr, repeatRows=1)
@@ -520,7 +520,7 @@ def build():
         [P("6"), PB("Authorized Payment"), P("x401 verified, policy passed, USDC settled, receipt signed with identity + tx hash")],
         [P("7"), PB("Prompt Injection"), P("Circle blocks it. Verigate produces signed denial receipt proving the attempt happened.")],
         [P("8"), PB("Forensic Recorder"), P("Signed forensic record: findings (attack vector), evidence, recommendations for Circle's Action Gate")],
-        [P("9"), PB("ERC-8004 Reputation"), P("Purple card: forensic event published to on-chain registry with tx hash")],
+        [P("9"), PB("ERC-8004 Reputation"), P("Purple card: REAL on-chain tx to deployed AgentReputation contract. Clickable Basescan link.")],
         [P("10"), PB("Cross-Agent Correlation"), P("Amber card: risk assessment (SPREADING), attack patterns, recommended actions")],
         [P("11-16"), PB("Receipts + Merkle + Verify + Compliance"), P("Receipt chain, Merkle tree, 5-check verification (incl. x401), compliance report")],
     ]
@@ -555,14 +555,73 @@ def build():
     elements.append(PageBreak())
 
     # =====================================================================
-    # 8. IMPLEMENTATION SUMMARY
+    # 8. ON-CHAIN PROOF
     # =====================================================================
-    elements.append(Paragraph("8. Implementation Summary", h1))
+    elements.append(Paragraph("8. On-Chain Proof: Deployed Contract + Real Transactions", h1))
+    elements.append(Paragraph(
+        "The AgentReputation contract is deployed on Base Sepolia. Every reputation "
+        "event from the Forensic Recorder is a real on-chain transaction. A judge can "
+        "click any tx hash and verify it on Basescan.",
+        body,
+    ))
+    elements.append(Spacer(1, 4 * mm))
+
+    proof_data = [
+        [PH("Item"), PH("Value")],
+        [PB("Contract"), P("AgentReputation (ERC-8004 compatible)")],
+        [PB("Address"), P("0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA")],
+        [PB("Chain"), P("Base Sepolia (chain ID 84532)")],
+        [PB("Deploy tx"), P("0xa80b2fe1984d947c8d85406dd44b00d691d68a6577ba7c31ae3c1b1ece606586")],
+        [PB("Test event tx"), P("0x433dc13725e1d4631326bbac53dd7666d9fe0c0ff1d2accd7222b9f3d66e1695")],
+        [PB("Source"), P("contracts/AgentReputation.sol (Apache-2.0)")],
+        [PB("Basescan"), P("https://sepolia.basescan.org/address/0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA")],
+    ]
+    col_proof = [26 * mm, PAGE_W - 26 * mm]
+    tproof = Table(proof_data, colWidths=col_proof, repeatRows=1)
+    tproof_style = [
+        ("BACKGROUND", (0, 0), (-1, 0), HexColor("#065f46")),
+        ("GRID", (0, 0), (-1, -1), 0.4, grid_c),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+    ]
+    for i in range(2, len(proof_data), 2):
+        tproof_style.append(("BACKGROUND", (0, i), (-1, i), row_alt))
+    tproof.setStyle(TableStyle(tproof_style))
+    elements.append(tproof)
+
+    elements.append(Spacer(1, 4 * mm))
+    elements.append(Paragraph("Contract interface:", h3))
+    interface_items = [
+        "<b>recordEvent(agentId, eventType, severity, metadata)</b> — write a reputation event on-chain",
+        "<b>getAgentEntryCount(agentId)</b> — query how many events exist for an agent",
+        "<b>totalEntries()</b> — total events in the registry",
+        "<b>ReputationRecorded</b> event — indexed by reporter and agentId for efficient querying",
+    ]
+    for item in interface_items:
+        elements.append(Paragraph(f"&bull; {item}", bullet))
+
+    elements.append(Spacer(1, 4 * mm))
+    elements.append(Paragraph(
+        "<b>This is not a stub.</b> Every golden path run produces a real on-chain transaction. "
+        "A judge can verify it on Basescan: search the contract address, click Events, and see "
+        "the ReputationRecorded logs with agent ID, severity, and forensic metadata.",
+        verdict_green,
+    ))
+
+    elements.append(PageBreak())
+
+    # =====================================================================
+    # 9. IMPLEMENTATION SUMMARY
+    # =====================================================================
+    elements.append(Paragraph("9. Implementation Summary", h1))
 
     files_data = [
         [PH("File"), PH("Purpose"), PH("Lines")],
         [PB("circle/x401.py"), P("x401 credential issuance, verification, revocation -- binds agent identity into receipt chain"), P("~180")],
-        [PB("circle/reputation.py"), P("ERC-8004 reputation writer -- publishes forensic events to on-chain registry"), P("~130")],
+        [PB("circle/reputation.py"), P("ERC-8004 reputation writer -- real on-chain txs to deployed contract on Base Sepolia"), P("~130")],
         [PB("circle/correlation.py"), P("Cross-agent forensic correlation engine -- detects systemic attacks across agents"), P("~200")],
         [PB("circle/dispute.py"), P("Standalone dispute resolution verifier CLI + PDF report generator"), P("~250")],
         [PB("circle/executor.py"), P("Updated: x401 credential verification before policy eval, credential hash in all receipts"), P("modified")],

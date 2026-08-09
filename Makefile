@@ -6,7 +6,7 @@ demo:
 
 # Run unit tests
 test:
-	python3 -m pytest tests/test_circle_golden_path.py -v
+	python3 -m pytest tests/ -v
 
 # Run the rogue-agent containment demo (for demo video)
 rogue:

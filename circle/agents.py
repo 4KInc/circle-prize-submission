@@ -214,7 +214,7 @@ class AuditorAgent(AgentBase):
             "tenant": self.tenant,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "total_receipts_audited": len(receipts),
-            "total_governed_spend_usdc": spend,
+            "total_governed_spend_usdc": str(spend),
             "verification_status": verification_status,
             "isolations": len(isolations),
             "narrative": narrative,
@@ -257,8 +257,9 @@ Respond with JSON:
     def _fallback_narrative(self, receipts, isolations, spend, verification) -> dict:
         approved = sum(1 for r in receipts if r.get("body", {}).get("decision") == "approve")
         denied = sum(1 for r in receipts if r.get("body", {}).get("decision") == "deny")
+        spend_str = str(spend) if isinstance(spend, str) else f"{spend:.2f}"
         return {
-            "summary": f"Governed ${spend:.2f} USDC. {approved} payments approved, {denied} blocked. {len(isolations)} rogue agents contained. Integrity: {verification}.",
+            "summary": f"Governed ${spend_str} USDC. {approved} payments approved, {denied} blocked. {len(isolations)} rogue agents contained. Integrity: {verification}.",
             "eu_ai_act": {
                 "article_14": "Human oversight via deterministic policy rules. No LLM in authorization path.",
                 "article_15": "Ed25519 receipts, hash chains, Merkle anchoring. Isolator quarantines rogue agents.",
