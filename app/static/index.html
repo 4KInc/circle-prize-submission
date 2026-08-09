@@ -1614,18 +1614,32 @@ function loadData(){
       const order=['Coordinator','Gateway','Auditor','Investigator','Recommender','Isolator'];
       const icons={Coordinator:'hub',Gateway:'security',Auditor:'policy',Investigator:'search',Recommender:'lightbulb',Isolator:'gpp_bad'};
       const iconColors={Coordinator:'text-secondary',Gateway:'text-primary-fixed',Auditor:'text-primary-fixed',Investigator:'text-error',Recommender:'text-v-amb',Isolator:'text-error'};
-      const trustScores={Coordinator:95,Gateway:98,Auditor:92,Investigator:88,Recommender:90,Isolator:34};
-      const trustLabels={Coordinator:'Verified',Gateway:'High Integrity',Auditor:'Verified',Investigator:'Verified',Recommender:'Verified',Isolator:'Critical Failure'};
+      // Calculate trust scores from real agent behavior
+      function calcTrust(name,ag){
+        const arts=ag.artifacts||0;
+        const isActive=ag.status==='Active';
+        const isQuarantined=name==='Isolator'&&arts>0;
+        if(isQuarantined)return {score:Math.max(5,30-arts*10),label:'Critical Failure'};
+        // Base: 50 for existing, +10 for active, +5 per artifact (cap 30), +10 if key present
+        let s=50;
+        if(isActive)s+=10;
+        s+=Math.min(arts*5,30);
+        if(ag.kid&&ag.kid.length>10)s+=10;
+        // Role bonuses based on what the agent does
+        if(name==='Gateway')s+=Math.min(arts*2,10); // receipts are high-value artifacts
+        return {score:Math.min(s,100),label:s>=90?'High Integrity':s>=70?'Verified':s>=50?'Moderate':'Low'};
+      }
       let totalTrust=0,trustCount=0,quarantineCount=0;
       const anomalies=[];
       order.forEach(name=>{
         const ag=d.agents[name];if(!ag)return;
         const isActive=ag.status==='Active';
-        const isQuarantined=name==='Isolator'&&ag.artifacts>0;
+        const isQuarantined=name==='Isolator'&&(ag.artifacts||0)>0;
         if(isQuarantined){quarantineCount++;anomalies.push({time:'Recent',text:'Agent <span class="font-mono text-xs text-error">'+name+'</span> triggered policy violation. Automatically quarantined.',color:'bg-error'})}
-        const trust=trustScores[name]||90;totalTrust+=trust;trustCount++;
+        const trustData=calcTrust(name,ag);
+        const trust=trustData.score;totalTrust+=trust;trustCount++;
         const trustColor=trust>=80?'#b8f600':trust>=50?'#fbbf24':'#ffb4ab';
-        const trustLabel=trustLabels[name]||'Active';
+        const trustLabel=trustData.label;
         // Apply status filter
         if(_agentStatusFilter==='active'&&isQuarantined)return;
         if(_agentStatusFilter==='quarantined'&&!isQuarantined)return;
