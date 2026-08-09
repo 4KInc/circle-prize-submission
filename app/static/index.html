@@ -1718,38 +1718,30 @@ function updateTryItScenario(){
 function runTryIt(){
   const btn=document.getElementById('tryit-btn');
   btn.disabled=true;
-  btn.innerHTML='<span class="material-symbols-outlined animate-spin" style="font-size:18px">progress_activity</span> Checking...';
+  btn.innerHTML='<span class="material-symbols-outlined animate-spin" style="font-size:18px">progress_activity</span> Scoring...';
 
   const payee=document.getElementById('tryit-payee').value;
-  const amount=parseFloat(document.getElementById('tryit-amount').value)||0.5;
+  const amount=document.getElementById('tryit-amount').value||'0.50';
   const service=document.getElementById('tryit-service').value;
   const reason=document.getElementById('tryit-reason').value;
-  const scenario=document.getElementById('tryit-scenario').value;
 
-  // Simulate risk scoring based on scenario
-  setTimeout(()=>{
-    let score,confidence,decision,band,factors,color,bgColor;
-    const hash='sha256:'+Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  // Call the REAL risk scorer API
+  fetch('/api/check',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({payee,amount,service,reason}),
+  }).then(r=>r.json()).then(d=>{
+    const score=d.score;
+    const confidence=d.confidence;
+    const decision=d.decision;
+    const band=d.band;
+    const factors=d.signals||[];
+    const hash='sha256:'+d.evaluated_at?.replace(/[^a-z0-9]/gi,'').padEnd(64,'0').slice(0,64)||'pending';
 
-    if(scenario==='safe'){
-      score=12+Math.floor(Math.random()*20);
-      confidence=0.85+Math.random()*0.12;
-      decision='APPROVE';band='LOW';
-      factors=['payee_on_allowlist','amount_within_policy','no_velocity_anomaly','clean_history'];
-      color='#4ade80';bgColor='rgba(74,222,128,0.1)';
-    }else if(scenario==='uncertain'){
-      score=45+Math.floor(Math.random()*25);
-      confidence=0.45+Math.random()*0.12;
-      decision='STEP_UP';band='MEDIUM';
-      factors=['new_payee_address','amount_near_threshold','low_confidence','requires_evidence'];
-      color='#ffaf00';bgColor='rgba(255,175,0,0.1)';
-    }else{
-      score=82+Math.floor(Math.random()*15);
-      confidence=0.92+Math.random()*0.06;
-      decision='DENY';band='CRITICAL';
-      factors=['payee_not_on_allowlist','amount_exceeds_cap','injection_pattern_detected','velocity_anomaly'];
-      color='#ff6b6b';bgColor='rgba(255,107,107,0.1)';
-    }
+    let color,bgColor;
+    if(decision==='APPROVE'){color='#4ade80';bgColor='rgba(74,222,128,0.1)'}
+    else if(decision==='STEP_UP'){color='#ffaf00';bgColor='rgba(255,175,0,0.1)'}
+    else{color='#ff6b6b';bgColor='rgba(255,107,107,0.1)'}
 
     // Update UI
     document.getElementById('tryit-empty').classList.add('hidden');
@@ -1795,15 +1787,21 @@ function runTryIt(){
       confidence:confidence,
       risk_band:band,
       factors:factors,
-      intent:{payee,amount:amount.toString(),service,reason},
+      model_version:d.model_version,
+      thresholds:d.thresholds,
+      intent:{payee,amount,service,reason},
       settlement_method:'circle-gateway-nanopayment',
       timestamp:new Date().toISOString(),
-      scorer:'blockintel-heuristic-v1',
+      scorer:d.model_version||'blockintel-heuristic-v1',
     };
 
     btn.disabled=false;
     btn.innerHTML='<span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:\'FILL\' 1">shield</span> Check Payment';
-  },1200);
+  }).catch(e=>{
+    btn.disabled=false;
+    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:\'FILL\' 1">shield</span> Check Payment';
+    console.error('Risk check failed:',e);
+  });
 }
 
 function downloadTryItReceipt(){

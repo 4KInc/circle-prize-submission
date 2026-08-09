@@ -117,7 +117,51 @@ async def get_state():
 
 @app.get("/api/data")
 async def get_data():
-    """Return all persisted demo data for tab views."""
+    """Return all persisted demo data for tab views.
+
+    If no demo has been run in this session, falls back to the latest
+    proof bundle from GCS so the dashboard isn't empty on cold start.
+    """
+    # If live state has data, return it
+    if state["receipts"]:
+        return {
+            "receipts": state["receipts"],
+            "agents": state["agents"],
+            "artifacts": state["artifacts"],
+            "merkle_root": state["merkle_root"],
+            "anchor": state["anchor"],
+            "verification": state["verification"],
+            "compliance": state["compliance"],
+            "payments": state["payments"],
+            "isolations": state["isolations"],
+            "treasury": state["treasury"],
+        }
+
+    # Cold start — try to load last GCS proof bundle
+    try:
+        from app.storage import list_bundles, get_bundle
+        bundles = list_bundles(limit=1)
+        if bundles:
+            b = get_bundle(bundles[0]["name"])
+            if b:
+                return {
+                    "receipts": b.get("receipts", []),
+                    "agents": b.get("agents", {}),
+                    "artifacts": b.get("artifacts", []),
+                    "merkle_root": b.get("merkle_root"),
+                    "anchor": b.get("anchor_data"),
+                    "verification": b.get("verification"),
+                    "compliance": b.get("compliance"),
+                    "payments": [],
+                    "isolations": b.get("isolation_records", []),
+                    "treasury": {},
+                    "source": "gcs-persisted",
+                    "bundle_path": bundles[0]["name"],
+                }
+    except Exception as e:
+        logger.warning(f"GCS fallback for /api/data: {e}")
+
+    # Nothing available
     return {
         "receipts": state["receipts"],
         "agents": state["agents"],
@@ -289,6 +333,29 @@ async def get_wallets():
     except Exception as e:
         logger.warning(f"Wallet fetch failed: {e}")
 
+    # Ensure the three key wallets are always shown (even if CLI doesn't list them)
+    known_addrs = {w["address"].lower() for w in wallets_out}
+    key_wallets = [
+        {"address": TREASURY_WALLET, "label": "Verigate Treasury", "role": "treasury"},
+        {"address": VALIDATOR_WALLET, "label": "Evidence Validator", "role": "validator"},
+    ]
+    for kw in key_wallets:
+        if kw["address"].lower() not in known_addrs:
+            try:
+                bals = wallet_balance(kw["address"], chain)
+                usdc = next((b for b in bals if b["token"]["symbol"] == "USDC"), None)
+            except Exception:
+                usdc = None
+            wallets_out.append({
+                "address": kw["address"],
+                "chain": chain,
+                "type": kw["role"],
+                "label": kw["label"],
+                "created": "",
+                "usdc_balance": usdc["amount"] if usdc else "0",
+                "explorer_url": f"https://{'sepolia.' if 'SEPOLIA' in chain.upper() else ''}basescan.org/address/{kw['address']}",
+            })
+
     # Also check mainnet wallet if available
     try:
         mlist = wallet_list("BASE")
@@ -436,6 +503,51 @@ async def gateway_status():
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/check")
+async def api_check(request: Request):
+    """Live risk check — calls the real BlockIntel risk scorer.
+
+    This is what the "Try It" tab calls. Returns the same risk assessment
+    that the x402 security-check endpoint returns, but without requiring payment.
+    """
+    from circle.risk_scorer import evaluate_risk
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    payee = body.get("payee", "0x0000000000000000000000000000000000000000")
+    amount = body.get("amount", "0")
+    service = body.get("service", "unknown")
+    reason = body.get("reason", "")
+
+    risk = evaluate_risk(
+        payee=payee,
+        amount=amount,
+        service=service,
+        reason=reason,
+        source_wallet=CUSTOMER_WALLET,
+        chain=state["chain"],
+    )
+
+    return {
+        "decision": risk.decision,
+        "score": risk.score,
+        "band": risk.band,
+        "confidence": risk.confidence,
+        "signals": risk.signals,
+        "model_version": risk.model_version,
+        "evaluated_at": risk.evaluated_at,
+        "thresholds": {
+            "approve_ceiling": 39,
+            "step_up_range": "40-74",
+            "deny_floor": 75,
+            "confidence_floor": 0.60,
+        },
+    }
 
 
 @app.post("/api/reset-demo")

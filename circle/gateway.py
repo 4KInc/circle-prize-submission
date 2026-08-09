@@ -160,16 +160,9 @@ def get_balances(addresses: list[str], network: str = "eip155:84532") -> dict:
     """
     url = f"{GATEWAY_URL}/v1/balances"
 
-    # USDC token addresses per network
-    usdc_by_network = {
-        "eip155:84532": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
-        "eip155:8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    }
-    token = usdc_by_network.get(network, usdc_by_network["eip155:84532"])
-
     body = {
         "sources": [{"network": network, "address": addr} for addr in addresses],
-        "token": token,
+        "token": "USDC",
     }
 
     try:
