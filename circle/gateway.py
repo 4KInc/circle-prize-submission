@@ -161,7 +161,7 @@ def get_balances(addresses: list[str], network: str = "eip155:84532") -> dict:
     url = f"{GATEWAY_URL}/v1/balances"
 
     body = {
-        "sources": [{"network": network, "address": addr} for addr in addresses],
+        "sources": [{"network": network, "depositor": addr} for addr in addresses],
         "token": "USDC",
     }
 
