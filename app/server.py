@@ -88,6 +88,11 @@ async def lifespan(app: FastAPI):
         "Recommender": {"kid": gov.recommender._kid, "status": "Ready", "artifacts": 0, "role": "Circle policy recommendations"},
         "Isolator": {"kid": iso_kid, "status": "Ready", "artifacts": 0, "role": "Forensic recording + ERC-8004 reputation"},
     }
+
+    # Start background scheduler for continuous autonomous operation
+    from app.scheduler import start_scheduler
+    start_scheduler()
+
     yield
 
 app = FastAPI(title="Verigate Live Dashboard", lifespan=lifespan)
@@ -573,6 +578,63 @@ async def api_check(request: Request):
             "confidence_floor": 0.60,
         },
     }
+
+
+@app.post("/api/compliance/generate")
+async def generate_compliance():
+    """Generate a full Gemini compliance report over stored receipts.
+
+    Uses receipts from live state or GCS fallback. Calls the Auditor agent
+    with Gemini to produce a comprehensive EU AI Act + NIST AI RMF narrative.
+    """
+    receipts = state.get("receipts", [])
+    if not receipts:
+        try:
+            from app.storage import list_bundles, get_bundle
+            bundles = list_bundles(limit=1)
+            if bundles:
+                b = get_bundle(bundles[0]["name"])
+                if b:
+                    receipts = b.get("receipts", [])
+        except Exception:
+            pass
+
+    if not receipts:
+        return {"error": "No receipts available. Run the demo first."}
+
+    try:
+        from circle.agents import GovernanceSystem
+        gov = GovernanceSystem(tenant="compliance-on-demand")
+        iso_envelopes = state.get("isolations", [])
+        approved = sum(1 for r in receipts if r.get("body", {}).get("decision") == "approve")
+        blocked = sum(1 for r in receipts if r.get("body", {}).get("decision") == "deny")
+        total_spend = sum(float(r.get("body", {}).get("delegation_context", {}).get("settlement_amount", 0) or 0) for r in receipts)
+        total_spend_str = f"${total_spend:.2f}"
+        verification = state.get("verification", "PASS")
+        if isinstance(verification, dict):
+            verification = verification.get("overall", "PASS")
+
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(
+                gov.auditor.generate_compliance_report,
+                receipts, iso_envelopes, total_spend_str, verification,
+            )
+            compliance_artifact = future.result(timeout=30)
+
+        compliance = compliance_artifact.body.get("narrative", {})
+        state["compliance"] = compliance
+        return {"status": "generated", "compliance": compliance}
+    except Exception as e:
+        logger.warning(f"Compliance generation failed: {e}")
+        return {"error": str(e), "hint": "Gemini API key may not be set."}
+
+
+@app.get("/api/scheduler/status")
+async def scheduler_status():
+    """Background scheduler status — continuous autonomous operation."""
+    from app.scheduler import get_status
+    return get_status()
 
 
 @app.post("/api/autonomous-check")

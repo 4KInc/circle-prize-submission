@@ -138,6 +138,26 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
 
+    <!-- Autonomous Operations Status -->
+    <div class="mb-8 rounded-2xl p-5 border border-primary-fixed/15 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.6) 0%, rgba(20,22,28,0.8) 100%);display:none">
+      <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.04]" style="background:radial-gradient(circle,#b8f600,transparent 70%)"></div>
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+          <span class="w-2.5 h-2.5 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
+          <div>
+            <div class="font-display text-sm font-bold text-primary-fixed">Autonomous Operations</div>
+            <div class="font-mono text-[10px] text-on-surface-variant/50" id="sched-since">Running since --</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-6">
+          <div class="text-center"><div class="font-mono text-lg font-bold text-on-surface" id="sched-runs">0</div><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Checks</div></div>
+          <div class="text-center"><div class="font-mono text-lg font-bold text-primary-fixed" id="sched-earned">$0.00</div><div class="font-mono text-[9px] text-primary-fixed/40 uppercase">Earned</div></div>
+          <div class="text-center"><div class="font-mono text-lg font-bold text-[#ffaf00]" id="sched-spent">$0.00</div><div class="font-mono text-[9px] text-[#ffaf00]/40 uppercase">Spent</div></div>
+          <div class="text-center"><div class="font-mono text-xs text-on-surface-variant/60" id="sched-last">--</div><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Last Check</div></div>
+        </div>
+      </div>
+    </div>
+
     <!-- What Verigate Adds -->
     <div class="mb-10">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -239,6 +259,15 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <div class="flex items-center gap-3 mb-6">
         <h2 class="font-display text-lg font-bold text-on-surface">Three wallets. Three actors.</h2>
         <div class="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent"></div>
+      </div>
+      <!-- Money flow diagram -->
+      <div class="hidden md:flex items-center justify-center gap-2 mb-6 py-3 px-4 rounded-xl border border-white/[.04]" style="background:rgba(255,255,255,0.015)">
+        <span class="font-mono text-xs text-secondary">Customer Agent</span>
+        <span class="font-mono text-[10px] text-primary-fixed/60 flex items-center gap-1">— $0.05 →</span>
+        <span class="font-mono text-xs text-primary-fixed font-bold">Verigate Treasury</span>
+        <span class="font-mono text-[10px] text-[#ffaf00]/60 flex items-center gap-1">— $0.02 →</span>
+        <span class="font-mono text-xs text-tertiary-fixed-dim">Evidence Validator</span>
+        <span class="ml-3 font-mono text-[9px] text-on-surface-variant/30">(only on STEP_UP)</span>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
         <!-- Customer Agent -->
@@ -443,6 +472,12 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <div class="flex items-center gap-2 pt-1">
           <img src="/static/circle-logo.png" width="10" height="10" alt="Circle" class="inline"/>
           <span class="text-[11px] text-on-surface-variant/40">Powered by Circle Gateway nanopayments &middot; $0.05 per check</span>
+        </div>
+        <div class="flex items-center gap-3 pt-1 flex-wrap">
+          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#4ade80]/10 text-[#4ade80] border border-[#4ade80]/15">0-39 APPROVE</span>
+          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#ffaf00]/10 text-[#ffaf00] border border-[#ffaf00]/15">40-74 STEP_UP</span>
+          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#ff6b6b]/10 text-[#ff6b6b] border border-[#ff6b6b]/15">75+ DENY</span>
+          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#ffaf00]/10 text-[#ffaf00] border border-[#ffaf00]/15">conf &lt;60% → STEP_UP</span>
         </div>
       </div>
     </div>
@@ -980,6 +1015,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <div class="glass overflow-hidden">
       <div class="px-5 py-3 border-b border-white/5"><span class="font-mono text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Auditor Report</span></div>
       <div id="comp-report" class="p-5 max-h-96 overflow-y-auto"><span class="text-sm text-on-surface-variant">Run a demo to generate compliance report.</span></div>
+      <div class="px-5 pb-4"><button onclick="generateCompliance()" id="btn-compliance" class="btn-secondary px-4 py-2 rounded-lg font-mono text-xs w-full">Generate Full Gemini Report</button></div>
     </div>
   </div>
 
@@ -1802,9 +1838,17 @@ function runTryIt(){
     document.getElementById('tryit-band').textContent=band;
     document.getElementById('tryit-band').style.color=color;
 
-    // Factors
+    // Factors with explanations
+    const signalExplain={
+      'amount_anomaly':'Amount exceeds normal threshold',
+      'prompt_injection':'Injection keywords detected in reason',
+      'wallet_velocity':'Unusual transaction frequency',
+      'elevated_amount':'Amount is above typical range',
+      'first_commercial_relationship':'First interaction with this payee',
+      'unknown_payee':'Payee not in known allowlist',
+    };
     const factorsEl=document.getElementById('tryit-factors');
-    factorsEl.innerHTML=factors.map(f=>'<span class="font-mono text-[10px] px-2 py-1 rounded-full border border-white/[.06]" style="background:rgba(255,255,255,0.03);color:'+color+'">'+f+'</span>').join('');
+    factorsEl.innerHTML=factors.map(f=>'<span class="font-mono text-[10px] px-2 py-1 rounded-full border border-white/[.06] cursor-help" style="background:rgba(255,255,255,0.03);color:'+color+'" title="'+(signalExplain[f]||f)+'">'+f+'</span>').join('');
 
     // Step-up box
     const stepBox=document.getElementById('tryit-stepup-box');
@@ -1951,7 +1995,48 @@ document.addEventListener('click',e=>{
 });
 
 // Load all data on startup so pages aren't empty
-setTimeout(()=>{loadData();loadWallets()},200);
+setTimeout(()=>{loadData();loadWallets();loadSchedulerStatus()},200);
+
+// Generate compliance report on demand
+async function generateCompliance(){
+  const btn=document.getElementById('btn-compliance');
+  btn.disabled=true;btn.textContent='Generating with Gemini...';
+  try{
+    const resp=await fetch('/api/compliance/generate',{method:'POST'});
+    const d=await resp.json();
+    if(d.compliance){
+      const c=d.compliance;let ch='';
+      if(c.executive_summary||c.summary)ch+='<p class="text-xs text-on-surface-variant leading-relaxed mb-3">'+(c.executive_summary||c.summary)+'</p>';
+      if(c.eu_ai_act){ch+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">EU AI Act</div>';for(const[k,v]of Object.entries(c.eu_ai_act))ch+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface">'+k.replace(/_/g,' ')+'</strong>: '+v+'</p>';ch+='</div>'}
+      if(c.nist_ai_rmf){ch+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(c.nist_ai_rmf))ch+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface">'+k.toUpperCase()+'</strong>: '+v+'</p>';ch+='</div>'}
+      if(c.recommendations){ch+='<div><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">Recommendations</div>';c.recommendations.forEach((r,i)=>{ch+='<p class="text-xs text-on-surface-variant">'+(i+1)+'. '+r+'</p>'});ch+='</div>'}
+      document.getElementById('comp-report').innerHTML=ch||'<span class="text-sm text-on-surface-variant">Report generated.</span>';
+    }else{document.getElementById('comp-report').innerHTML='<span class="text-sm text-error">'+(d.error||'Generation failed')+'</span>'}
+  }catch(e){document.getElementById('comp-report').innerHTML='<span class="text-sm text-error">'+e+'</span>'}
+  btn.disabled=false;btn.textContent='Generate Full Gemini Report';
+}
+
+// Scheduler status
+async function loadSchedulerStatus(){
+  try{
+    const resp=await fetch('/api/scheduler/status');
+    const s=await resp.json();
+    if(!s.running&&!s.total_runs)return;
+    const card=document.getElementById('scheduler-card');
+    card.style.display='';
+    document.getElementById('sched-runs').textContent=s.total_runs;
+    document.getElementById('sched-earned').textContent='$'+s.total_earned_usdc.toFixed(2);
+    document.getElementById('sched-spent').textContent='$'+s.total_spent_usdc.toFixed(2);
+    if(s.started_at)document.getElementById('sched-since').textContent='Running since '+new Date(s.started_at).toLocaleDateString();
+    if(s.last_result){
+      const lr=s.last_result;
+      const ago=s.next_run_in_seconds?Math.max(0,1800-s.next_run_in_seconds):0;
+      const agoMin=Math.round(ago/60);
+      document.getElementById('sched-last').textContent=lr.decision+' ('+lr.score+') '+agoMin+'m ago';
+    }
+  }catch(e){console.warn('Scheduler status unavailable:',e)}
+}
+setInterval(loadSchedulerStatus,60000);
 </script>
 </body>
 </html>
