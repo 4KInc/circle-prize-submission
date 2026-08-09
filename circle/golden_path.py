@@ -30,11 +30,9 @@ for name in ("httpx", "httpcore", "urllib3", "google"):
     logging.getLogger(name).setLevel(logging.WARNING)
 
 # ─── x402 service endpoint ────────────────────────────────────────────
-# On Cloud Run, this is the deployed URL. Locally, it's localhost:8080.
-X402_ENDPOINT = os.environ.get(
-    "X402_ENDPOINT",
-    "https://verigate-dashboard-1031148889398.us-central1.run.app/x402/market-data",
-)
+# Use localhost when running inside the container (Cloud Run can't loopback via its own URL).
+_default_x402 = "http://localhost:8080/x402/market-data" if os.environ.get("PORT") else "https://verigate-dashboard-1031148889398.us-central1.run.app/x402/market-data"
+X402_ENDPOINT = os.environ.get("X402_ENDPOINT", _default_x402)
 
 # Payee address for the x402 service (our agent wallet for self-pay demo)
 SERVICE_PAYEE = os.environ.get(

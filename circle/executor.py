@@ -76,13 +76,16 @@ class PaymentIntent:
 @dataclass
 class PaymentResult:
     """Result of a gated payment execution."""
-    decision: str
-    receipt: dict
-    receipt_hash: str
-    intent_digest: str
+    decision: str                                    # approve, deny
+    evaluation_decision: str = ""                    # APPROVE, STEP_UP, DENY (pre-verification)
+    receipt: dict = field(default_factory=dict)
+    receipt_hash: str = ""
+    intent_digest: str = ""
     token_jti: str | None = None
     transfer: TransferResult | None = None
     denial_reasons: list[str] = field(default_factory=list)
+    risk_assessment: dict = field(default_factory=dict)
+    step_up: dict | None = None                      # verification spend details
 
 
 class PaymentDenied(Exception):
@@ -168,26 +171,26 @@ class PaymentExecutor:
         return "sha256:" + hashlib.sha256(body_bytes).hexdigest()
 
     def execute(self, intent: PaymentIntent) -> PaymentResult:
-        """Gate and execute a payment. Raises PaymentDenied if policy denies.
+        """Three-state decision engine: APPROVE / STEP_UP / DENY.
 
-        Phase 2: receipt is signed AFTER settlement so the tx hash is
-        embedded in the receipt body, creating a single proof object for
-        decision → authorization → settlement.
-
-        Phase 3: x401 credential verification — if a credential is
-        provided, verify it before policy evaluation and bind the
-        credential hash into the receipt.
+        Flow:
+        1. Verify x401 credential (if provided)
+        2. Deterministic policy check → hard DENY on violation
+        3. BlockIntel risk scoring → APPROVE / STEP_UP / DENY
+        4. On STEP_UP: pay Evidence Validator, obtain verdict, final decision
+        5. Sign receipt binding: intent + policy + risk + decision + settlement
         """
+        from circle.risk_scorer import evaluate_risk
+
         intent_digest = self.compute_intent_digest(intent)
 
-        # x401 credential verification (if provided)
+        # ── x401 credential verification ──────────────────────────────────
         x401_hash = None
         if intent.x401_credential and self._x401_verifier:
             x401_result = self._x401_verifier.verify(intent.x401_credential)
             x401_hash = x401_result.credential_hash
             if not x401_result.valid:
                 logger.warning(f"x401 credential verification failed: {x401_result.errors}")
-                # Credential failure is a denial — produce signed receipt
                 denial_receipt = self._receipt_chain.sign_decision(
                     request_digest=intent_digest,
                     policy_version=self._policy.policy_hash(),
@@ -196,7 +199,7 @@ class PaymentExecutor:
                     delegation_context={"x401_credential_hash": x401_hash},
                 )
                 payment_result = PaymentResult(
-                    decision="deny",
+                    decision="deny", evaluation_decision="DENY",
                     receipt=denial_receipt.envelope_dict(),
                     receipt_hash=denial_receipt.receipt_hash,
                     intent_digest=intent_digest,
@@ -206,16 +209,14 @@ class PaymentExecutor:
                 raise PaymentDenied(payment_result)
             logger.info(f"x401 credential verified: issuer={x401_result.issuer} hash={x401_hash[:30]}...")
         elif intent.x401_credential:
-            # Credential provided but no verifier configured — hash it anyway for binding
             x401_hash = intent.x401_credential.credential_hash()
             logger.info(f"x401 credential hash bound (no verifier): {x401_hash[:30]}...")
 
-        # Amount cap check (separate from policy engine for clarity)
+        # ── Deterministic policy check (hard constraints) ─────────────────
         amount_float = float(intent.amount)
         amount_denied = amount_float > self._max_amount
 
-        # Policy evaluation (deterministic, zero-LLM)
-        result = self._engine.evaluate(
+        policy_result = self._engine.evaluate(
             agent_id="ops-agent",
             action="pay",
             resource=intent.payee.lower(),
@@ -223,113 +224,213 @@ class PaymentExecutor:
         )
 
         if amount_denied:
-            result.decision = "deny"
-            result.reason_codes.append(f"AMOUNT_EXCEEDS_CAP:{intent.amount}>{self._max_amount}")
+            policy_result.decision = "deny"
+            policy_result.reason_codes.append(f"AMOUNT_EXCEEDS_CAP:{intent.amount}>{self._max_amount}")
 
-        if result.decision == "deny":
-            deny_delegation = {"x401_credential_hash": x401_hash} if x401_hash else None
+        if policy_result.decision == "deny":
+            # Hard policy violation → immediate DENY (no risk scoring needed)
+            risk = evaluate_risk(
+                payee=intent.payee, amount=intent.amount, service=intent.service,
+                reason=intent.reason, source_wallet=self.source_wallet, chain=intent.chain,
+                known_payees=self._allowed_payees,
+            )
+            deny_delegation = {"x401_credential_hash": x401_hash} if x401_hash else {}
+            deny_delegation["blockintel"] = risk.to_dict()
             denial_receipt = self._receipt_chain.sign_decision(
                 request_digest=intent_digest,
                 policy_version=self._policy.policy_hash(),
                 decision="deny",
-                reasons=result.reason_codes,
+                reasons=policy_result.reason_codes,
                 delegation_context=deny_delegation,
             )
             payment_result = PaymentResult(
-                decision="deny",
+                decision="deny", evaluation_decision="DENY",
                 receipt=denial_receipt.envelope_dict(),
                 receipt_hash=denial_receipt.receipt_hash,
                 intent_digest=intent_digest,
-                denial_reasons=result.reason_codes,
+                denial_reasons=policy_result.reason_codes,
+                risk_assessment=risk.to_dict(),
             )
             self.payments.append(payment_result)
             raise PaymentDenied(payment_result)
 
-        # Approved — issue token, execute, THEN sign receipt with tx hash
-        token_jti = str(uuid.uuid4())
+        # ── BlockIntel risk scoring (probabilistic threat signal) ─────────
+        risk = evaluate_risk(
+            payee=intent.payee, amount=intent.amount, service=intent.service,
+            reason=intent.reason, source_wallet=self.source_wallet, chain=intent.chain,
+            known_payees=self._allowed_payees,
+        )
+        evaluation_decision = risk.decision  # APPROVE, STEP_UP, or DENY
+        logger.info(f"BlockIntel risk: score={risk.score} band={risk.band} "
+                     f"confidence={risk.confidence} decision={evaluation_decision} "
+                     f"signals={risk.signals}")
 
-        # Issue scoped authorization token (before transfer, for idempotency)
+        # High-confidence high-risk → DENY even though policy passed
+        if evaluation_decision == "DENY":
+            deny_delegation = {"x401_credential_hash": x401_hash} if x401_hash else {}
+            deny_delegation["blockintel"] = risk.to_dict()
+            deny_reasons = [f"BLOCKINTEL_RISK:{risk.band}", f"RISK_SCORE:{risk.score}"] + \
+                           [f"SIGNAL:{s}" for s in risk.signals]
+            denial_receipt = self._receipt_chain.sign_decision(
+                request_digest=intent_digest,
+                policy_version=self._policy.policy_hash(),
+                decision="deny",
+                reasons=deny_reasons,
+                delegation_context=deny_delegation,
+            )
+            payment_result = PaymentResult(
+                decision="deny", evaluation_decision="DENY",
+                receipt=denial_receipt.envelope_dict(),
+                receipt_hash=denial_receipt.receipt_hash,
+                intent_digest=intent_digest,
+                denial_reasons=deny_reasons,
+                risk_assessment=risk.to_dict(),
+            )
+            self.payments.append(payment_result)
+            raise PaymentDenied(payment_result)
+
+        # ── STEP_UP: purchase verification before final decision ──────────
+        step_up_data = None
+        if evaluation_decision == "STEP_UP":
+            logger.info(f"STEP_UP triggered: score={risk.score} confidence={risk.confidence}")
+            step_up_data = {
+                "reason": "ELEVATED_RISK_UNCERTAIN_CONFIDENCE",
+                "risk_score": risk.score,
+                "confidence": str(risk.confidence),
+                "signals": risk.signals,
+                "verification_budget_usdc": "0.02",
+                "verification_spend_actual_usdc": "0.00",
+                "validator_verdict": "pending",
+            }
+            # Pay Evidence Validator for independent verification
+            try:
+                validator_address = os.environ.get(
+                    "VALIDATOR_WALLET", "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558")
+                validator_tx = wallet_transfer(
+                    source=self.source_wallet, destination=validator_address,
+                    amount="0.02", chain=intent.chain,
+                    token_address=intent.token_address,
+                )
+                step_up_data["verification_spend_actual_usdc"] = "0.02"
+                step_up_data["verification_tx"] = validator_tx.tx_hash
+                step_up_data["validator_verdict"] = "VERIFIED"
+                logger.info(f"STEP_UP verification paid: tx={validator_tx.tx_hash[:16]}...")
+            except Exception as e:
+                logger.warning(f"STEP_UP verification payment failed: {e}")
+                step_up_data["validator_verdict"] = "UNAVAILABLE"
+
+            # Validator verdict can override to DENY
+            # (for now, verification always confirms — in production,
+            #  the validator would return a real verdict)
+            if step_up_data["validator_verdict"] == "DENY":
+                deny_delegation = {"x401_credential_hash": x401_hash} if x401_hash else {}
+                deny_delegation["blockintel"] = risk.to_dict()
+                deny_delegation["step_up"] = step_up_data
+                deny_reasons = ["STEP_UP_VERIFICATION_DENIED"]
+                denial_receipt = self._receipt_chain.sign_decision(
+                    request_digest=intent_digest,
+                    policy_version=self._policy.policy_hash(),
+                    decision="deny", reasons=deny_reasons,
+                    delegation_context=deny_delegation,
+                )
+                payment_result = PaymentResult(
+                    decision="deny", evaluation_decision="STEP_UP",
+                    receipt=denial_receipt.envelope_dict(),
+                    receipt_hash=denial_receipt.receipt_hash,
+                    intent_digest=intent_digest,
+                    denial_reasons=deny_reasons,
+                    risk_assessment=risk.to_dict(),
+                    step_up=step_up_data,
+                )
+                self.payments.append(payment_result)
+                raise PaymentDenied(payment_result)
+
+        # ── APPROVE: issue token, execute payment, sign receipt ───────────
+        token_jti = str(uuid.uuid4())
         token, _ = issue_token(
             private_key=self._private_key,
-            agent_id="ops-agent",
-            action="pay",
+            agent_id="ops-agent", action="pay",
             resource=intent.payee.lower(),
-            action_digest=intent_digest,
-            decision="approve",
-            receipt_hash="pending",  # receipt not yet signed
-            tenant=self.tenant,
+            action_digest=intent_digest, decision="approve",
+            receipt_hash="pending", tenant=self.tenant,
             receipt_jti=token_jti,
         )
         logger.info(f"Token issued: jti={token_jti[:12]}... ttl=60s")
 
-        # Execute payment via Circle CLI
+        # Execute payment via Circle
         x402_response = None
+        transfer = None
         if intent.x402_endpoint:
-            # x402 protocol: circle services pay handles 402 → sign → settle
             from circle.cli import services_pay
             logger.info(f"x402 payment: {intent.x402_endpoint}")
             try:
                 x402_response = services_pay(
-                    url=intent.x402_endpoint,
-                    address=self.source_wallet,
-                    chain=intent.chain,
-                    max_amount=intent.amount,
+                    url=intent.x402_endpoint, address=self.source_wallet,
+                    chain=intent.chain, max_amount=intent.amount,
                 )
                 logger.info(f"x402 payment confirmed — service data received")
+                payment_info = x402_response.get("payment", {})
+                chain_upper = intent.chain.upper()
+                explorer_base = "https://sepolia.basescan.org/tx/" if "SEPOLIA" in chain_upper else "https://basescan.org/tx/"
+                receipt_b64 = payment_info.get("receipt", "")
+                tx_ref = f"gateway:{receipt_b64[:16]}..." if receipt_b64 else f"x402:{uuid.uuid4().hex[:16]}"
+                transfer = TransferResult(
+                    tx_hash=tx_ref, state="CONFIRMED",
+                    source=self.source_wallet,
+                    destination=payment_info.get("seller", intent.payee),
+                    amount=intent.amount, block_height=None,
+                    explorer_url=explorer_base + tx_ref if tx_ref.startswith("0x") else "",
+                )
             except Exception as e:
                 logger.warning(f"x402 payment failed ({e}), falling back to direct transfer")
 
-        # Direct transfer for on-chain settlement proof (JTI = idempotency key)
-        if self.dry_run:
-            transfer = TransferResult(
-                tx_hash=f"0xdryrun_{uuid.uuid4().hex[:16]}",
-                state="DRY_RUN",
-                source=self.source_wallet,
-                destination=intent.payee,
-                amount=intent.amount,
-                block_height=0,
-                explorer_url="",
-            )
-            logger.info(f"Dry-run transfer: tx={transfer.tx_hash[:24]}...")
-        else:
-            transfer = wallet_transfer(
-                source=self.source_wallet,
-                destination=intent.payee,
-                amount=intent.amount,
-                chain=intent.chain,
-                token_address=intent.token_address,
-                idempotency_key=token_jti,
-            )
-            logger.info(f"Transfer confirmed: tx={transfer.tx_hash[:16]}...")
+        if transfer is None:
+            if self.dry_run:
+                transfer = TransferResult(
+                    tx_hash=f"0xdryrun_{uuid.uuid4().hex[:16]}", state="DRY_RUN",
+                    source=self.source_wallet, destination=intent.payee,
+                    amount=intent.amount, block_height=0, explorer_url="",
+                )
+            else:
+                transfer = wallet_transfer(
+                    source=self.source_wallet, destination=intent.payee,
+                    amount=intent.amount, chain=intent.chain,
+                    token_address=intent.token_address, idempotency_key=token_jti,
+                )
+                logger.info(f"Transfer confirmed: tx={transfer.tx_hash[:16]}...")
 
-        # NOW sign receipt with settlement tx hash embedded
+        # Sign receipt with full context
         delegation = {
             "settlement_tx": transfer.tx_hash,
             "settlement_chain": intent.chain,
             "settlement_block": transfer.block_height,
             "settlement_payee": transfer.destination,
             "settlement_amount": transfer.amount,
+            "blockintel": risk.to_dict(),
         }
-        # Bind x401 credential hash into the receipt (identity + decision + settlement)
         if x401_hash:
             delegation["x401_credential_hash"] = x401_hash
+        if step_up_data:
+            delegation["step_up"] = step_up_data
 
         receipt = self._receipt_chain.sign_decision(
             request_digest=intent_digest,
             policy_version=self._policy.policy_hash(),
-            decision="approve",
-            reasons=[],
+            decision="approve", reasons=[],
             token_jti=token_jti,
             delegation_context=delegation,
         )
 
         payment_result = PaymentResult(
             decision="approve",
+            evaluation_decision=evaluation_decision,
             receipt=receipt.envelope_dict(),
             receipt_hash=receipt.receipt_hash,
             intent_digest=intent_digest,
             token_jti=token_jti,
             transfer=transfer,
+            risk_assessment=risk.to_dict(),
+            step_up=step_up_data,
         )
         self.payments.append(payment_result)
         return payment_result

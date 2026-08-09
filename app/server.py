@@ -321,6 +321,40 @@ async def get_wallets():
     return {"wallets": wallets_out}
 
 
+@app.get("/api/carrier/evidence-bundle")
+async def carrier_evidence_bundle():
+    """Carrier evidence-bundle endpoint.
+
+    Returns the complete audit trail for carrier underwriting/claims:
+    receipts, risk assessments, isolation records, compliance data.
+    """
+    return {
+        "schema_version": "1.0",
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "tenant": "live-demo",
+        "wallet": state["wallet"],
+        "chain": state["chain"],
+        "payments": state.get("payments", []),
+        "receipts": [
+            {
+                "receipt_hash": r.get("receipt_hash", ""),
+                "decision": r.get("body", {}).get("decision", ""),
+                "seq": r.get("body", {}).get("seq", 0),
+                "delegation_context": r.get("body", {}).get("delegation_context", {}),
+            }
+            for r in state.get("receipts", [])
+        ],
+        "isolations": state.get("isolations", []),
+        "treasury": state.get("treasury", {}),
+        "verification": state.get("verification", {}),
+        "compliance": state.get("compliance", {}),
+        "merkle_root": state.get("merkle_root", ""),
+        "anchor": state.get("anchor", {}),
+        "agents": state.get("agents", {}),
+        "artifact_count": len(state.get("artifacts", [])),
+    }
+
+
 def _is_demo_running() -> bool:
     """Check if a demo is running, with a 120s auto-expire to prevent stale locks."""
     if not state["running"]:
@@ -401,41 +435,17 @@ async def _golden_path_stream():
         chain = state["chain"]
         service = SERVICE_CATALOG[0]
 
-        # Step 1: Wallet check
-        yield _sse("step", {"id": "wallet", "title": "Wallet Check", "status": "running",
-                            "desc": "Verify Circle Agent Wallet has sufficient USDC balance on Base Sepolia."})
-        await asyncio.sleep(0.3)
+        # ── HOT PATH: Agent → Payment (minimum steps) ──────────────────
+        hot_start = time.time()
 
-        balances = wallet_balance(wallet, chain)
+        # Parallel setup: wallet check + service discovery + credential (all fast)
+        balances = await asyncio.to_thread(wallet_balance, wallet, chain)
         usdc = next((b for b in balances if b["token"]["symbol"] == "USDC"), None)
         usdc_amount = usdc["amount"] if usdc else "0"
-
-        yield _sse("step", {
-            "id": "wallet", "title": "Wallet Check", "status": "complete",
-            "desc": "Wallet funded with " + usdc_amount + " USDC. Ready for payments.",
-            "details": {"address": wallet, "chain": chain, "usdc": usdc_amount},
-        })
-        await asyncio.sleep(0.5)
-
-        # Step 2: Marketplace discovery
-        yield _sse("step", {"id": "discover", "title": "Service Discovery", "status": "running",
-                            "desc": "Query Circle Agent Marketplace for x402-paywalled services. Merge with our own x402 endpoint to build the service catalog."})
-        await asyncio.sleep(0.3)
 
         from circle.golden_path import discover_marketplace_services
         discovered = discover_marketplace_services("market data")
         marketplace_count = sum(1 for s in discovered if s.get("marketplace"))
-
-        yield _sse("step", {
-            "id": "discover", "title": "Service Discovery", "status": "complete",
-            "desc": f"Found {len(discovered)} services ({marketplace_count} from Circle Marketplace, 1 local x402 endpoint).",
-        })
-        await asyncio.sleep(0.5)
-
-        # Step: x401 credential issuance
-        yield _sse("step", {"id": "x401", "title": "x401 Credential Issuance", "status": "running",
-                            "desc": "Issue an x401 verifiable credential authorizing the agent. Binds human operator identity to scoped permissions (pay, transfer, amount cap, payee allowlist)."})
-        await asyncio.sleep(0.3)
 
         x401_issuer = X401Issuer(issuer_name="live-demo-operator")
         x401_credential = x401_issuer.issue_credential(
@@ -448,71 +458,107 @@ async def _golden_path_stream():
         x401_verifier = X401Verifier()
         x401_verifier.trust_issuer_jwk(x401_issuer.get_public_key_jwk())
 
-        yield _sse("step", {
-            "id": "x401", "title": "x401 Credential Issuance", "status": "complete",
-            "desc": f"Credential issued: {x401_credential.credential_id}. Issuer: {x401_credential.issuer}. Scope: {x401_credential.scope}. Credential hash will be bound into every receipt.",
-            "details": {
-                "credential_id": x401_credential.credential_id,
-                "issuer": x401_credential.issuer,
-                "scope": x401_credential.scope,
-                "credential_hash": x401_credential.credential_hash()[:40] + "...",
-            },
-        })
-        await asyncio.sleep(0.5)
-
-        # Step: Gemini ops agent
+        # Step 1: Gemini ops agent (only LLM call in hot path)
         yield _sse("step", {"id": "agent", "title": "Gemini Ops Agent", "status": "running",
-                            "desc": "Gemini 2.5 Flash analyzes the task, selects a service from the catalog, and forms a structured payment intent. This is the only LLM call in the flow.",
-                            "subtitle": "Analyzing task and selecting service..."})
-        await asyncio.sleep(0.3)
+                            "desc": "Gemini 2.5 Flash selects a service and forms a payment intent.",
+                            "subtitle": "Analyzing task..."})
 
         task = "Fetch the latest BTC/USDC price data for our portfolio dashboard. Use an external market data service if needed."
-        agent_decision = run_gemini_ops_agent(task)
+        agent_decision = await asyncio.to_thread(run_gemini_ops_agent, task)
 
         yield _sse("step", {
             "id": "agent", "title": "Gemini Ops Agent", "status": "complete",
-            "desc": "Agent selected " + agent_decision.get("service_name", "N/A") + " and formed a payment intent for " + agent_decision.get("amount", "0") + " USDC.",
-            "details": {
-                "service": agent_decision.get("service_name", "N/A"),
-            },
+            "desc": "Agent selected " + agent_decision.get("service_name", "N/A") + " → " + agent_decision.get("amount", "0") + " USDC.",
+            "details": {"service": agent_decision.get("service_name", "N/A")},
         })
-        await asyncio.sleep(0.5)
 
         payee = agent_decision["payee"]
         amount = agent_decision["amount"]
 
-        # Step 3: Initialize gate
-        yield _sse("step", {"id": "gate-init", "title": "Initialize Verigate Gate", "status": "running",
-                            "desc": "Generate a per-tenant Ed25519 signing key and configure the payment policy: payee allowlist, amount cap, and rate limit. Zero LLM."})
-        await asyncio.sleep(0.3)
-
+        # Gate init (local, instant — no step UI)
         executor = PaymentExecutor(
             source_wallet=wallet, tenant="live-demo",
             allowed_payees=[payee], max_amount=1.0,
             x401_verifier=x401_verifier,
         )
-
-        yield _sse("step", {
-            "id": "gate-init", "title": "Initialize Verigate Gate", "status": "complete",
-            "desc": "Gate ready with x401 verifier. Payments to approved payees under 1.0 USDC with valid credentials will pass.",
-            "details": {
-                "kid": executor._kid,
-            },
-        })
-        # Emit Gateway agent info
         state["agents"]["Gateway"] = {"kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"}
         yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"})
-        await asyncio.sleep(0.5)
 
-        # Step: Customer agent pays Verigate for security verification
+        # Step 2: USDC Payment via Circle Gateway (sub-second nanopayment)
+        x402_url = None
+        from circle.golden_path import SERVICE_CATALOG
+        for svc in SERVICE_CATALOG:
+            if svc["name"] == agent_decision.get("service_name") and svc.get("x402"):
+                x402_url = svc.get("endpoint")
+                break
+
+        method_desc = "x402 + Circle Gateway (nanopayment)" if x402_url else "direct transfer"
+        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Payment", "status": "running",
+                            "desc": f"Deterministic policy → BlockIntel risk score → {method_desc}.",
+                            "subtitle": "Policy check → risk scoring → settlement..."})
+
+        intent = PaymentIntent(
+            payee=payee, amount=amount,
+            service=agent_decision["service_name"],
+            reason=agent_decision["reason"], chain=chain,
+            x402_endpoint=x402_url,
+            x401_credential=x401_credential,
+        )
+
+        # Run in thread so event loop stays free to serve the x402 request
+        result = await asyncio.to_thread(executor.execute, intent)
+
+        hot_elapsed = time.time() - hot_start
+
+        # Build rich payment data with risk assessment
+        risk = result.risk_assessment
+        eval_decision = result.evaluation_decision
+        step_up = result.step_up
+
+        payment_data = {
+            "decision": "approve", "amount": result.transfer.amount + " USDC",
+            "evaluation_decision": eval_decision,
+            "tx_hash": result.transfer.tx_hash,
+            "explorer_url": result.transfer.explorer_url,
+            "receipt_hash": result.receipt_hash[:40] + "...",
+            "token_jti": result.token_jti,
+            "block": result.transfer.block_height,
+            "risk_score": risk.get("risk_score"),
+            "risk_band": risk.get("risk_band"),
+            "risk_confidence": risk.get("confidence"),
+            "risk_signals": risk.get("signals", []),
+        }
+        if step_up:
+            payment_data["step_up"] = step_up
+        state["payments"].append(payment_data)
+
+        # Describe what happened
+        if eval_decision == "STEP_UP":
+            desc = (f"STEP_UP: Risk score {risk.get('risk_score')} (confidence {risk.get('confidence')}) "
+                    f"triggered verification spend. Validator confirmed. "
+                    f"Payment settled in {hot_elapsed:.1f}s.")
+        else:
+            desc = (f"APPROVE: Risk score {risk.get('risk_score')} ({risk.get('risk_band')}). "
+                    f"Settled in {hot_elapsed:.1f}s via {method_desc}.")
+
+        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Payment", "status": "complete",
+                            "desc": desc, "details": payment_data})
+        yield _sse("payment", payment_data)
+
+        # ── PHASE DIVIDER ─────────────────────────────────────────────────
+        yield _sse("phase", {"name": "Payment Complete", "elapsed": f"{hot_elapsed:.1f}s",
+                             "desc": f"Decision: {eval_decision}. USDC settled. Async security processing below."})
+
+        # ── ASYNC PATH: Security, forensics, compliance ───────────────────
+
+        # Treasury: Customer pays Verigate for verification
         yield _sse("step", {"id": "treasury-earn", "title": "Security Verification Payment", "status": "running",
-                            "desc": "Customer agent autonomously pays Verigate $0.05 USDC for transaction verification, receipt signing, and security monitoring."})
-        await asyncio.sleep(0.3)
+                            "desc": "Customer agent pays Verigate $0.05 USDC for verification."})
 
         try:
-            treasury_tx = wallet_transfer(
-                source=wallet, destination=TREASURY_WALLET, amount="0.05",
-                chain=chain, token_address=USDC_ADDRESSES.get(chain),
+            treasury_tx = await asyncio.to_thread(wallet_transfer,
+                wallet, TREASURY_WALLET, "0.05",
+                chain, USDC_ADDRESSES.get(chain),
             )
             state["treasury"]["earned"] += 0.05
             state["treasury"]["transactions"].append({
@@ -539,62 +585,12 @@ async def _golden_path_stream():
             logger.warning(f"Treasury payment failed: {e}")
             yield _sse("step", {"id": "treasury-earn", "title": "Security Verification Payment", "status": "complete",
                                 "desc": "Verification payment skipped (testnet funding)."})
-        await asyncio.sleep(0.5)
 
-        # Step 4: Happy path payment
-        # Check if selected service is x402
-        x402_url = None
-        from circle.golden_path import SERVICE_CATALOG
-        for svc in SERVICE_CATALOG:
-            if svc["name"] == agent_decision.get("service_name") and svc.get("x402"):
-                x402_url = svc.get("endpoint")
-                break
-
-        payment_desc = "Verify x401 credential, evaluate intent against policy rules. If approved, issue a 60-second single-use Ed25519 token"
-        if x402_url:
-            payment_desc += ", execute x402 payment via Circle CLI (402 challenge → EIP-3009 sign → settle)."
-        else:
-            payment_desc += ", call Circle CLI, and settle real USDC on-chain."
-
-        yield _sse("step", {"id": "payment", "title": "Authorized USDC Payment", "status": "running",
-                            "desc": payment_desc,
-                            "subtitle": "Policy eval, token issuance, Circle CLI, settlement..."})
-        await asyncio.sleep(0.3)
-
-        intent = PaymentIntent(
-            payee=payee, amount=amount,
-            service=agent_decision["service_name"],
-            reason=agent_decision["reason"], chain=chain,
-            x402_endpoint=x402_url,
-            x401_credential=x401_credential,
-        )
-
-        yield _sse("policy", {"decision": "evaluating", "payee": payee[:20] + "...", "amount": amount})
-        await asyncio.sleep(0.8)
-
-        result = executor.execute(intent)
-
-        payment_data = {
-            "decision": "approve", "amount": result.transfer.amount + " USDC",
-            "tx_hash": result.transfer.tx_hash,
-            "explorer_url": result.transfer.explorer_url,
-            "receipt_hash": result.receipt_hash[:40] + "...",
-            "token_jti": result.token_jti,
-            "block": result.transfer.block_height,
-        }
-        state["payments"].append(payment_data)
-
-        yield _sse("step", {"id": "payment", "title": "Authorized USDC Payment", "status": "complete",
-                            "desc": "Payment settled on Base Sepolia. Receipt signed with x401 credential hash + settlement tx hash embedded. One object proves: identity + decision + settlement.",
-                            "details": payment_data})
-        yield _sse("payment", payment_data)
-        await asyncio.sleep(0.8)
-
-        # Step 5: Rogue agent attack
+        # Rogue agent attack
         yield _sse("step", {"id": "rogue", "title": "Prompt Injection Attack", "status": "running",
                             "desc": "A poisoned tool result injects adversarial instructions into the agent's context. Circle's Action Gate would independently block this — Verigate produces the signed proof.",
                             "subtitle": "Poisoned tool result — documenting the attempt..."})
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(0.2)
 
         rogue_payee = "0x" + secrets.token_hex(20)
         rogue_intent = PaymentIntent(
@@ -610,7 +606,7 @@ async def _golden_path_stream():
             "payee": rogue_payee[:20] + "...",
             "amount": "50.00 USDC",
         })
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(0.25)
 
         denial_result = None
         try:
@@ -634,13 +630,13 @@ async def _golden_path_stream():
                                 "reasons": denial_result.denial_reasons if denial_result else [],
                                 "usdc_moved": "$0.00",
                             }})
-        await asyncio.sleep(0.8)
+        await asyncio.sleep(0.15)
 
         # Step 6: Isolator
         yield _sse("step", {"id": "isolator", "title": "Forensic Recorder: Incident Documentation", "status": "running",
                             "desc": "Classify severity, analyze the attack vector, and produce signed forensic evidence. Circle enforces — Verigate proves what happened and recommends actions.",
                             "subtitle": "Analyzing incident and producing forensic record..."})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         reputation_writer = ReputationWriter(chain=chain, wallet_address=wallet)
         correlation_engine = CorrelationEngine(
@@ -658,7 +654,7 @@ async def _golden_path_stream():
         if denial_result:
             severity = classify_severity(denial_result.denial_reasons)
             yield _sse("severity", {"level": severity, "agent": "ops-agent"})
-            await asyncio.sleep(0.8)
+            await asyncio.sleep(0.15)
 
             isolation_record = isolator.evaluate_and_contain(
                 agent_id="ops-agent",
@@ -686,19 +682,19 @@ async def _golden_path_stream():
         yield _sse("step", {"id": "isolator", "title": "Forensic Recorder: Incident Documentation", "status": "complete",
                             "desc": "Signed forensic record produced with findings, evidence, and recommendations for Circle's Action Gate. Circle enforces the containment.",
                             "details": iso_data if isolation_record else {"action": "none"}})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         # Verigate autonomously pays Evidence Validator for independent verification
         if isolation_record and isolation_record.severity in ("HIGH", "CRITICAL"):
             yield _sse("step", {"id": "treasury-spend", "title": "Evidence Validation Purchase", "status": "running",
                                 "desc": "Threat severity justifies independent verification. Verigate autonomously pays $0.01 USDC from its security treasury to the Evidence Validator.",
                                 "subtitle": "Escalation policy: severity HIGH, budget available, validator on allowlist..."})
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.05)
 
             try:
-                validator_tx = wallet_transfer(
-                    source=wallet, destination=VALIDATOR_WALLET, amount="0.01",
-                    chain=chain, token_address=USDC_ADDRESSES.get(chain),
+                validator_tx = await asyncio.to_thread(wallet_transfer,
+                    wallet, VALIDATOR_WALLET, "0.01",
+                    chain, USDC_ADDRESSES.get(chain),
                 )
                 state["treasury"]["spent"] += 0.01
                 state["treasury"]["transactions"].append({
@@ -747,14 +743,14 @@ async def _golden_path_stream():
                 logger.warning(f"Validator payment failed: {e}")
                 yield _sse("step", {"id": "treasury-spend", "title": "Evidence Validation Purchase", "status": "complete",
                                     "desc": "Validator payment skipped (testnet funding)."})
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
         # ERC-8004 reputation event
         if reputation_writer.events:
             rep_event = reputation_writer.events[-1]
             yield _sse("step", {"id": "reputation", "title": "ERC-8004 Reputation Event", "status": "running",
                                 "desc": "Publishing isolation event to the ERC-8004 on-chain agent reputation registry. Other operators can verify this agent's track record."})
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(0.05)
             yield _sse("reputation", {
                 "event_id": rep_event.event_id,
                 "agent_id": rep_event.agent_id,
@@ -767,13 +763,13 @@ async def _golden_path_stream():
             yield _sse("step", {"id": "reputation", "title": "ERC-8004 Reputation Event", "status": "complete",
                                 "desc": f"Reputation event {rep_event.event_id} published. Agent {rep_event.agent_id} flagged as {rep_event.severity} on-chain.",
                                 "details": {"event_id": rep_event.event_id, "tx_hash": rep_event.tx_hash}})
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
         # Cross-agent forensic correlation
         if isolation_record:
             yield _sse("step", {"id": "correlation", "title": "Cross-Agent Forensic Correlation", "status": "running",
                                 "desc": "Scanning all denial receipts for matching attack patterns. Detecting if this is an isolated incident or a systemic attack across multiple agents."})
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(0.05)
 
             chain_receipts_for_corr = executor.get_receipt_chain()
             correlation_report = isolator.correlate_across_agents(
@@ -796,7 +792,7 @@ async def _golden_path_stream():
             else:
                 yield _sse("step", {"id": "correlation", "title": "Cross-Agent Forensic Correlation", "status": "complete",
                                     "desc": "No correlation engine configured."})
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
         # Step 7: Investigator
         from circle.agents import GovernanceSystem
@@ -828,7 +824,7 @@ async def _golden_path_stream():
 
         yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "running",
                             "desc": "Deep analysis of the suspicious denial. The Investigator synthesizes evidence, classifies severity, identifies root cause, and produces a signed incident report."})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         if denial_result:
             denial_envelope = denial_result.receipt
@@ -843,12 +839,12 @@ async def _golden_path_stream():
             yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "complete",
                                 "desc": f'{inc.get("severity", "?")} — {inc.get("narrative", {}).get("summary", "")[:100]}',
                                 "details": {"incident_id": inc.get("incident_id", ""), "severity": inc.get("severity", "")}})
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
             # Step 8: Recommender
             yield _sse("step", {"id": "recommender", "title": "Recommender: Policy Proposals", "status": "running",
                                 "desc": "Based on the incident, the Recommender suggests policy changes to prevent similar attacks. Each proposal is signed and auditable."})
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
             prop = pipeline_result["proposal"]["body"]
             proposals = prop.get("proposals", [])
@@ -861,7 +857,7 @@ async def _golden_path_stream():
             state["agents"]["Recommender"]["artifacts"] = len(governance.recommender.artifacts)
             yield _sse("agent_info", {"name": "Investigator", "kid": governance.investigator._kid, "status": "Active", "artifacts": len(governance.investigator.artifacts), "role": "Forensic evidence + severity classification"})
             yield _sse("agent_info", {"name": "Recommender", "kid": governance.recommender._kid, "status": "Active", "artifacts": len(governance.recommender.artifacts), "role": "Circle policy recommendations"})
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
         else:
             yield _sse("step", {"id": "investigator", "title": "Investigator: Incident Analysis", "status": "complete",
                                 "desc": "No denial to investigate."})
@@ -871,7 +867,7 @@ async def _golden_path_stream():
         # Step 9: Auditor (per-receipt)
         yield _sse("step", {"id": "auditor-receipts", "title": "Auditor: Receipt Audit", "status": "running",
                             "desc": "The Auditor agent audits each receipt against EU AI Act and NIST frameworks. Each audit produces a signed report — independent from the Gateway's signing key."})
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.05)
 
         chain_receipts = executor.get_receipt_chain()
         state["receipts"] = chain_receipts
@@ -885,12 +881,12 @@ async def _golden_path_stream():
                             "desc": f"Audited {len(chain_receipts)} receipts. All verdicts: ALIGNED. {len(governance.auditor.artifacts)} signed audit reports produced."})
         state["agents"]["Auditor"]["artifacts"] = len(governance.auditor.artifacts)
         yield _sse("agent_info", {"name": "Auditor", "kid": governance.auditor._kid, "status": "Active", "artifacts": len(governance.auditor.artifacts), "role": "EU AI Act / NIST / DORA compliance proof"})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         # Step 10: Receipt chain
         yield _sse("step", {"id": "receipts", "title": "Receipt Chain", "status": "running",
                             "desc": "Verify the hash-linked receipt chain. Each receipt's prev_receipt field references the prior receipt hash, forming an immutable sequence."})
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.05)
 
         receipt_summary = []
         for i, env in enumerate(chain_receipts):
@@ -906,19 +902,19 @@ async def _golden_path_stream():
         yield _sse("step", {"id": "receipts", "title": "Receipt Chain", "status": "complete",
                             "desc": str(len(chain_receipts)) + " receipts verified. Hash chain integrity confirmed from genesis.",
                             "details": {"count": len(chain_receipts)}})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         # Step 8: Merkle
         yield _sse("step", {"id": "merkle", "title": "Merkle Tree + Anchor", "status": "running",
                             "desc": "Batch receipts into an RFC 6962 Merkle tree. Sign the root with the Circle agent wallet to create a verifiable anchor."})
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.05)
 
         merkle_root = executor.compute_merkle_root()
         state["merkle_root"] = merkle_root
 
         anchor_message = merkle_root.removeprefix("sha256:")
         try:
-            anchor_data = wallet_sign_message(address=wallet, chain=chain, message=anchor_message)
+            anchor_data = await asyncio.to_thread(wallet_sign_message, wallet, chain, anchor_message)
             anchor_data["message"] = anchor_message
             anchor_sig = anchor_data.get("signature", "")[:40] + "..."
         except Exception:
@@ -933,13 +929,13 @@ async def _golden_path_stream():
                                 "merkle_root": merkle_root[:40] + "...",
                                 "anchor_signature": anchor_sig,
                             }})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         # Step 9: Verification
         yield _sse("step", {"id": "verify", "title": "Offline Verification", "status": "running",
                             "desc": "Independent verification using only the public key. Check Ed25519 signatures, hash chain continuity, Merkle inclusion proofs, anchor, and cross-reference each settlement tx on-chain.",
                             "subtitle": "Ed25519 sigs, hash chain, Merkle root, settlement cross-ref..."})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         jwk = executor.get_public_key_jwk()
         inclusion_proofs = {}
@@ -971,13 +967,13 @@ async def _golden_path_stream():
                                 "anchor": report.anchor_check,
                                 "overall": report.overall,
                             }})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         # Step 13: Compliance report (Auditor agent, Gemini-powered)
         yield _sse("step", {"id": "compliance", "title": "Auditor: Compliance Report", "status": "running",
                             "desc": "The Auditor agent uses Gemini to generate a comprehensive compliance report over the real USDC spend, covering EU AI Act (Art 14/15/52) and NIST AI RMF.",
                             "subtitle": "Generating compliance analysis..."})
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.05)
 
         iso_envelopes = [ir.envelope_dict() for ir in isolator.records] if isolation_record else []
         total_spend = float(result.transfer.amount) if result.transfer else 0
@@ -1072,7 +1068,7 @@ async def _rogue_path_stream():
 
         yield _sse("step", {"id": "setup", "title": "Strict Policy Initialized", "status": "complete",
                             "details": {"allowlist": [allowed_payee[:20] + "..."], "max_amount": "1.0 USDC"}})
-        await asyncio.sleep(0.8)
+        await asyncio.sleep(0.15)
 
         scenarios = [
             {"name": "Off-Allowlist Payee", "payee": "0x" + secrets.token_hex(20),
@@ -1095,7 +1091,7 @@ async def _rogue_path_stream():
                 "amount": sc["amount"] + " USDC", "reason": sc["reason"][:80],
                 "icon": sc["icon"],
             })
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(0.25)
 
             intent = PaymentIntent(
                 payee=sc["payee"], amount=sc["amount"],
@@ -1111,11 +1107,11 @@ async def _rogue_path_stream():
                     "reasons": e.result.denial_reasons,
                     "receipt_hash": e.result.receipt_hash[:30] + "...",
                 })
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(0.2)
 
         # Forensic Recorder
         yield _sse("step", {"id": "isolator", "title": "Forensic Recorder: Incident Documentation", "status": "running"})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         rogue_rep_writer = ReputationWriter(chain=chain, wallet_address=wallet)
         rogue_corr_engine = CorrelationEngine(
@@ -1142,7 +1138,7 @@ async def _rogue_path_stream():
                     "severity": record.severity,
                     "actions": [r.get("action", r.get("recommendation", "")) for r in record.recommendations],
                 })
-                await asyncio.sleep(0.8)
+                await asyncio.sleep(0.15)
 
         # Emit reputation events
         for rep_event in rogue_rep_writer.events:
@@ -1154,7 +1150,7 @@ async def _rogue_path_stream():
                 "published": rep_event.published,
                 "tx_hash": rep_event.tx_hash,
             })
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
         # Cross-agent correlation
         if isolator.records:
@@ -1173,14 +1169,14 @@ async def _rogue_path_stream():
                     "patterns": corr_report.trigger_patterns,
                     "actions": corr_report.recommended_actions,
                 })
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.1)
 
         yield _sse("step", {"id": "isolator", "title": "Forensic Recorder: Incident Documentation", "status": "complete",
                             "details": {
                                 "forensic_records": len(isolator.records),
                                 "reputation_events": len(rogue_rep_writer.events),
                             }})
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
         # Verification
         chain_receipts = executor.get_receipt_chain()

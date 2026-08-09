@@ -2,10 +2,14 @@
 
 All Circle operations go through this module so we have a single
 place to swap CLI-shell-out for REST/SDK later if needed.
+
+Async variants (_async suffix) use asyncio.create_subprocess_exec
+to avoid blocking the event loop during long-running CLI calls.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import subprocess
@@ -35,6 +39,23 @@ def _run(args: list[str], timeout: int = 120) -> dict:
     if result.returncode != 0:
         raise RuntimeError(f"circle {' '.join(args)} failed: {result.stderr.strip()}")
     return json.loads(result.stdout)
+
+
+async def _run_async(args: list[str], timeout: int = 180) -> dict:
+    """Run a circle CLI command asynchronously without blocking the event loop."""
+    cmd = [_circle_bin()] + args + ["-o", "json"]
+    env = {**os.environ, "CIRCLE_ACCEPT_TERMS": "1"}
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except asyncio.TimeoutError:
+        proc.kill()
+        raise RuntimeError(f"circle {' '.join(args)} timed out after {timeout}s")
+    if proc.returncode != 0:
+        raise RuntimeError(f"circle {' '.join(args)} failed: {stderr.decode().strip()}")
+    return json.loads(stdout.decode())
 
 
 @dataclass
@@ -246,6 +267,65 @@ def wallet_transfer_with_recibo(
     )
     result.recibo_receipt_hash = receipt_hash
     return result
+
+
+# ── Async variants (non-blocking for use in async generators) ─────────
+
+async def async_wallet_balance(address: str, chain: str) -> list[dict]:
+    """Get token balances without blocking the event loop."""
+    data = await _run_async(["wallet", "balance", "--address", address, "--chain", chain])
+    return data.get("data", {}).get("balances", [])
+
+
+async def async_wallet_transfer(
+    source: str,
+    destination: str,
+    amount: str,
+    chain: str,
+    token_address: str | None = None,
+    idempotency_key: str | None = None,
+) -> TransferResult:
+    """Execute a USDC transfer asynchronously."""
+    args = [
+        "wallet", "transfer", destination,
+        "--amount", amount,
+        "--address", source,
+        "--chain", chain,
+    ]
+    if token_address:
+        args.extend(["--token", token_address])
+    if idempotency_key:
+        args.extend(["--idempotency-key", idempotency_key])
+
+    data = await _run_async(args, timeout=180)
+    tx = data.get("data", {})
+    tx_hash = tx.get("txHash", "")
+
+    chain_upper = chain.upper()
+    if "SEPOLIA" in chain_upper:
+        explorer_url = f"https://sepolia.basescan.org/tx/{tx_hash}"
+    else:
+        explorer_url = f"https://basescan.org/tx/{tx_hash}"
+
+    return TransferResult(
+        tx_hash=tx_hash,
+        state=tx.get("state", "UNKNOWN"),
+        source=tx.get("sourceAddress", source),
+        destination=tx.get("destinationAddress", destination),
+        amount=amount,
+        block_height=tx.get("blockHeight"),
+        explorer_url=explorer_url,
+    )
+
+
+async def async_wallet_sign_message(address: str, chain: str, message: str) -> dict:
+    """Sign a message without blocking the event loop."""
+    data = await _run_async([
+        "wallet", "sign", "message", message,
+        "--address", address,
+        "--chain", chain,
+    ])
+    return data.get("data", {})
 
 
 # Well-known USDC token addresses

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Verigate | Cryptographic Integrity Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Hanken+Grotesk:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary": "#b9c3ff",
+                      "on-background": "#e2e2e9",
+                      "success-glow": "#b8f600",
+                      "secondary-container": "#384377",
+                      "on-error": "#690005",
+                      "error": "#ffb4ab",
+                      "surface": "#111318",
+                      "on-primary": "#253500",
+                      "surface-dim": "#111318",
+                      "inverse-primary": "#4b6700",
+                      "on-tertiary-fixed-variant": "#5a357f",
+                      "inverse-surface": "#e2e2e9",
+                      "surface-container": "#1e2025",
+                      "tertiary-fixed": "#f0dbff",
+                      "outline": "#8d9479",
+                      "outline-variant": "#434933",
+                      "surface-bright": "#37393f",
+                      "surface-container-low": "#1a1b21",
+                      "secondary-fixed-dim": "#b9c3ff",
+                      "background": "#111318",
+                      "on-surface": "#e2e2e9",
+                      "secondary-fixed": "#dde1ff",
+                      "tertiary": "#ffffff",
+                      "on-tertiary": "#421c67",
+                      "glass-border": "rgba(255, 255, 255, 0.08)",
+                      "error-alert": "#ffb4ab",
+                      "on-secondary": "#212d5f",
+                      "on-primary-fixed-variant": "#384e00",
+                      "tertiary-container": "#f0dbff",
+                      "on-tertiary-fixed": "#2c0051",
+                      "on-error-container": "#ffdad6",
+                      "tertiary-fixed-dim": "#ddb8ff",
+                      "surface-container-high": "#282a2f",
+                      "surface-container-lowest": "#0c0e13",
+                      "surface-container-highest": "#33353a",
+                      "on-primary-container": "#506d00",
+                      "on-tertiary-container": "#79539f",
+                      "on-primary-fixed": "#141f00",
+                      "primary": "#ffffff",
+                      "inverse-on-surface": "#2e3036",
+                      "error-container": "#93000a",
+                      "surface-tint": "#a1d800",
+                      "on-surface-variant": "#c3caad",
+                      "primary-fixed": "#b8f601",
+                      "surface-card": "rgba(30, 32, 36, 0.6)",
+                      "primary-container": "#b8f600",
+                      "surface-variant": "#33353a",
+                      "primary-fixed-dim": "#a1d800",
+                      "on-secondary-fixed-variant": "#384377",
+                      "on-secondary-fixed": "#091649",
+                      "on-secondary-container": "#a7b2ed"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "card-gap": "16px",
+                      "gutter": "24px",
+                      "bento-unit": "120px",
+                      "unit": "4px",
+                      "container-padding": "32px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Sora"],
+                      "code-sm": ["JetBrains Mono"],
+                      "body-base": ["Hanken Grotesk"],
+                      "headline-md": ["Sora"],
+                      "code-xs": ["JetBrains Mono"],
+                      "headline-lg": ["Sora"],
+                      "display-xl": ["Sora"],
+                      "body-sm": ["Hanken Grotesk"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "code-sm": ["13px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                      "body-base": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                      "code-xs": ["11px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "headline-lg": ["48px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "display-xl": ["72px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                      "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        /* Base Surface Texture */
+        body {
+            background-color: #111318;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            color: #e2e2e9;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .bento-card {
+            background: rgba(30, 32, 36, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.15); /* Top-light shimmer */
+            padding: 24px;
+        }
+
+        /* Luminous Effects */
+        .glow-primary {
+            box-shadow: 0 0 15px rgba(184, 246, 0, 0.3);
+        }
+        
+        .glow-primary-intense {
+            box-shadow: 0 0 20px rgba(184, 246, 0, 0.6);
+        }
+
+        .glow-amber {
+            box-shadow: 0 0 15px rgba(255, 175, 0, 0.3);
+        }
+        
+        /* Grid Background Pattern */
+        .grid-pattern {
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        
+        /* Interactive Utilities */
+        .btn-scale {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-scale:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(184, 246, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="font-body-base min-h-screen flex flex-col antialiased grid-pattern">
+<!-- Top Navigation (Generated from JSON, 'Overview' Active) -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-gutter py-3 backdrop-blur-xl border border-glass-border shadow-[0_0_20px_rgba(184,246,0,0.1)] rounded-full mt-4 mx-auto max-w-[95%] bg-surface-card hidden md:flex">
+<div class="font-headline-md text-headline-md font-bold text-primary-fixed tracking-tight">
+            Verigate
+        </div>
+<nav class="flex gap-6 font-body-base text-body-base font-semibold">
+<a class="text-primary-fixed border-b-2 border-primary-fixed pb-1 hover:text-primary-fixed transition-all duration-300" href="#">Overview</a>
+<a class="text-on-surface-variant hover:text-primary-fixed transition-all duration-300" href="#">Live Demo</a>
+<a class="text-on-surface-variant hover:text-primary-fixed transition-all duration-300" href="#">Wallets</a>
+<a class="text-on-surface-variant hover:text-primary-fixed transition-all duration-300" href="#">Agents</a>
+<a class="text-on-surface-variant hover:text-primary-fixed transition-all duration-300" href="#">Receipts</a>
+<a class="text-on-surface-variant hover:text-primary-fixed transition-all duration-300" href="#">Compliance</a>
+</nav>
+<div class="flex gap-4">
+<button class="px-4 py-2 text-primary-fixed glass-panel rounded-lg hover:text-primary-fixed transition-all duration-300">Rogue Demo</button>
+<button class="px-4 py-2 bg-primary-container text-on-primary-fixed rounded-lg font-semibold glow-primary btn-scale">Run Golden Path</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-32 pb-24 px-container-padding max-w-7xl mx-auto w-full flex flex-col gap-16">
+<!-- Hero Section -->
+<section class="flex flex-col items-center justify-center text-center py-20 gap-8 relative">
+<!-- Decorative Glow Behind Hero -->
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary-container opacity-[0.03] blur-[100px] rounded-full pointer-events-none"></div>
+<div class="inline-flex items-center gap-2 glass-panel px-4 py-1.5 rounded-full border-primary-container/30">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse glow-primary-intense"></span>
+<span class="font-code-xs text-code-xs text-primary-container uppercase tracking-widest">Built on Circle Agent Stack</span>
+</div>
+<h1 class="font-display-xl text-display-xl text-on-background max-w-4xl">
+                Sells clearance. Buys evidence. <span class="text-primary-container">Proves every decision.</span>
+</h1>
+<p class="font-body-base text-body-base text-on-surface-variant max-w-2xl text-lg">
+                Agents pay Verigate $0.05 for transaction security. When risk is uncertain, Verigate autonomously purchases independent evidence within a bounded budget.
+            </p>
+<div class="flex gap-card-gap mt-4">
+<button class="bg-primary-container text-on-primary-fixed px-8 py-3 rounded-lg font-headline-md text-body-base glow-primary btn-scale flex items-center gap-2">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    Run Live Demo
+                </button>
+<button class="glass-panel text-on-background px-8 py-3 rounded-lg font-headline-md text-body-base hover:bg-surface-bright/50 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined">account_balance</span>
+                    View Treasury
+                </button>
+</div>
+</section>
+<!-- The Decision Loop (Bento Grid) -->
+<section class="flex flex-col gap-6">
+<h2 class="font-headline-lg text-headline-lg text-on-background">The Decision Loop</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- Step 1 -->
+<div class="bento-card rounded-xl flex flex-col gap-4 relative overflow-hidden group">
+<div class="absolute -right-4 -top-4 text-9xl font-display-xl text-surface-bright opacity-20 group-hover:opacity-40 transition-opacity">1</div>
+<div class="w-10 h-10 rounded-full glass-panel flex items-center justify-center border-glass-border">
+<span class="material-symbols-outlined text-primary-container">payments</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Customer Pays</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">$0.05 for verification service.</p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="bento-card rounded-xl flex flex-col gap-4 relative overflow-hidden group">
+<div class="absolute -right-4 -top-4 text-9xl font-display-xl text-surface-bright opacity-20 group-hover:opacity-40 transition-opacity">2</div>
+<div class="w-10 h-10 rounded-full glass-panel flex items-center justify-center border-glass-border">
+<span class="material-symbols-outlined text-primary-container">speed</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Risk Scored</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Policy check + BlockIntel scoring.</p>
+<div class="flex gap-2 mt-2 font-code-xs text-code-xs">
+<span class="px-2 py-0.5 rounded glass-panel text-on-surface-variant">APPROVE</span>
+<span class="px-2 py-0.5 rounded border border-[#ffaf00]/30 text-[#ffaf00]">STEP_UP</span>
+<span class="px-2 py-0.5 rounded glass-panel text-on-surface-variant">DENY</span>
+</div>
+</div>
+</div>
+<!-- Step 3 (Amber Accent) -->
+<div class="bento-card rounded-xl flex flex-col gap-4 relative overflow-hidden group border-[#ffaf00]/30 glow-amber">
+<div class="absolute inset-0 bg-gradient-to-br from-[#ffaf00]/5 to-transparent pointer-events-none"></div>
+<div class="absolute -right-4 -top-4 text-9xl font-display-xl text-surface-bright opacity-20 group-hover:opacity-40 transition-opacity">3</div>
+<div class="w-10 h-10 rounded-full glass-panel flex items-center justify-center border-[#ffaf00]/30 bg-[#ffaf00]/10">
+<span class="material-symbols-outlined text-[#ffaf00]">warning</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">STEP_UP Protocol</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">$0.01 for evidence within $0.02 cap.</p>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="bento-card rounded-xl flex flex-col gap-4 relative overflow-hidden group">
+<div class="absolute -right-4 -top-4 text-9xl font-display-xl text-surface-bright opacity-20 group-hover:opacity-40 transition-opacity">4</div>
+<div class="w-10 h-10 rounded-full glass-panel flex items-center justify-center border-glass-border">
+<span class="material-symbols-outlined text-primary-container">receipt_long</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Receipt Issued</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Signed proof containing intent, policy, risk, verification, and settlement.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer (Generated from JSON) -->
+<footer class="w-full mt-auto py-8 px-container-padding flex flex-col md:flex-row justify-between items-center gap-card-gap bg-surface-container-lowest border-t border-glass-border">
+<div class="text-on-surface font-bold font-code-xs text-code-xs uppercase tracking-widest">
+            © 2024 Verigate Infrastructure. All systems verified via cryptographic integrity.
+        </div>
+<nav class="flex gap-6 font-code-xs text-code-xs uppercase tracking-widest text-on-surface-variant">
+<a class="opacity-80 hover:opacity-100 hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="opacity-80 hover:opacity-100 hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="opacity-80 hover:opacity-100 hover:text-primary transition-colors" href="#">API Status</a>
+<a class="opacity-80 hover:opacity-100 hover:text-primary transition-colors" href="#">Audit Reports</a>
+<a class="opacity-80 hover:opacity-100 hover:text-primary transition-colors" href="#">Technical Specs</a>
+</nav>
+</footer>
+</body></html>
