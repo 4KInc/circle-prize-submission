@@ -1867,7 +1867,8 @@ async function loadBundles(){
       const created=b.created?new Date(b.created).toLocaleString():'--';
       const size=b.size?(b.size/1024).toFixed(1)+'KB':'--';
       const runId=name.split('_').pop()?.replace('.json','')||'--';
-      html+='<div class="flex items-center justify-between px-6 py-4 hover:bg-white/[.02] transition-colors">';
+      html+='<div class="border-b border-white/[.04] last:border-0">';
+      html+='<div class="flex items-center justify-between px-6 py-4 hover:bg-white/[.02] transition-colors cursor-pointer" onclick="toggleBundlePreview('+i+',\''+name+'\')">';
       html+='<div class="flex items-center gap-4 flex-1 min-w-0">';
       html+='<div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background:rgba(184,246,0,0.06);border:1px solid rgba(184,246,0,0.15)"><span class="material-symbols-outlined text-primary-fixed/60" style="font-size:16px">description</span></div>';
       html+='<div class="min-w-0">';
@@ -1876,8 +1877,11 @@ async function loadBundles(){
       html+='</div></div>';
       html+='<div class="flex items-center gap-2">';
       html+='<span class="flex items-center gap-1 text-[10px] text-primary-fixed/60 font-mono"><span class="material-symbols-outlined text-primary-fixed" style="font-size:12px;font-variation-settings:\'FILL\' 1">verified</span>verified</span>';
-      html+='<button onclick="viewBundle(\''+name+'\')" class="text-[11px] text-primary-fixed/60 font-mono px-2 py-1 rounded border border-primary-fixed/15 hover:bg-primary-fixed/5 transition-colors">View</button>';
+      html+='<button onclick="event.stopPropagation();toggleBundlePreview('+i+',\''+name+'\')" class="text-[11px] text-primary-fixed/60 font-mono px-2 py-1 rounded border border-primary-fixed/15 hover:bg-primary-fixed/5 transition-colors">Preview</button>';
+      html+='<button onclick="event.stopPropagation();viewBundle(\''+name+'\')" class="text-[11px] text-on-surface-variant/50 font-mono px-2 py-1 rounded border border-white/[.06] hover:bg-white/[.03] transition-colors">Download</button>';
       html+='</div></div>';
+      html+='<div id="bundle-preview-'+i+'" class="hidden px-6 pb-4"></div>';
+      html+='</div>';
     });
     table.innerHTML=html;
   }catch(e){
@@ -1895,6 +1899,49 @@ async function viewBundle(name){
     a.href=url;a.download=name.split('/').pop()||'bundle.json';
     a.click();URL.revokeObjectURL(url);
   }catch(e){console.error('Failed to download bundle:',e)}
+}
+
+async function toggleBundlePreview(idx,name){
+  const el=document.getElementById('bundle-preview-'+idx);
+  if(!el)return;
+  if(!el.classList.contains('hidden')){el.classList.add('hidden');return}
+  el.innerHTML='<div class="text-xs text-on-surface-variant/50 py-2">Loading...</div>';
+  el.classList.remove('hidden');
+  try{
+    const resp=await fetch('/api/bundles/'+encodeURIComponent(name));
+    const d=await resp.json();
+    const receipts=d.receipts||[];
+    const artifacts=d.artifacts||[];
+    const verification=d.verification||{};
+    const agents=d.agents||{};
+    let h='<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">';
+    h+='<div class="rounded-lg p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Receipts</div><div class="font-display text-lg font-bold text-on-surface">'+receipts.length+'</div></div>';
+    h+='<div class="rounded-lg p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Artifacts</div><div class="font-display text-lg font-bold text-on-surface">'+artifacts.length+'</div></div>';
+    h+='<div class="rounded-lg p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Agents</div><div class="font-display text-lg font-bold text-on-surface">'+Object.keys(agents).length+'</div></div>';
+    h+='<div class="rounded-lg p-3 border border-'+(verification==='PASS'?'primary-fixed':'error')+'/20" style="background:rgba('+(verification==='PASS'?'184,246,0':'255,107,107')+',0.04)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Verification</div><div class="font-display text-lg font-bold '+(verification==='PASS'?'text-primary-fixed':'text-error')+'">'+(verification||'--')+'</div></div>';
+    h+='</div>';
+    // Receipt details
+    if(receipts.length){
+      h+='<div class="font-mono text-[9px] text-on-surface-variant/40 uppercase tracking-wider mb-2">Receipt Chain</div>';
+      h+='<div class="space-y-1.5">';
+      receipts.forEach((r,ri)=>{
+        const body=r.body||{};const dec=body.decision||'?';
+        const isApprove=dec==='approve';
+        const del=body.delegation_context||{};
+        const tx=del.settlement_tx||'';
+        h+='<div class="flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[.04]" style="background:rgba(255,255,255,0.015)">';
+        h+='<span class="font-mono text-[10px] text-on-surface-variant/40">#'+body.seq+'</span>';
+        h+='<span class="font-mono text-[10px] font-bold '+(isApprove?'text-primary-fixed':'text-error')+'">'+dec.toUpperCase()+'</span>';
+        if(del.step_up)h+='<span class="font-mono text-[9px] text-[#ffaf00] px-1.5 py-0.5 rounded bg-[#ffaf00]/10">STEP_UP</span>';
+        if(tx)h+='<a href="https://sepolia.basescan.org/tx/'+tx+'" target="_blank" class="font-mono text-[10px] text-secondary hover:underline ml-auto">'+tx.substring(0,16)+'...</a>';
+        else h+='<span class="font-mono text-[10px] text-on-surface-variant/30 ml-auto">'+r.receipt_hash?.substring(0,24)+'...</span>';
+        h+='</div>';
+      });
+      h+='</div>';
+    }
+    if(d.merkle_root)h+='<div class="mt-3 font-mono text-[10px] text-on-surface-variant/30 truncate">Merkle root: '+d.merkle_root+'</div>';
+    el.innerHTML=h;
+  }catch(e){el.innerHTML='<div class="text-xs text-error py-2">Failed to load: '+e+'</div>'}
 }
 
 // Auto-load bundles when Evidence Vault is shown
