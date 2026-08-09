@@ -327,31 +327,93 @@ async def carrier_evidence_bundle():
 
     Returns the complete audit trail for carrier underwriting/claims:
     receipts, risk assessments, isolation records, compliance data.
+
+    If no demo has been run in this session, falls back to the latest
+    proof bundle from GCS (persisted across Cloud Run cold starts).
     """
+    # If in-memory state has receipts, return live data
+    if state.get("receipts"):
+        return {
+            "schema_version": "1.0",
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "tenant": "live-demo",
+            "wallet": state["wallet"],
+            "chain": state["chain"],
+            "payments": state.get("payments", []),
+            "receipts": [
+                {
+                    "receipt_hash": r.get("receipt_hash", ""),
+                    "decision": r.get("body", {}).get("decision", ""),
+                    "seq": r.get("body", {}).get("seq", 0),
+                    "delegation_context": r.get("body", {}).get("delegation_context", {}),
+                }
+                for r in state.get("receipts", [])
+            ],
+            "isolations": state.get("isolations", []),
+            "treasury": state.get("treasury", {}),
+            "verification": state.get("verification", {}),
+            "compliance": state.get("compliance", {}),
+            "merkle_root": state.get("merkle_root", ""),
+            "anchor": state.get("anchor", {}),
+            "agents": state.get("agents", {}),
+            "artifact_count": len(state.get("artifacts", [])),
+        }
+
+    # No live data — try to load the latest proof bundle from GCS
+    try:
+        from app.storage import list_bundles, get_bundle
+        bundles = list_bundles(limit=1)
+        if bundles:
+            bundle = get_bundle(bundles[0]["name"])
+            if bundle:
+                return {
+                    "schema_version": "1.0",
+                    "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "source": "gcs-persisted",
+                    "bundle_path": bundles[0]["name"],
+                    "tenant": bundle.get("tenant", "live-demo"),
+                    "wallet": bundle.get("wallet", state["wallet"]),
+                    "chain": bundle.get("chain", state["chain"]),
+                    "payments": [],
+                    "receipts": [
+                        {
+                            "receipt_hash": r.get("receipt_hash", ""),
+                            "decision": r.get("body", {}).get("decision", ""),
+                            "seq": r.get("body", {}).get("seq", 0),
+                        }
+                        for r in bundle.get("receipts", [])
+                    ],
+                    "isolations": bundle.get("isolation_records", []),
+                    "treasury": {},
+                    "verification": bundle.get("verification", {}),
+                    "compliance": bundle.get("compliance", {}),
+                    "merkle_root": bundle.get("merkle_root", ""),
+                    "anchor": bundle.get("anchor_data", {}),
+                    "agents": bundle.get("agents", {}),
+                    "artifact_count": len(bundle.get("artifacts", [])),
+                }
+    except Exception as e:
+        logger.warning(f"GCS fallback failed: {e}")
+
+    # No live data and no GCS data — return empty with instructions
     return {
         "schema_version": "1.0",
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "tenant": "live-demo",
         "wallet": state["wallet"],
         "chain": state["chain"],
-        "payments": state.get("payments", []),
-        "receipts": [
-            {
-                "receipt_hash": r.get("receipt_hash", ""),
-                "decision": r.get("body", {}).get("decision", ""),
-                "seq": r.get("body", {}).get("seq", 0),
-                "delegation_context": r.get("body", {}).get("delegation_context", {}),
-            }
-            for r in state.get("receipts", [])
-        ],
-        "isolations": state.get("isolations", []),
+        "note": "No evidence yet. Run the Golden Path demo on the dashboard to generate receipts and evidence.",
+        "dashboard_url": "https://verigate-dashboard-1031148889398.us-central1.run.app",
+        "payments": [],
+        "receipts": [],
+        "isolations": [],
         "treasury": state.get("treasury", {}),
-        "verification": state.get("verification", {}),
-        "compliance": state.get("compliance", {}),
-        "merkle_root": state.get("merkle_root", ""),
-        "anchor": state.get("anchor", {}),
+        "verification": {},
+        "compliance": {},
+        "merkle_root": "",
+        "anchor": {},
         "agents": state.get("agents", {}),
-        "artifact_count": len(state.get("artifacts", [])),
+        "artifact_count": 0,
     }
 
 

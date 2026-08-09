@@ -327,6 +327,39 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
       </div>
     </div>
+    <!-- Integration -->
+    <div class="mb-6">
+      <div class="flex items-center gap-3 mb-5">
+        <h2 class="font-display text-lg font-bold text-on-surface">Integrate in 30 seconds</h2>
+        <div class="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent"></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="rounded-2xl p-5 border border-white/[.06] overflow-hidden" style="background:rgba(12,14,18,0.9)">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="font-mono text-[10px] text-primary-fixed/60 uppercase tracking-wider">MCP Server (Claude / any agent)</span>
+          </div>
+          <pre class="font-mono text-[11px] text-on-surface/80 leading-relaxed overflow-x-auto"><code>{
+  "mcpServers": {
+    "verigate": {
+      "command": "python",
+      "args": ["-m", "verigate.mcp_server"]
+    }
+  }
+}</code></pre>
+          <div class="mt-3 font-mono text-[10px] text-on-surface-variant/40">pip install verigate &middot; 6 tools &middot; 3 resources</div>
+        </div>
+        <div class="rounded-2xl p-5 border border-white/[.06] overflow-hidden" style="background:rgba(12,14,18,0.9)">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="font-mono text-[10px] text-primary-fixed/60 uppercase tracking-wider">x402 Payment (Circle CLI)</span>
+          </div>
+          <pre class="font-mono text-[11px] text-on-surface/80 leading-relaxed overflow-x-auto"><code>circle services pay \
+  https://verigate-dashboard-...run.app/x402/security-check \
+  --address 0xYOUR_WALLET \
+  --chain BASE-SEPOLIA</code></pre>
+          <div class="mt-3 font-mono text-[10px] text-on-surface-variant/40">$0.05 USDC &middot; Circle Gateway nanopayment &middot; gas-free</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1119,10 +1152,26 @@ function showReceiptDetail(idx){
     const color=status==='PASS'?'text-primary-fixed':'text-on-surface-variant/40';
     h+='<div class="flex items-center gap-2"><span class="material-symbols-outlined '+color+'" style="font-size:18px;font-variation-settings:\'FILL\' 1">'+icon+'</span><span class="text-sm text-on-surface">'+name+'</span></div>';
   });
-  h+='</div></div>';
+  h+='</div>';
+  // Verify button
+  h+='<button onclick="verifyReceiptLive('+idx+')" class="btn-primary w-full py-2 rounded-lg font-mono text-xs font-bold mt-2">Verify This Receipt (Ed25519 + Hash)</button>';
+  h+='<div id="receipt-verify-result-'+idx+'"></div>';
+  h+='</div>';
   document.getElementById('receipt-detail-content').innerHTML=h;
-  // Highlight selected row
   document.querySelectorAll('#receipt-rows tr').forEach((r,i)=>{r.style.background=i===idx?'rgba(184,246,0,0.05)':''});
+}
+function verifyReceiptLive(idx){
+  if(!window._receiptData)return;
+  const env=window._receiptData[idx];
+  const el=document.getElementById('receipt-verify-result-'+idx);
+  el.innerHTML='<div class="py-2 text-xs text-on-surface-variant">Verifying independently...</div>';
+  fetch('/api/verify-artifact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(env)})
+    .then(r=>r.json()).then(d=>{
+      let h='<div class="mt-2 p-3 rounded-lg border '+(d.verified?'border-primary-fixed/20 bg-primary-fixed/5':'border-error/20 bg-error/5')+'">';
+      h+='<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined '+(d.verified?'text-primary-fixed':'text-error')+'" style="font-size:18px;font-variation-settings:\'FILL\' 1">'+(d.verified?'verified':'error')+'</span><span class="font-display text-sm font-bold '+(d.verified?'text-primary-fixed':'text-error')+'">'+(d.verified?'VERIFIED':'FAILED')+'</span></div>';
+      if(d.checks){d.checks.forEach(c=>{h+='<div class="flex items-center gap-1.5 text-xs"><span class="material-symbols-outlined '+(c.passed?'text-primary-fixed':'text-error')+'" style="font-size:14px;font-variation-settings:\'FILL\' 1">'+(c.passed?'check_circle':'cancel')+'</span>'+c.name+'</div>'})}
+      h+='</div>';el.innerHTML=h;
+    }).catch(e=>{el.innerHTML='<div class="text-xs text-error mt-2">Verification error: '+e+'</div>'});
 }
 
 function updateReceiptsView(){document.getElementById('receipt-count').textContent=storeReceipts.length+' receipts'}
@@ -1821,8 +1870,8 @@ document.addEventListener('click',e=>{
   if(e.target.textContent?.includes('Evidence'))setTimeout(loadBundles,100);
 });
 
-// Load agent data on startup so pages aren't empty
-setTimeout(loadData,200);
+// Load all data on startup so pages aren't empty
+setTimeout(()=>{loadData();loadWallets()},200);
 </script>
 </body>
 </html>
