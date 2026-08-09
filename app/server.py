@@ -148,6 +148,20 @@ async def get_data():
                 v = b.get("verification")
                 if isinstance(v, str):
                     v = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "anchor": v}
+                # Synthesize spend findings from receipt data
+                comp = b.get("compliance") or {}
+                if comp and not comp.get("spend_findings"):
+                    receipts = b.get("receipts", [])
+                    approved = sum(1 for r in receipts if r.get("body", {}).get("decision") == "approve")
+                    blocked = sum(1 for r in receipts if r.get("body", {}).get("decision") == "deny")
+                    total_spend = sum(float(r.get("body", {}).get("delegation_context", {}).get("settlement_amount", 0) or 0) for r in receipts)
+                    comp["spend_findings"] = {
+                        "total_governed_spend_usdc": total_spend,
+                        "payments_approved": approved,
+                        "payments_blocked": blocked,
+                        "receipt_chain_integrity": v.get("overall", "PASS") if isinstance(v, dict) else v,
+                    }
+                    comp["executive_summary"] = comp.get("summary", "")
                 return {
                     "receipts": b.get("receipts", []),
                     "agents": b.get("agents", {}),
@@ -1366,7 +1380,12 @@ async def _golden_path_stream():
 
     except Exception as e:
         logger.exception("Golden path error")
-        yield _sse("error", {"message": str(e)})
+        yield _sse("error", {
+            "message": str(e),
+            "hint": "The demo may have failed due to insufficient wallet balance or Circle CLI auth. "
+                    "Try the 'Try It' tab for an instant risk check, or view the Evidence Vault for "
+                    "previously stored proof bundles.",
+        })
     finally:
         state["running"] = False
 
