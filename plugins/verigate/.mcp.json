@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "verigate": {
+      "command": "python",
+      "args": ["-m", "verigate.mcp_server"],
+      "description": "Verigate payment security — risk assessment, receipts, and evidence bundles for AI agent USDC payments"
+    }
+  }
+}

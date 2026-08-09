@@ -37,10 +37,13 @@ logger = logging.getLogger("verigate.mcp")
 mcp = FastMCP(
     "Verigate",
     instructions=(
-        "Verigate is an autonomous transaction-security agent. "
-        "AI agents call these tools to check if a USDC payment is safe "
-        "before executing it. Verigate scores risk, buys independent "
-        "evidence when uncertain, and returns a signed receipt."
+        "Verigate is an autonomous transaction-security agent built on "
+        "Circle Agent Stack. AI agents call these tools to check if a "
+        "USDC payment is safe before executing it. Verigate scores risk, "
+        "buys independent evidence when uncertain (STEP_UP), and returns "
+        "a signed receipt. Fees are $0.05 USDC per check, settled via "
+        "Circle Gateway nanopayments (gas-free, batched). "
+        "Circle Skill: payment-security"
     ),
 )
 
@@ -163,14 +166,16 @@ def get_receipt(receipt_hash: str) -> dict:
     )
 
     try:
-        resp = httpx.get(f"{base_url}/api/receipts", timeout=10)
+        resp = httpx.get(f"{base_url}/api/data", timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             receipts = data.get("receipts", [])
+            normalized = receipt_hash.replace("sha256:", "")
             for r in receipts:
-                if r.get("receipt_hash", "").startswith(receipt_hash.replace("sha256:", "")):
+                rh = r.get("receipt_hash", "")
+                if rh.startswith(normalized) or normalized.startswith(rh.replace("sha256:", "")):
                     return {"found": True, "receipt": r}
-            return {"found": False, "message": f"No receipt matching {receipt_hash[:30]}..."}
+            return {"found": False, "message": f"No receipt matching {receipt_hash[:30]}...", "total_receipts": len(receipts)}
         return {"found": False, "message": f"API returned {resp.status_code}"}
     except Exception as e:
         return {"found": False, "message": str(e)}
@@ -196,6 +201,86 @@ def get_evidence_bundle() -> dict:
 
     try:
         resp = httpx.get(f"{base_url}/api/carrier/evidence-bundle", timeout=10)
+        if resp.status_code == 200:
+            return resp.json()
+        return {"error": f"API returned {resp.status_code}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def check_payment_x402(
+    payee: str,
+    amount: str,
+    service: str,
+    reason: str,
+) -> dict:
+    """Check a payment via Verigate's x402 endpoint (Circle Gateway nanopayment).
+
+    This calls the live x402-paywalled security check endpoint on Cloud Run.
+    The $0.05 fee is settled via Circle Gateway nanopayments.
+
+    Use this when you want the full production flow including Gateway settlement.
+    For a quick local check without payment, use check_payment instead.
+
+    Args:
+        payee: Destination wallet address (0x...)
+        amount: USDC amount as string
+        service: Service being paid for
+        reason: Justification for the payment
+
+    Returns:
+        x402 payment requirements (402 response) or the security verdict if paid.
+    """
+    import httpx
+
+    base_url = os.environ.get(
+        "VERIGATE_API_URL",
+        "https://verigate-dashboard-1031148889398.us-central1.run.app",
+    )
+
+    try:
+        resp = httpx.get(f"{base_url}/x402/health", timeout=10)
+        health = resp.json() if resp.status_code == 200 else {}
+
+        return {
+            "endpoint": f"{base_url}/x402/security-check",
+            "method": "POST",
+            "price": health.get("price_usdc", "$0.05"),
+            "settlement": "Circle Gateway nanopayments",
+            "facilitator": health.get("facilitator", "https://gateway-api-testnet.circle.com"),
+            "network": health.get("network", "eip155:84532"),
+            "payee_wallet": health.get("payee", ""),
+            "how_to_pay": (
+                "Use `circle services pay` CLI or send an EIP-3009 signed "
+                "authorization in the payment-signature header. The endpoint "
+                "returns 402 with payment requirements on first request."
+            ),
+            "intent": {"payee": payee, "amount": amount, "service": service, "reason": reason},
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def get_gateway_status() -> dict:
+    """Get Circle Gateway nanopayments status for Verigate.
+
+    Returns Gateway facilitator connectivity, supported networks,
+    and Verigate treasury balance information.
+
+    Returns:
+        Gateway status including facilitator URL, networks, and balance info.
+    """
+    import httpx
+
+    base_url = os.environ.get(
+        "VERIGATE_API_URL",
+        "https://verigate-dashboard-1031148889398.us-central1.run.app",
+    )
+
+    try:
+        resp = httpx.get(f"{base_url}/api/gateway", timeout=10)
         if resp.status_code == 200:
             return resp.json()
         return {"error": f"API returned {resp.status_code}"}
@@ -229,8 +314,52 @@ def get_pricing() -> str:
         "verification_fee": "$0.05 per transaction",
         "evidence_cost": "Up to $0.01 per STEP_UP case",
         "daily_cap": "$1.00 maximum autonomous spend",
-        "payment_method": "USDC via Circle Agent Wallets",
-        "settlement": "Circle Gateway (sub-500ms balance access)",
+        "payment_method": "USDC via Circle Gateway nanopayments",
+        "settlement": "Circle Gateway (gas-free, batched)",
+        "x402_endpoint": "https://verigate-dashboard-1031148889398.us-central1.run.app/x402/security-check",
+    })
+
+
+@mcp.resource("verigate://circle-skill")
+def get_circle_skill() -> str:
+    """Circle Skill metadata for Verigate.
+
+    Describes Verigate as a Circle Skill — a discoverable service
+    in the Circle Agent Stack ecosystem. AI agents use this metadata
+    to understand how to pay for and consume Verigate's services.
+    """
+    return json.dumps({
+        "skill": "payment-security",
+        "name": "Verigate Payment Security",
+        "description": (
+            "Autonomous payment security for AI agents. Submit a USDC payment "
+            "intent, get a risk assessment with three possible outcomes: "
+            "APPROVE (safe), STEP_UP (uncertain, evidence purchased), or DENY (blocked). "
+            "Every decision produces a signed, independently verifiable receipt."
+        ),
+        "provider": "BlockIntel Inc",
+        "version": "1.0.0",
+        "circle_stack": {
+            "agent_wallets": True,
+            "gateway_nanopayments": True,
+            "circle_cli": True,
+            "x402_protocol": True,
+        },
+        "pricing": {
+            "fee": "$0.05 USDC",
+            "settlement": "Circle Gateway nanopayments",
+            "network": "eip155:84532",
+        },
+        "endpoints": {
+            "security_check": "/x402/security-check",
+            "health": "/x402/health",
+            "gateway_status": "/api/gateway",
+        },
+        "wallets": {
+            "treasury": "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d",
+            "customer_agent": "0x008ed50be2cd35f6333a37542a76a227e3b16acc",
+            "evidence_validator": "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558",
+        },
     })
 
 

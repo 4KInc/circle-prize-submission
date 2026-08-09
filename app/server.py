@@ -19,8 +19,8 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import FastAPI, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 # Add project root and engine to path
@@ -355,13 +355,61 @@ async def carrier_evidence_bundle():
     }
 
 
+@app.get("/api/gateway")
+async def gateway_status():
+    """Circle Gateway nanopayments integration status."""
+    try:
+        from circle.gateway import get_supported_networks, get_balances, GATEWAY_URL
+        supported = get_supported_networks()
+        treasury = os.environ.get("VERIGATE_TREASURY_WALLET", TREASURY_WALLET)
+        balances = get_balances([treasury])
+        return {
+            "status": "active",
+            "facilitator": GATEWAY_URL,
+            "treasury_wallet": treasury,
+            "balances": balances,
+            "supported_networks": supported,
+            "fee_per_check": "$0.05 USDC",
+            "settlement": "gas-free batched via Circle Gateway",
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/api/reset-demo")
+async def reset_demo():
+    """Force-clear a stale demo lock."""
+    state["running"] = False
+    return {"status": "cleared"}
+
+
+# ── GCS Proof Bundle Storage ─────────────────────────────────────────
+
+@app.get("/api/bundles")
+async def list_proof_bundles(limit: int = Query(50, le=200)):
+    """List stored proof bundles from GCS for insurance/carrier retrieval."""
+    from app.storage import list_bundles
+    bundles = list_bundles(limit=limit)
+    return {"bundles": bundles, "count": len(bundles)}
+
+
+@app.get("/api/bundles/{bundle_name:path}")
+async def get_proof_bundle(bundle_name: str):
+    """Retrieve a specific proof bundle from GCS."""
+    from app.storage import get_bundle
+    bundle = get_bundle(bundle_name)
+    if bundle is None:
+        return JSONResponse({"error": "Bundle not found"}, status_code=404)
+    return bundle
+
+
 def _is_demo_running() -> bool:
-    """Check if a demo is running, with a 120s auto-expire to prevent stale locks."""
+    """Check if a demo is running, with a 300s auto-expire to prevent stale locks."""
     if not state["running"]:
         return False
     started = state.get("running_since", 0)
-    if time.time() - started > 120:
-        logger.warning("Stale demo lock detected (>120s), auto-clearing")
+    if time.time() - started > 300:
+        logger.warning("Stale demo lock detected (>300s), auto-clearing")
         state["running"] = False
         return False
     return True
@@ -484,7 +532,7 @@ async def _golden_path_stream():
         state["agents"]["Gateway"] = {"kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"}
         yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"})
 
-        # Step 2: USDC Payment via Circle Gateway (sub-second nanopayment)
+        # Step 2: USDC Payment via Circle Gateway nanopayments
         x402_url = None
         from circle.golden_path import SERVICE_CATALOG
         for svc in SERVICE_CATALOG:
@@ -492,10 +540,10 @@ async def _golden_path_stream():
                 x402_url = svc.get("endpoint")
                 break
 
-        method_desc = "x402 + Circle Gateway (nanopayment)" if x402_url else "direct transfer"
-        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Payment", "status": "running",
+        method_desc = "Circle Gateway nanopayment (gas-free, batched)" if x402_url else "Circle wallet transfer"
+        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Gateway Settlement", "status": "running",
                             "desc": f"Deterministic policy → BlockIntel risk score → {method_desc}.",
-                            "subtitle": "Policy check → risk scoring → settlement..."})
+                            "subtitle": "Policy check → risk scoring → Gateway nanopayment..."})
 
         intent = PaymentIntent(
             payee=payee, amount=amount,
@@ -541,13 +589,13 @@ async def _golden_path_stream():
             desc = (f"APPROVE: Risk score {risk.get('risk_score')} ({risk.get('risk_band')}). "
                     f"Settled in {hot_elapsed:.1f}s via {method_desc}.")
 
-        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Payment", "status": "complete",
+        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Gateway Settlement", "status": "complete",
                             "desc": desc, "details": payment_data})
         yield _sse("payment", payment_data)
 
         # ── PHASE DIVIDER ─────────────────────────────────────────────────
-        yield _sse("phase", {"name": "Payment Complete", "elapsed": f"{hot_elapsed:.1f}s",
-                             "desc": f"Decision: {eval_decision}. USDC settled. Async security processing below."})
+        yield _sse("phase", {"name": "Gateway Settlement Complete", "elapsed": f"{hot_elapsed:.1f}s",
+                             "desc": f"Decision: {eval_decision}. USDC settled via Circle Gateway nanopayment. Async security processing below."})
 
         # ── ASYNC PATH: Security, forensics, compliance ───────────────────
 
@@ -693,7 +741,7 @@ async def _golden_path_stream():
 
             try:
                 validator_tx = await asyncio.to_thread(wallet_transfer,
-                    wallet, VALIDATOR_WALLET, "0.01",
+                    TREASURY_WALLET, VALIDATOR_WALLET, "0.01",
                     chain, USDC_ADDRESSES.get(chain),
                 )
                 state["treasury"]["spent"] += 0.01
@@ -976,13 +1024,13 @@ async def _golden_path_stream():
         await asyncio.sleep(0.05)
 
         iso_envelopes = [ir.envelope_dict() for ir in isolator.records] if isolation_record else []
-        total_spend = float(result.transfer.amount) if result.transfer else 0
+        total_spend_str = result.transfer.amount if result.transfer else "0"
         try:
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 future = pool.submit(
                     governance.auditor.generate_compliance_report,
-                    chain_receipts, iso_envelopes, total_spend, report.overall,
+                    chain_receipts, iso_envelopes, total_spend_str, report.overall,
                 )
                 compliance_artifact = future.result(timeout=30)
         except Exception as e:
@@ -990,7 +1038,7 @@ async def _golden_path_stream():
             # Use fallback
             compliance_artifact = governance.auditor._sign_artifact("compliance_report", {
                 "report_id": "fallback",
-                "narrative": governance.auditor._fallback_narrative(chain_receipts, iso_envelopes, total_spend, report.overall),
+                "narrative": governance.auditor._fallback_narrative(chain_receipts, iso_envelopes, total_spend_str, report.overall),
             })
         compliance = compliance_artifact.body.get("narrative", {})
 
@@ -1024,6 +1072,38 @@ async def _golden_path_stream():
                                 "recommendations": compliance.get("recommendations", []),
                             }})
 
+        # Persist proof bundle to GCS for insurance/carrier retrieval
+        run_id = secrets.token_hex(8)
+        proof_bundle = {
+            "schema": "verigate-proof-bundle-v1",
+            "run_id": run_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "wallet": wallet,
+            "chain": chain,
+            "settlement_url": result.transfer.explorer_url,
+            "total_spend": result.transfer.amount,
+            "verification": report.overall,
+            "public_key_jwk": jwk,
+            "merkle_root": merkle_root,
+            "inclusion_proofs": inclusion_proofs,
+            "anchor_data": anchor_data,
+            "receipts": chain_receipts,
+            "artifacts": all_artifacts + iso_artifacts,
+            "agents": state.get("agents", {}),
+            "isolation_records": state.get("isolations", []),
+            "compliance": compliance,
+        }
+        try:
+            from app.storage import store_proof_bundle, store_receipt
+            gcs_path = store_proof_bundle(proof_bundle, run_id)
+            if gcs_path:
+                state["last_bundle_gcs"] = gcs_path
+                for i, r in enumerate(chain_receipts):
+                    store_receipt(r, run_id, i)
+                logger.info("Proof bundle stored: %s (%d receipts)", gcs_path, len(chain_receipts))
+        except Exception as e:
+            logger.warning("GCS storage skipped: %s", e)
+
         # Done
         yield _sse("complete", {
             "settlement_url": result.transfer.explorer_url,
@@ -1036,6 +1116,7 @@ async def _golden_path_stream():
             "verification": report.overall,
             "agents_active": 6,
             "signed_artifacts": total_signed_artifacts,
+            "proof_bundle_gcs": state.get("last_bundle_gcs"),
         })
 
     except Exception as e:
@@ -1183,6 +1264,27 @@ async def _rogue_path_stream():
         jwk = executor.get_public_key_jwk()
         report = verify_payment_chain(envelopes=chain_receipts, public_key_jwk=jwk)
 
+        # Persist rogue-path proof bundle to GCS
+        run_id = f"rogue_{secrets.token_hex(8)}"
+        try:
+            from app.storage import store_proof_bundle
+            rogue_bundle = {
+                "schema": "verigate-proof-bundle-v1",
+                "run_id": run_id,
+                "run_type": "rogue-path",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "verification": report.overall,
+                "receipts": chain_receipts,
+                "attacks_attempted": len(scenarios),
+                "attacks_blocked": len(denials),
+                "isolation_records": state.get("isolations", []),
+            }
+            gcs_path = store_proof_bundle(rogue_bundle, run_id)
+            if gcs_path:
+                state["last_bundle_gcs"] = gcs_path
+        except Exception as e:
+            logger.warning("GCS storage skipped (rogue): %s", e)
+
         yield _sse("complete", {
             "attacks_attempted": len(scenarios),
             "attacks_blocked": len(denials),
@@ -1190,6 +1292,7 @@ async def _rogue_path_stream():
             "agent_quarantined": isolator.is_agent_revoked("ops-agent"),
             "wallet_frozen": isolator.is_wallet_frozen(),
             "verification": report.overall,
+            "proof_bundle_gcs": state.get("last_bundle_gcs"),
         })
 
     except Exception as e:

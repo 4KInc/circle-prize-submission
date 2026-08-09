@@ -43,12 +43,13 @@ SERVICE_PAYEE = os.environ.get(
 SERVICE_CATALOG = [
     {
         "name": "verigate-market-data",
-        "description": "Real-time BTC/USDC price data (x402-paywalled)",
+        "description": "Real-time BTC/USDC price data — $0.01 via Circle Gateway nanopayments",
         "endpoint": X402_ENDPOINT,
         "price_usdc": "0.01",
         "payee": SERVICE_PAYEE,
         "chain": os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA"),
         "x402": True,
+        "settlement": "circle-gateway-nanopayment",
     },
 ]
 

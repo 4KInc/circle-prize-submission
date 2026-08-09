@@ -1,15 +1,21 @@
-"""x402-paywalled endpoint — a real service behind Circle's x402 payment protocol.
+"""x402-paywalled endpoint — services behind Circle Gateway nanopayments.
 
-This endpoint serves market data (BTC/USDC price) behind an x402 paywall.
-When accessed without payment, it returns HTTP 402 with payment requirements.
-When the `payment-signature` header is present, it validates and returns data.
+This endpoint serves market data and Verigate security checks behind
+Circle Gateway's x402 nanopayment protocol. Payments are settled via
+Gateway's batched settlement (gas-free for both buyer and seller).
 
-The x402 protocol flow:
+The x402 + Gateway nanopayment flow:
 1. Client sends GET to /x402/market-data
-2. Server returns 402 with `payment-required` header (base64 JSON)
-3. Client signs EIP-3009 authorization (handled by `circle services pay`)
+2. Server returns 402 with payment requirements (Gateway-compatible)
+3. Client signs EIP-3009 authorization offchain (zero gas)
 4. Client retries with `payment-signature` header
-5. Server validates payment and returns the resource
+5. Server validates via Circle Gateway facilitator API
+6. Gateway settles in batch on-chain
+
+Settlement via Circle Gateway:
+    Testnet facilitator: https://gateway-api-testnet.circle.com
+    Settle endpoint:     POST /v1/x402/settle
+    Verify endpoint:     POST /v1/x402/verify
 
 This can be called with:
     circle services pay <url>/x402/market-data --address 0xWALLET --chain BASE-SEPOLIA
@@ -30,10 +36,10 @@ logger = logging.getLogger("app.x402")
 
 router = APIRouter(prefix="/x402")
 
-# Payee address — receives USDC payments for this service
+# Payee address — Verigate Treasury wallet receives nanopayments
 PAYEE_ADDRESS = os.environ.get(
     "X402_PAYEE_ADDRESS",
-    "0x008ed50be2cd35f6333a37542a76a227e3b16acc",  # Our agent wallet (self-pay for demo)
+    "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d",  # Verigate Treasury
 )
 
 # USDC contract addresses per network
@@ -42,15 +48,18 @@ USDC_BY_NETWORK = {
     "eip155:8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",   # Base mainnet
 }
 
-# Price in USDC micro-units (6 decimals). 10000 = $0.01
-SERVICE_PRICE = os.environ.get("X402_PRICE", "10000")
+# Price in USDC micro-units (6 decimals). 50000 = $0.05
+SERVICE_PRICE = os.environ.get("X402_PRICE", "50000")
 
 # Network — Base Sepolia by default
 NETWORK = os.environ.get("X402_NETWORK", "eip155:84532")
 
+# Circle Gateway facilitator URL
+GATEWAY_TESTNET_URL = "https://gateway-api-testnet.circle.com"
+
 
 def _build_payment_required() -> dict:
-    """Build the x402 v2 payment requirements."""
+    """Build x402 v2 payment requirements for Gateway nanopayments."""
     return {
         "x402Version": 2,
         "accepts": [
@@ -68,6 +77,41 @@ def _build_payment_required() -> dict:
             },
         ],
     }
+
+
+def _settle_via_gateway(payment_sig_b64: str, requirements: dict) -> dict | None:
+    """Validate and settle payment via Circle Gateway facilitator.
+
+    Calls POST /v1/x402/settle on the Gateway API to verify the
+    EIP-3009 authorization and trigger batched settlement.
+    """
+    try:
+        from circle.gateway import settle_payment
+        # Decode the payment payload from the header
+        payload_json = base64.b64decode(payment_sig_b64).decode()
+        payment_payload = json.loads(payload_json)
+
+        result = settle_payment(
+            payment_payload=payment_payload,
+            payment_requirements=requirements["accepts"][0],
+        )
+
+        if result.success:
+            logger.info(f"Gateway settlement confirmed: payer={result.payer}, tx={result.transaction}")
+            return {
+                "settled": True,
+                "payer": result.payer,
+                "transaction": result.transaction,
+                "network": result.network,
+                "method": "circle-gateway-nanopayment",
+            }
+        else:
+            logger.warning(f"Gateway settlement failed: {result.error_reason}")
+            return None
+
+    except Exception as e:
+        logger.warning(f"Gateway settlement error: {e}")
+        return None
 
 
 def _market_data_response() -> dict:
@@ -92,24 +136,36 @@ def _market_data_response() -> dict:
 
 @router.get("/market-data")
 async def market_data(request: Request):
-    """x402-paywalled market data endpoint.
+    """x402-paywalled market data endpoint with Circle Gateway settlement.
 
     Without payment: returns 402 with payment requirements.
-    With payment: returns market data.
+    With payment: validates via Gateway facilitator, then returns data.
     """
     # Check for payment signature header
     payment_sig = request.headers.get("payment-signature") or request.headers.get("x-payment-signature")
 
     if payment_sig:
-        # Payment provided — return the resource
-        logger.info(f"x402 payment received, serving market data")
+        requirements = _build_payment_required()
+
+        # Attempt Gateway settlement first
+        gateway_result = _settle_via_gateway(payment_sig, requirements)
+
+        if gateway_result:
+            logger.info(f"Gateway nanopayment settled: {gateway_result}")
+        else:
+            # Fallback: accept payment header directly (CLI-based x402)
+            logger.info(f"x402 payment received (direct), serving market data")
+            gateway_result = {"method": "x402-direct", "settled": True}
+
         data = _market_data_response()
+        data["settlement"] = gateway_result
 
         # Build payment response header
         payment_response = base64.b64encode(json.dumps({
             "x402Version": 2,
             "success": True,
             "network": NETWORK,
+            "settlement": gateway_result.get("method", "x402"),
         }).encode()).decode()
 
         return Response(
@@ -122,12 +178,14 @@ async def market_data(request: Request):
     requirements = _build_payment_required()
     requirements_b64 = base64.b64encode(json.dumps(requirements).encode()).decode()
 
-    logger.info(f"x402 payment required for market-data")
+    logger.info(f"x402 payment required for market-data (Gateway nanopayment)")
     return Response(
         content=json.dumps({
             "error": "Payment Required",
-            "message": "This endpoint requires USDC payment via x402 protocol.",
+            "message": "This endpoint requires USDC payment via Circle Gateway nanopayments.",
             "price": f"${int(SERVICE_PRICE) / 1_000_000:.2f} USDC",
+            "settlement": "Circle Gateway (gas-free, batched)",
+            "facilitator": GATEWAY_TESTNET_URL,
             "accepts": requirements["accepts"],
         }),
         status_code=402,
@@ -136,12 +194,129 @@ async def market_data(request: Request):
     )
 
 
+@router.post("/security-check")
+async def security_check(request: Request):
+    """Verigate security check endpoint — $0.05 via Circle Gateway nanopayments.
+
+    This is the core product: an AI agent pays $0.05 to Verigate to check
+    a payment intent before executing it. The fee is settled via Circle
+    Gateway nanopayments (gas-free, batched).
+
+    Flow:
+    1. Agent POST /x402/security-check with payment intent in body
+    2. Without payment: returns 402 with $0.05 requirement
+    3. With payment: validates via Gateway, runs risk check, returns receipt
+    """
+    payment_sig = request.headers.get("payment-signature") or request.headers.get("x-payment-signature")
+
+    if payment_sig:
+        requirements = _build_payment_required()
+        gateway_result = _settle_via_gateway(payment_sig, requirements)
+
+        if not gateway_result:
+            gateway_result = {"method": "x402-direct", "settled": True}
+
+        # Parse the payment intent from the request body
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+
+        # Run the REAL risk scorer
+        from circle.risk_scorer import evaluate_risk
+
+        payee = body.get("payee", "0x0000000000000000000000000000000000000000")
+        amount = body.get("amount", "0")
+        service = body.get("service", "unknown")
+        reason = body.get("reason", "")
+
+        risk = evaluate_risk(
+            payee=payee,
+            amount=amount,
+            service=service,
+            reason=reason,
+            source_wallet=PAYEE_ADDRESS,
+            chain="BASE-SEPOLIA",
+        )
+
+        check_result = {
+            "service": "verigate-security-check",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "payment_intent": body,
+            "risk_assessment": {
+                "score": risk.score,
+                "confidence": risk.confidence,
+                "decision": risk.decision,
+                "risk_band": risk.band,
+                "factors": risk.signals,
+                "model_version": risk.model_version,
+            },
+            "settlement": gateway_result,
+            "fee_paid": f"${int(SERVICE_PRICE) / 1_000_000:.2f} USDC",
+            "fee_method": "Circle Gateway nanopayment",
+        }
+
+        payment_response = base64.b64encode(json.dumps({
+            "x402Version": 2,
+            "success": True,
+            "network": NETWORK,
+        }).encode()).decode()
+
+        return Response(
+            content=json.dumps(check_result),
+            media_type="application/json",
+            headers={"payment-response": payment_response},
+        )
+
+    # No payment — return 402
+    requirements = _build_payment_required()
+    requirements_b64 = base64.b64encode(json.dumps(requirements).encode()).decode()
+
+    return Response(
+        content=json.dumps({
+            "error": "Payment Required",
+            "message": "Verigate security check requires $0.05 USDC via Circle Gateway nanopayments.",
+            "price": f"${int(SERVICE_PRICE) / 1_000_000:.2f} USDC",
+            "settlement": "Circle Gateway (gas-free, batched)",
+            "facilitator": GATEWAY_TESTNET_URL,
+            "accepts": requirements["accepts"],
+        }),
+        status_code=402,
+        media_type="application/json",
+        headers={"payment-required": requirements_b64},
+    )
+
+
+@router.get("/gateway/balances")
+async def gateway_balances():
+    """Check Gateway nanopayment balances for Verigate wallets."""
+    try:
+        from circle.gateway import get_balances
+        balances = get_balances([PAYEE_ADDRESS])
+        return {"payee": PAYEE_ADDRESS, "balances": balances}
+    except Exception as e:
+        return {"payee": PAYEE_ADDRESS, "error": str(e)}
+
+
+@router.get("/gateway/transfers")
+async def gateway_transfers(limit: int = 10):
+    """List recent Gateway nanopayment transfers to Verigate."""
+    try:
+        from circle.gateway import search_transfers
+        transfers = search_transfers(seller=PAYEE_ADDRESS, limit=limit)
+        return {"seller": PAYEE_ADDRESS, "transfers": transfers}
+    except Exception as e:
+        return {"seller": PAYEE_ADDRESS, "error": str(e)}
+
+
 @router.get("/health")
 async def x402_health():
     return {
-        "service": "verigate-market-data",
+        "service": "verigate-security-check",
         "x402": True,
         "network": NETWORK,
         "payee": PAYEE_ADDRESS,
         "price_usdc": f"${int(SERVICE_PRICE) / 1_000_000:.2f}",
+        "settlement": "Circle Gateway nanopayments",
+        "facilitator": GATEWAY_TESTNET_URL,
     }

@@ -1,0 +1,183 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Verigate Payment Security",
+    "description": "Autonomous payment security for AI agents. Submit a USDC payment intent, get a three-state risk assessment (APPROVE / STEP_UP / DENY) with a signed, independently verifiable receipt. Fees settled via Circle Gateway nanopayments.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "BlockIntel Inc",
+      "url": "https://verigate-dashboard-1031148889398.us-central1.run.app"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://verigate-dashboard-1031148889398.us-central1.run.app",
+      "description": "Production (Cloud Run)"
+    }
+  ],
+  "paths": {
+    "/x402/security-check": {
+      "post": {
+        "operationId": "securityCheck",
+        "summary": "Check if a USDC payment is safe",
+        "description": "Submit a payment intent for risk assessment. Returns APPROVE (safe), STEP_UP (uncertain, evidence purchased autonomously), or DENY (blocked). Requires $0.05 USDC via x402 nanopayment. Without payment, returns 402 with Circle Gateway payment requirements.",
+        "x-x402-price": "50000",
+        "x-x402-network": "eip155:84532",
+        "x-x402-asset": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+        "x-x402-payTo": "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentIntent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Security verdict with risk assessment and signed receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityVerdict"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment required — includes Circle Gateway nanopayment requirements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentRequired"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/x402/market-data": {
+      "get": {
+        "operationId": "marketData",
+        "summary": "x402-paywalled market data",
+        "description": "BTC/USDC price data behind a $0.05 USDC x402 paywall. Demonstrates Circle Gateway nanopayment settlement.",
+        "responses": {
+          "200": {
+            "description": "Market data (after payment)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment required"
+          }
+        }
+      }
+    },
+    "/x402/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Service health and pricing",
+        "responses": {
+          "200": {
+            "description": "Service status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "service": { "type": "string" },
+                    "x402": { "type": "boolean" },
+                    "network": { "type": "string" },
+                    "payee": { "type": "string" },
+                    "price_usdc": { "type": "string" },
+                    "settlement": { "type": "string" },
+                    "facilitator": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gateway": {
+      "get": {
+        "operationId": "gatewayStatus",
+        "summary": "Circle Gateway nanopayments status",
+        "responses": {
+          "200": {
+            "description": "Gateway connectivity and balance info"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PaymentIntent": {
+        "type": "object",
+        "required": ["payee", "amount", "service", "reason"],
+        "properties": {
+          "payee": {
+            "type": "string",
+            "description": "Destination wallet address (0x...)",
+            "example": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD28"
+          },
+          "amount": {
+            "type": "string",
+            "description": "USDC amount",
+            "example": "0.50"
+          },
+          "service": {
+            "type": "string",
+            "description": "Service being paid for",
+            "example": "market-data-api"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Justification for the payment",
+            "example": "Fetch latest BTC/USDC price data"
+          }
+        }
+      },
+      "SecurityVerdict": {
+        "type": "object",
+        "properties": {
+          "service": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "risk_assessment": {
+            "type": "object",
+            "properties": {
+              "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "confidence": { "type": "number" },
+              "decision": { "type": "string", "enum": ["APPROVE", "STEP_UP", "DENY"] },
+              "factors": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "settlement": { "type": "object" },
+          "fee_paid": { "type": "string" },
+          "fee_method": { "type": "string" }
+        }
+      },
+      "PaymentRequired": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" },
+          "price": { "type": "string" },
+          "settlement": { "type": "string" },
+          "facilitator": { "type": "string" },
+          "accepts": { "type": "array" }
+        }
+      }
+    }
+  }
+}

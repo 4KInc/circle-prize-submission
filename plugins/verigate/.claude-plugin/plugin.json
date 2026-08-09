@@ -1,0 +1,9 @@
+{
+  "name": "verigate",
+  "version": "1.0.0",
+  "description": "Verigate Payment Security — autonomous risk assessment for AI agent USDC payments. Three-state decision engine (APPROVE / STEP_UP / DENY) with signed receipts.",
+  "author": "BlockIntel Inc",
+  "keywords": ["circle", "usdc", "payment-security", "risk-assessment", "x402", "agent-wallets", "gateway-nanopayments", "receipts"],
+  "license": "MIT",
+  "homepage": "https://verigate-dashboard-1031148889398.us-central1.run.app"
+}
