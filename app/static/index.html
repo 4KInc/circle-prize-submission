@@ -521,6 +521,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <span class="font-mono text-xs text-primary-fixed" id="ptag">NETWORK ACTIVE</span>
       </div>
       <button class="btn-secondary px-4 py-1.5 rounded-lg font-mono text-xs" id="btn-rogue" onclick="runRogue()">Rogue Demo</button>
+      <button class="btn-secondary px-4 py-1.5 rounded-lg font-mono text-xs" onclick="runDemo(true)" title="Replay last demo from GCS (no wallet needed)">Dry Run</button>
       <button class="btn-primary px-4 py-1.5 rounded-lg font-mono text-xs font-bold shadow-[0_0_15px_rgba(184,246,0,0.3)]" id="btn-run" onclick="runDemo()">Run Golden Path</button>
     </div>
   </div>
@@ -1241,7 +1242,7 @@ function addPhase(d){
   el.scrollTop=el.scrollHeight;
 }
 function sse(url){reset();lock(true);const s=new EventSource(url);s.onmessage=e=>{const d=JSON.parse(e.data);switch(d.type){case'step':addStep(d);if(d.details?.signatures)showV(d.details);if(d.details?.summary)showC(d.details);break;case'payment':addPay(d);break;case'attack':addAtk(d);break;case'blocked':addBlk(d);break;case'isolation':addIso(d);break;case'reputation':addReputation(d);break;case'correlation':addCorrelation(d);break;case'proposal':addProposal(d);break;case'agent_info':updateAgent(d);break;case'treasury':updateTreasury(d);break;case'phase':addPhase(d);break;case'complete':fin(d);s.close();break;case'error':lock(false);s.close();break}};s.onerror=()=>{lock(false);s.close()}}
-function runDemo(){sse('/api/run/golden-path')}
+function runDemo(dryRun){sse('/api/run/golden-path'+(dryRun?'?dry_run=true':''))}
 function runRogue(){sse('/api/run/rogue-path')}
 
 // ── Wallets ──
