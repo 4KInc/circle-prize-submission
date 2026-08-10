@@ -136,8 +136,10 @@ def verify_payment_chain(
 
         check.has_settlement = True
         check.tx_hash = delegation["settlement_tx"]
-        check.payee_matches = True  # Payee is embedded in the receipt's request_digest
-        check.amount_matches = True  # Amount is embedded in the receipt's request_digest
+        # Verify payee/amount are present in the signed delegation context
+        # (on-chain cross-reference would require an RPC call — not done here)
+        check.payee_matches = bool(delegation.get("settlement_payee"))
+        check.amount_matches = bool(delegation.get("settlement_amount"))
 
         chain_name = delegation.get("settlement_chain", "")
         check.chain_matches = bool(chain_name)

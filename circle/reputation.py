@@ -127,18 +127,24 @@ class ReputationWriter:
 
     # Deployed AgentReputation contract on Base Sepolia
     REGISTRY_BASE_SEPOLIA = "0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA"
-    DEPLOYER_KEY = "5625ef9505e36beaa50a7a97bac60b1318a8e40323c369ec20bd0ff3a1904059"
 
     def _submit_to_registry(self, event: ReputationEvent) -> str | None:
-        """Submit event to the real AgentReputation contract on Base Sepolia.
+        """Submit event to the AgentReputation contract on Base Sepolia.
 
-        This is a REAL on-chain transaction — viewable on Basescan.
+        Requires ERC8004_DEPLOYER_KEY env var. Returns None if not set
+        or if submission fails. No fabricated hashes — either real tx or None.
         Contract: https://sepolia.basescan.org/address/0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA
         """
         payload = event.to_erc8004_payload()
 
         # Use the deployed contract on Base Sepolia
         registry = self.registry_address or self.REGISTRY_BASE_SEPOLIA
+
+        import os
+        deployer_key = os.environ.get("ERC8004_DEPLOYER_KEY")
+        if not deployer_key:
+            logger.info("ERC8004_DEPLOYER_KEY not set — skipping on-chain submission")
+            return None
 
         try:
             from web3 import Web3
@@ -147,7 +153,7 @@ class ReputationWriter:
                 logger.warning("Cannot connect to Base Sepolia RPC")
                 return None
 
-            account = w3.eth.account.from_key(self.DEPLOYER_KEY)
+            account = w3.eth.account.from_key(deployer_key)
 
             # Encode the function call
             from eth_abi import encode
@@ -179,10 +185,7 @@ class ReputationWriter:
 
         except Exception as e:
             logger.warning(f"ERC-8004 on-chain submission failed: {e}")
-            # Fallback to deterministic hash
-            return "0x" + hashlib.sha256(
-                json.dumps(payload, sort_keys=True).encode()
-            ).hexdigest()
+            return None
 
     def get_agent_history(self, agent_id: str) -> list[ReputationEvent]:
         """Get all reputation events for a specific agent."""

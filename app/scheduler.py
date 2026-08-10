@@ -1,8 +1,11 @@
-"""Background scheduler for continuous autonomous operation.
+"""Background scheduler for continuous autonomous risk scoring.
 
-Runs a security check every 30 minutes without human intervention.
-Verigate earns, sometimes spends on evidence, stores proof bundles to GCS.
-Judges can see bundles accumulating over days.
+Runs a risk check every 30 minutes without human intervention.
+Generates randomized payment intents, scores them through the real
+BlockIntel v2 risk engine, and stores results as GCS proof bundles.
+
+This is scoring-only — no USDC transfers. Real transfers happen
+in the Golden Path demo and the mainnet STEP_UP flow.
 """
 
 from __future__ import annotations
