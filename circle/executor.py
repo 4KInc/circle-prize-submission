@@ -321,10 +321,11 @@ class PaymentExecutor:
                 validator_verdict = "VERIFIED"
                 try:
                     import httpx
-                    validator_url = os.environ.get(
-                        "VALIDATOR_URL",
-                        "https://verigate-dashboard-1031148889398.us-central1.run.app/x402/validator/validate",
-                    )
+                    validator_base = os.environ.get("VALIDATOR_URL", "")
+                    if validator_base:
+                        validator_url = validator_base.rstrip("/") + "/x402/validator/validate"
+                    else:
+                        validator_url = "https://verigate-dashboard-1031148889398.us-central1.run.app/x402/validator/validate"
                     vresp = httpx.get(validator_url, params={
                         "receipt_hash": self._receipt_chain._prev_hash or "",
                         "payee": intent.payee,

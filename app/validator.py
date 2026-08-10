@@ -108,17 +108,21 @@ async def validate_evidence(request: Request):
     except json.JSONDecodeError:
         evidence = {}
 
-    # If no evidence in query params, accept from recent server state
+    # If no evidence in query params, try server state (only when co-deployed)
     if not evidence:
-        from app.server import state
-        evidence = {
-            "receipts": [
-                {"receipt_hash": env.get("receipt_hash", ""), "body": env.get("body", {})}
-                for env in (state.get("receipts") or [])
-            ],
-            "merkle_root": state.get("merkle_root"),
-            "incident_count": len(state.get("isolations") or []),
-        }
+        try:
+            from app.server import state
+            evidence = {
+                "receipts": [
+                    {"receipt_hash": env.get("receipt_hash", ""), "body": env.get("body", {})}
+                    for env in (state.get("receipts") or [])
+                ],
+                "merkle_root": state.get("merkle_root"),
+                "incident_count": len(state.get("isolations") or []),
+            }
+        except ImportError:
+            # Running as standalone validator — no server state available
+            evidence = {"receipts": [], "merkle_root": None, "incident_count": 0}
 
     # Perform independent verification
     checks = _verify_evidence(evidence)

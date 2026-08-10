@@ -1358,11 +1358,18 @@ async def _golden_path_stream():
                 # Call the validator endpoint for the signed verdict
                 import httpx
                 try:
-                    base_url = os.environ.get("VALIDATOR_BASE_URL", "http://localhost:8080")
+                    validator_base = os.environ.get("VALIDATOR_URL", "")
+                    if not validator_base:
+                        # Fallback: co-deployed validator on same host
+                        validator_base = "http://localhost:8080/x402/validator/validate"
+                    else:
+                        # External validator service
+                        validator_base = validator_base.rstrip("/") + "/x402/validator/validate"
                     async with httpx.AsyncClient() as client:
                         resp = await client.get(
-                            f"{base_url}/x402/validator/validate",
+                            validator_base,
                             headers={"payment-signature": validator_tx.tx_hash},
+                            params={"payee": rogue_payee, "amount": "50.00"},
                             timeout=10,
                         )
                         validator_result = resp.json() if resp.status_code == 200 else {"verdict": {"verdict": "UNAVAILABLE"}}
