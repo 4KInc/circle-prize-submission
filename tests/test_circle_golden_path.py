@@ -25,6 +25,11 @@ sys.path.insert(0, PROJECT_ROOT)
 if os.path.isdir(ENGINE_PATH):
     sys.path.insert(0, ENGINE_PATH)
 
+# `gateway` lives in the `engine/` git submodule. It is present in local/dev
+# checkouts but not fetched by a default CI checkout (submodules: false), so
+# skip this whole module cleanly rather than erroring at collection time.
+pytest.importorskip("gateway", reason="engine/ submodule not checked out")
+
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from gateway.merkle import compute_inclusion_proof, compute_unified_root
 from gateway.policy import Policy, PolicyEngine, PolicyRule
