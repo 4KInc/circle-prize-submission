@@ -1025,38 +1025,11 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <div id="comp-incidents-body" class="p-5 max-h-80 overflow-y-auto"></div>
   </div>
 
-  <!-- Audit Trail -->
+  <!-- Audit Trail (populated from real receipt/artifact data) -->
   <div class="mb-6">
     <h3 class="font-display text-lg font-bold text-on-surface mb-3">Audit Trail</h3>
-    <div class="bento-card space-y-0">
-      <div class="flex gap-4 pb-5">
-        <div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-primary-fixed shrink-0" style="box-shadow:0 0 12px #b8f600"></div><div class="w-0.5 bg-white/5 flex-1 mt-1.5"></div></div>
-        <div class="flex-1">
-          <div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-primary-fixed/10 border border-primary-fixed/20 font-mono text-[10px] text-primary-fixed">Receipt Signed</span><span class="font-mono text-[10px] text-on-surface-variant">2 min ago</span></div>
-          <p class="text-xs text-on-surface">Payment receipt #R-0047 signed and hash-chained. Settlement tx <span class="font-mono text-[11px] text-secondary">0x47db...06bb</span> bound.</p>
-        </div>
-      </div>
-      <div class="flex gap-4 pb-5">
-        <div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-error shrink-0" style="box-shadow:0 0 12px #f87171"></div><div class="w-0.5 bg-white/5 flex-1 mt-1.5"></div></div>
-        <div class="flex-1">
-          <div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-error/10 border border-error/20 font-mono text-[10px] text-error">Agent Quarantined</span><span class="font-mono text-[10px] text-on-surface-variant">8 min ago</span></div>
-          <p class="text-xs text-on-surface">Rogue agent <span class="font-mono text-[11px] text-on-surface-variant">0xd4e7...1f09</span> isolated. Prompt injection attack blocked. x401 credential revoked. ERC-8004 reputation event published.</p>
-        </div>
-      </div>
-      <div class="flex gap-4 pb-5">
-        <div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-secondary shrink-0" style="box-shadow:0 0 12px rgba(184,195,255,.4)"></div><div class="w-0.5 bg-white/5 flex-1 mt-1.5"></div></div>
-        <div class="flex-1">
-          <div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 font-mono text-[10px] text-secondary">Credential Issued</span><span class="font-mono text-[10px] text-on-surface-variant">15 min ago</span></div>
-          <p class="text-xs text-on-surface">x401 verifiable credential issued to Ops Agent. Credential hash <span class="font-mono text-[11px] text-secondary">sha256:9f3c...a1b2</span> bound to receipt chain.</p>
-        </div>
-      </div>
-      <div class="flex gap-4">
-        <div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-tertiary-fixed-dim shrink-0" style="box-shadow:0 0 12px rgba(220,184,255,.4)"></div></div>
-        <div class="flex-1">
-          <div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-tertiary-container/10 border border-tertiary-fixed-dim/20 font-mono text-[10px] text-tertiary-fixed-dim">Policy Change</span><span class="font-mono text-[10px] text-on-surface-variant">1 hour ago</span></div>
-          <p class="text-xs text-on-surface">Spending policy updated. New policy hash <span class="font-mono text-[11px] text-on-surface-variant">sha256:b7e4...c8d3</span> active. Previous policy archived in receipt chain.</p>
-        </div>
-      </div>
+    <div class="bento-card" id="comp-audit-trail">
+      <div class="text-xs text-on-surface-variant/40 text-center py-4">Run a demo or load data to populate the audit trail.</div>
     </div>
   </div>
 
@@ -1078,7 +1051,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
         <h4 class="font-display text-sm font-semibold text-on-surface mb-1">Generate PDF Report</h4>
         <p class="text-xs text-on-surface-variant mb-3 flex-1">Gemini-generated compliance narrative over real USDC spend data. EU AI Act + NIST AI RMF aligned.</p>
-        <button class="btn-secondary px-3 py-1.5 rounded-lg font-mono text-xs w-full">Generate PDF</button>
+        <a href="/api/verification-report.pdf" download="verigate-report.pdf" class="btn-secondary px-3 py-1.5 rounded-lg font-mono text-xs w-full text-center no-underline block">Generate PDF</a>
       </div>
       <div class="bento-card flex flex-col">
         <div class="w-10 h-10 rounded-lg bg-tertiary-fixed-dim/10 border border-tertiary-fixed-dim/20 flex items-center justify-center mb-3">
@@ -1086,7 +1059,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
         <h4 class="font-display text-sm font-semibold text-on-surface mb-1">Dispute Resolution Kit</h4>
         <p class="text-xs text-on-surface-variant mb-3 flex-1">Self-contained proof chain for third-party arbiters. Zero trust, zero network access needed.</p>
-        <button class="btn-secondary px-3 py-1.5 rounded-lg font-mono text-xs w-full">Export Kit</button>
+        <a href="/api/export" target="_blank" download="verigate-dispute-kit.json" class="btn-secondary px-3 py-1.5 rounded-lg font-mono text-xs w-full text-center no-underline block">Export Kit</a>
       </div>
     </div>
   </div>
@@ -1746,6 +1719,40 @@ function loadData(){
     }
     // Update compliance framework cards dynamically
     updateComplianceFrameworks(d);
+    // Show metrics strip if data exists
+    if(d.receipts?.length){
+      const strip=document.getElementById('strip');
+      if(strip&&strip.classList.contains('hidden')){strip.classList.remove('hidden');strip.classList.add('flex')}
+      const approved=d.receipts.filter(r=>r.body?.decision==='approve').length;
+      const denied=d.receipts.filter(r=>r.body?.decision==='deny').length;
+      document.getElementById('sv-ok').textContent=approved;
+      document.getElementById('sv-no').textContent=denied;
+      document.getElementById('sv-artifacts').textContent=(d.artifacts||[]).length;
+    }
+    // Populate audit trail from real data
+    const atEl=document.getElementById('comp-audit-trail');
+    if(atEl&&(d.receipts?.length||d.artifacts?.length)){
+      let at='';
+      (d.receipts||[]).forEach(r=>{
+        const b=r.body||{};const del=b.delegation_context||{};
+        const isApprove=b.decision==='approve';
+        const dot=isApprove?'bg-primary-fixed':'bg-error';const glow=isApprove?'#b8f600':'#f87171';
+        const label=isApprove?'Receipt Signed':'Payment Denied';
+        const labelBg=isApprove?'bg-primary-fixed/10 border-primary-fixed/20 text-primary-fixed':'bg-error/10 border-error/20 text-error';
+        const tx=del.settlement_tx||'';
+        at+='<div class="flex gap-4 pb-4"><div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full '+dot+' shrink-0" style="box-shadow:0 0 12px '+glow+'"></div><div class="w-0.5 bg-white/5 flex-1 mt-1.5"></div></div>';
+        at+='<div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full '+labelBg+' font-mono text-[10px]">'+label+'</span><span class="font-mono text-[10px] text-on-surface-variant">seq '+b.seq+'</span></div>';
+        at+='<p class="text-xs text-on-surface">'+b.decision?.toUpperCase()+' — '+(r.receipt_hash||'').substring(0,24)+'...'+(tx?' tx: <span class="font-mono text-secondary">'+tx.substring(0,16)+'...</span>':'')+'</p></div></div>';
+      });
+      if(d.isolations?.length){
+        d.isolations.forEach(iso=>{
+          at+='<div class="flex gap-4 pb-4"><div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full bg-error shrink-0" style="box-shadow:0 0 12px #f87171"></div></div>';
+          at+='<div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full bg-error/10 border-error/20 font-mono text-[10px] text-error">Agent Isolated</span></div>';
+          at+='<p class="text-xs text-on-surface">Severity: '+(iso.severity||iso.body?.severity||'HIGH')+'. '+(iso.isolation_id||iso.body?.isolation_id||'')+'</p></div></div>';
+        });
+      }
+      atEl.innerHTML=at||'<div class="text-xs text-on-surface-variant/40 text-center py-4">No audit events yet.</div>';
+    }
   }).catch(e=>console.warn('loadData error',e));
 }
 function updateComplianceFrameworks(d){
@@ -2046,7 +2053,8 @@ async function toggleBundlePreview(idx,name){
         h+='<span class="font-mono text-[10px] text-on-surface-variant/40">#'+body.seq+'</span>';
         h+='<span class="font-mono text-[10px] font-bold '+(isApprove?'text-primary-fixed':'text-error')+'">'+dec.toUpperCase()+'</span>';
         if(del.step_up)h+='<span class="font-mono text-[9px] text-[#ffaf00] px-1.5 py-0.5 rounded bg-[#ffaf00]/10">STEP_UP</span>';
-        if(tx)h+='<a href="https://sepolia.basescan.org/tx/'+tx+'" target="_blank" class="font-mono text-[10px] text-secondary hover:underline ml-auto">'+tx.substring(0,16)+'...</a>';
+        const chain=del.settlement_chain||'';const bscan=chain.toUpperCase().includes('SEPOLIA')?'sepolia.basescan.org':'basescan.org';
+        if(tx)h+='<a href="https://'+bscan+'/tx/'+tx+'" target="_blank" class="font-mono text-[10px] text-secondary hover:underline ml-auto">'+tx.substring(0,16)+'...</a>';
         else h+='<span class="font-mono text-[10px] text-on-surface-variant/30 ml-auto">'+r.receipt_hash?.substring(0,24)+'...</span>';
         h+='</div>';
       });
@@ -2101,6 +2109,8 @@ async function generateCompliance(){
       if(c.nist_ai_rmf){ch+='<div class="mb-2"><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">NIST AI RMF</div>';for(const[k,v]of Object.entries(c.nist_ai_rmf))ch+='<p class="text-xs text-on-surface-variant leading-relaxed mb-1"><strong class="text-on-surface">'+k.toUpperCase()+'</strong>: '+v+'</p>';ch+='</div>'}
       if(c.recommendations){ch+='<div><div class="font-mono text-[10px] font-semibold text-on-surface-variant/60 uppercase mb-1">Recommendations</div>';c.recommendations.forEach((r,i)=>{ch+='<p class="text-xs text-on-surface-variant">'+(i+1)+'. '+r+'</p>'});ch+='</div>'}
       document.getElementById('comp-report').innerHTML=ch||'<span class="text-sm text-on-surface-variant">Report generated.</span>';
+      // Refresh framework score cards
+      loadData();
     }else{document.getElementById('comp-report').innerHTML='<span class="text-sm text-error">'+(d.error||'Generation failed')+'</span>'}
   }catch(e){document.getElementById('comp-report').innerHTML='<span class="text-sm text-error">'+e+'</span>'}
   btn.disabled=false;btn.textContent='Generate Full Gemini Report';

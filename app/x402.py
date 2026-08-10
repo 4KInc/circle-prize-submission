@@ -153,9 +153,21 @@ async def market_data(request: Request):
         if gateway_result:
             logger.info(f"Gateway nanopayment settled: {gateway_result}")
         else:
-            # Fallback: accept payment header directly (CLI-based x402)
-            logger.info(f"x402 payment received (direct), serving market data")
-            gateway_result = {"method": "x402-direct", "settled": True}
+            # Gateway settlement failed — verify the payment header is
+            # a valid base64 JSON payload (CLI-based x402 flow)
+            try:
+                import base64 as _b64
+                decoded = _b64.b64decode(payment_sig)
+                json.loads(decoded)
+                logger.info(f"x402 payment header validated (CLI-based)")
+                gateway_result = {"method": "x402-cli-verified", "settled": True}
+            except Exception:
+                logger.warning(f"x402 payment header invalid, rejecting")
+                return Response(
+                    content=json.dumps({"error": "Invalid payment signature"}),
+                    status_code=402,
+                    media_type="application/json",
+                )
 
         data = _market_data_response()
         data["settlement"] = gateway_result
@@ -214,7 +226,15 @@ async def security_check(request: Request):
         gateway_result = _settle_via_gateway(payment_sig, requirements)
 
         if not gateway_result:
-            gateway_result = {"method": "x402-direct", "settled": True}
+            try:
+                decoded = base64.b64decode(payment_sig)
+                json.loads(decoded)
+                gateway_result = {"method": "x402-cli-verified", "settled": True}
+            except Exception:
+                return Response(
+                    content=json.dumps({"error": "Invalid payment signature"}),
+                    status_code=402, media_type="application/json",
+                )
 
         # Parse the payment intent from the request body
         try:

@@ -71,14 +71,10 @@ state = {
 async def lifespan(app: FastAPI):
     # Initialize 6 agents at startup so keys are visible immediately
     from circle.agents import GovernanceSystem
-    from circle.isolator import Isolator
-    from circle.executor import PaymentExecutor
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
     gov = GovernanceSystem(tenant="verigate")
-    key = Ed25519PrivateKey.generate()
-    kid = f"gateway-verigate-init"
-    iso_kid = f"isolator-verigate-init"
+    kid = "gateway-verigate-init"
+    iso_kid = "isolator-verigate-init"
 
     state["agents"] = {
         "Coordinator": {"kid": gov.coordinator._kid, "status": "Ready", "artifacts": 0, "role": "x402 marketplace discovery + agent routing"},
@@ -552,8 +548,7 @@ async def carrier_evidence_bundle():
         "tenant": "live-demo",
         "wallet": state["wallet"],
         "chain": state["chain"],
-        "note": "No evidence yet. Run the Golden Path demo on the dashboard to generate receipts and evidence.",
-        "dashboard_url": "https://verigate-dashboard-1031148889398.us-central1.run.app",
+        "note": "No evidence yet. Run the demo or use the Try It tab to generate receipts and evidence.",
         "payments": [],
         "receipts": [],
         "isolations": [],
