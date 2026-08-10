@@ -237,6 +237,21 @@ async def get_export():
     }
 
 
+@app.post("/api/receipt.pdf")
+async def get_receipt_pdf(request: Request):
+    """Generate a PDF for a single receipt envelope."""
+    from app.receipt_pdf import generate_receipt_pdf
+
+    env = await request.json()
+    pdf_bytes = generate_receipt_pdf(env)
+    rh = (env.get("receipt_hash", "receipt") or "receipt").replace("sha256:", "")[:12]
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=verigate-receipt-{rh}.pdf"},
+    )
+
+
 @app.get("/api/verification-report.pdf")
 async def get_verification_pdf(request: Request):
     """Generate and return a downloadable PDF verification report."""
@@ -584,6 +599,38 @@ async def api_check(request: Request):
             "confidence_floor": 0.60,
         },
     }
+
+
+@app.get("/api/bundles-pdf/{bundle_name:path}")
+async def get_bundle_pdf(bundle_name: str, request: Request):
+    """Generate a PDF verification report from a GCS proof bundle."""
+    from app.storage import get_bundle
+    from app.report_pdf import generate_verification_pdf
+
+    bundle = get_bundle(bundle_name)
+    if bundle is None:
+        return JSONResponse({"error": "Bundle not found"}, status_code=404)
+
+    base_url = str(request.base_url).rstrip("/")
+    v = bundle.get("verification")
+    if isinstance(v, str):
+        v = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "anchor": v}
+
+    pdf_bytes = generate_verification_pdf(
+        verification_state=v or {},
+        receipts=bundle.get("receipts", []),
+        agents=bundle.get("agents", {}),
+        artifacts=bundle.get("artifacts", []),
+        public_key_jwk=bundle.get("public_key_jwk"),
+        base_url=base_url,
+    )
+
+    filename = "verigate-evidence-" + bundle_name.split("_")[-1].replace(".json", "") + ".pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.post("/api/compliance/generate")

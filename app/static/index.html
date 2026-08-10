@@ -1227,7 +1227,8 @@ function showReceiptDetail(idx){
   // Verify button
   h+='<div class="flex gap-2 mt-2">';
   h+='<button onclick="verifyReceiptLive('+idx+')" class="btn-primary flex-1 py-2 rounded-lg font-mono text-xs font-bold">Verify (Ed25519 + Hash)</button>';
-  h+='<button onclick="downloadReceipt('+idx+')" class="btn-secondary py-2 px-4 rounded-lg font-mono text-xs font-bold">Download JSON</button>';
+  h+='<button onclick="downloadReceipt('+idx+')" class="btn-secondary py-2 px-3 rounded-lg font-mono text-xs font-bold">JSON</button>';
+  h+='<button onclick="downloadReceiptPDF('+idx+')" class="btn-secondary py-2 px-3 rounded-lg font-mono text-xs font-bold">PDF</button>';
   h+='</div>';
   h+='<div id="receipt-verify-result-'+idx+'"></div>';
   h+='</div>';
@@ -1253,7 +1254,7 @@ function verifyReceiptLive(idx){
     .then(r=>r.json()).then(d=>{
       let h='<div class="mt-2 p-3 rounded-lg border '+(d.verified?'border-primary-fixed/20 bg-primary-fixed/5':'border-error/20 bg-error/5')+'">';
       h+='<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined '+(d.verified?'text-primary-fixed':'text-error')+'" style="font-size:18px;font-variation-settings:\'FILL\' 1">'+(d.verified?'verified':'error')+'</span><span class="font-display text-sm font-bold '+(d.verified?'text-primary-fixed':'text-error')+'">'+(d.verified?'VERIFIED':'FAILED')+'</span></div>';
-      if(d.checks){d.checks.forEach(c=>{h+='<div class="flex items-center gap-1.5 text-xs"><span class="material-symbols-outlined '+(c.passed?'text-primary-fixed':'text-error')+'" style="font-size:14px;font-variation-settings:\'FILL\' 1">'+(c.passed?'check_circle':'cancel')+'</span>'+c.name+'</div>'})}
+      if(d.checks){d.checks.forEach(c=>{const ok=c.passed||c.status==='PASS';h+='<div class="flex items-center gap-1.5 text-xs"><span class="material-symbols-outlined '+(ok?'text-primary-fixed':'text-error')+'" style="font-size:14px;font-variation-settings:\'FILL\' 1">'+(ok?'check_circle':'cancel')+'</span>'+c.name+'</div>'})}
       h+='</div>';el.innerHTML=h;
     }).catch(e=>{el.innerHTML='<div class="text-xs text-error mt-2">Verification error: '+e+'</div>'});
 }
@@ -1950,7 +1951,8 @@ async function loadBundles(){
       html+='<div class="flex items-center gap-2">';
       html+='<span class="flex items-center gap-1 text-[10px] text-primary-fixed/60 font-mono"><span class="material-symbols-outlined text-primary-fixed" style="font-size:12px;font-variation-settings:\'FILL\' 1">verified</span>verified</span>';
       html+='<button onclick="event.stopPropagation();toggleBundlePreview('+i+',\''+name+'\')" class="text-[11px] text-primary-fixed/60 font-mono px-2 py-1 rounded border border-primary-fixed/15 hover:bg-primary-fixed/5 transition-colors">Preview</button>';
-      html+='<button onclick="event.stopPropagation();viewBundle(\''+name+'\')" class="text-[11px] text-on-surface-variant/50 font-mono px-2 py-1 rounded border border-white/[.06] hover:bg-white/[.03] transition-colors">Download</button>';
+      html+='<button onclick="event.stopPropagation();viewBundle(\''+name+'\')" class="text-[11px] text-on-surface-variant/50 font-mono px-2 py-1 rounded border border-white/[.06] hover:bg-white/[.03] transition-colors">JSON</button>';
+      html+='<a onclick="event.stopPropagation()" href="/api/bundles-pdf/'+encodeURIComponent(name)+'" target="_blank" class="text-[11px] text-on-surface-variant/50 font-mono px-2 py-1 rounded border border-white/[.06] hover:bg-white/[.03] transition-colors no-underline inline-block">PDF</a>';
       html+='</div></div>';
       html+='<div id="bundle-preview-'+i+'" class="hidden px-6 pb-4"></div>';
       html+='</div>';
