@@ -1245,6 +1245,12 @@ function downloadReceipt(idx){
   a.href=url;a.download='verigate-receipt-'+hash+'.json';
   a.click();URL.revokeObjectURL(url);
 }
+function downloadReceiptPDF(idx){
+  if(!window._receiptData||!window._receiptData[idx])return;
+  const env=window._receiptData[idx];
+  // Use the main verification report PDF endpoint which includes all receipts
+  window.open('/api/verification-report.pdf','_blank');
+}
 function verifyReceiptLive(idx){
   if(!window._receiptData)return;
   const env=window._receiptData[idx];
