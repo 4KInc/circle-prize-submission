@@ -1225,11 +1225,24 @@ function showReceiptDetail(idx){
   });
   h+='</div>';
   // Verify button
-  h+='<button onclick="verifyReceiptLive('+idx+')" class="btn-primary w-full py-2 rounded-lg font-mono text-xs font-bold mt-2">Verify This Receipt (Ed25519 + Hash)</button>';
+  h+='<div class="flex gap-2 mt-2">';
+  h+='<button onclick="verifyReceiptLive('+idx+')" class="btn-primary flex-1 py-2 rounded-lg font-mono text-xs font-bold">Verify (Ed25519 + Hash)</button>';
+  h+='<button onclick="downloadReceipt('+idx+')" class="btn-secondary py-2 px-4 rounded-lg font-mono text-xs font-bold">Download JSON</button>';
+  h+='</div>';
   h+='<div id="receipt-verify-result-'+idx+'"></div>';
   h+='</div>';
   document.getElementById('receipt-detail-content').innerHTML=h;
   document.querySelectorAll('#receipt-rows tr').forEach((r,i)=>{r.style.background=i===idx?'rgba(184,246,0,0.05)':''});
+}
+function downloadReceipt(idx){
+  if(!window._receiptData||!window._receiptData[idx])return;
+  const env=window._receiptData[idx];
+  const hash=(env.receipt_hash||'receipt').replace('sha256:','').substring(0,12);
+  const blob=new Blob([JSON.stringify(env,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='verigate-receipt-'+hash+'.json';
+  a.click();URL.revokeObjectURL(url);
 }
 function verifyReceiptLive(idx){
   if(!window._receiptData)return;
