@@ -1831,12 +1831,15 @@ function runTryIt(){
   const service=document.getElementById('tryit-service').value;
   const reason=document.getElementById('tryit-reason').value;
 
-  // Call the REAL risk scorer API
+  // Call the REAL risk scorer API (with timeout + retry on cold start)
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
   fetch('/api/check',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({payee,amount,service,reason}),
-  }).then(r=>r.json()).then(d=>{
+    signal:controller.signal,
+  }).then(r=>{clearTimeout(timeout);return r.json()}).then(d=>{
     const score=d.score;
     const confidence=d.confidence;
     const decision=d.decision;
@@ -1912,9 +1915,21 @@ function runTryIt(){
     btn.disabled=false;
     btn.innerHTML='<span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:\'FILL\' 1">shield</span> Check Payment';
   }).catch(e=>{
+    clearTimeout(timeout);
     btn.disabled=false;
     btn.innerHTML='<span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:\'FILL\' 1">shield</span> Check Payment';
-    console.error('Risk check failed:',e);
+    // Show error in the result panel
+    document.getElementById('tryit-empty').classList.add('hidden');
+    document.getElementById('tryit-verdict').classList.remove('hidden');
+    document.getElementById('tryit-score-num').textContent='!';
+    document.getElementById('tryit-score-num').style.color='#ff6b6b';
+    document.getElementById('tryit-decision-badge').textContent='RETRY';
+    document.getElementById('tryit-decision-badge').style.cssText='background:rgba(255,107,107,0.1);color:#ff6b6b;border:1px solid rgba(255,107,107,0.25)';
+    document.getElementById('tryit-confidence').textContent='Server cold start — click again';
+    document.getElementById('tryit-band').textContent=e.name==='AbortError'?'Timeout (retrying wakes server)':'Error';
+    document.getElementById('tryit-factors').innerHTML='<span class="text-xs text-on-surface-variant/60">The server may be waking from sleep. Click Check Payment again.</span>';
+    document.getElementById('tryit-hash').textContent='--';
+    document.getElementById('tryit-stepup-box').classList.add('hidden');
   });
 }
 
