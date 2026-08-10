@@ -1939,13 +1939,19 @@ async function loadBundles(){
       const name=b.name||'';
       const created=b.created?new Date(b.created).toLocaleString():'--';
       const size=b.size?(b.size/1024).toFixed(1)+'KB':'--';
-      const runId=name.split('_').pop()?.replace('.json','')||'--';
+      const fname=name.split('/').pop()?.replace('.json','')||'';
+      const parts=fname.split('_');
+      // Derive human-readable label from run_id prefix
+      let label='Try It Demo';let icon='play_circle';
+      if(parts.length>=3&&parts[1]==='auto'){label='Scheduler Check';icon='schedule'}
+      else if(parts.length>=3&&parts[1]==='rogue'){label='Rogue Agent Scenario';icon='gpp_bad'}
+      const shortHash=(parts[parts.length-1]||'').slice(0,8);
       html+='<div class="border-b border-white/[.04] last:border-0">';
       html+='<div class="flex items-center justify-between px-6 py-4 hover:bg-white/[.02] transition-colors cursor-pointer" onclick="toggleBundlePreview('+i+',\''+name+'\')">';
       html+='<div class="flex items-center gap-4 flex-1 min-w-0">';
-      html+='<div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background:rgba(184,246,0,0.06);border:1px solid rgba(184,246,0,0.15)"><span class="material-symbols-outlined text-primary-fixed/60" style="font-size:16px">description</span></div>';
+      html+='<div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background:rgba(184,246,0,0.06);border:1px solid rgba(184,246,0,0.15)"><span class="material-symbols-outlined text-primary-fixed/60" style="font-size:16px">'+icon+'</span></div>';
       html+='<div class="min-w-0">';
-      html+='<div class="font-mono text-xs text-on-surface truncate">'+runId+'</div>';
+      html+='<div class="text-xs text-on-surface font-semibold truncate">'+label+' <span class="font-mono text-on-surface-variant/40 font-normal">#'+shortHash+'</span></div>';
       html+='<div class="text-[11px] text-on-surface-variant/40">'+created+' &middot; '+size+'</div>';
       html+='</div></div>';
       html+='<div class="flex items-center gap-2">';
