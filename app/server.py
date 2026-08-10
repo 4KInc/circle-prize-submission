@@ -741,11 +741,13 @@ async def autonomous_check(request: Request):
     stores results as a proof bundle in GCS, and updates the dashboard.
     This demonstrates continuous autonomous operation without human intervention.
     """
-    # Allow Cloud Scheduler (User-Agent) or admin token
+    # Allow Cloud Scheduler (identified by User-Agent) or a valid admin token.
+    # Fail closed: if not the scheduler, a matching admin token is required.
     ua = request.headers.get("user-agent", "")
-    if ADMIN_TOKEN and "Google-Cloud-Scheduler" not in ua:
+    is_scheduler = "Google-Cloud-Scheduler" in ua
+    if not is_scheduler:
         auth = request.headers.get("authorization", "").replace("Bearer ", "")
-        if auth != ADMIN_TOKEN:
+        if not ADMIN_TOKEN or auth != ADMIN_TOKEN:
             return JSONResponse({"error": "Unauthorized"}, status_code=401)
     from circle.risk_scorer import evaluate_risk
     import secrets as _secrets
@@ -810,11 +812,11 @@ ADMIN_TOKEN = os.environ.get("VERIGATE_ADMIN_TOKEN", "")
 
 @app.post("/api/reset-demo")
 async def reset_demo(request: Request):
-    """Force-clear a stale demo lock. Requires admin token if set."""
-    if ADMIN_TOKEN:
-        auth = request.headers.get("authorization", "").replace("Bearer ", "")
-        if auth != ADMIN_TOKEN:
-            return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    """Force-clear a stale demo lock. Requires a valid admin token."""
+    # Fail closed: a matching admin token is always required.
+    auth = request.headers.get("authorization", "").replace("Bearer ", "")
+    if not ADMIN_TOKEN or auth != ADMIN_TOKEN:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
     state["running"] = False
     return {"status": "cleared"}
 
