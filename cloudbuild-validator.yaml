@@ -1,0 +1,5 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'Dockerfile.validator', '-t', 'us-central1-docker.pkg.dev/quick-catcher-470218-b0/cloud-run-source-deploy/verigate-validator', '.']
+images:
+- 'us-central1-docker.pkg.dev/quick-catcher-470218-b0/cloud-run-source-deploy/verigate-validator'

@@ -1,0 +1,16 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY pyproject.toml .
+COPY app/validator.py app/validator.py
+COPY app/validator_app.py app/validator_app.py
+COPY app/__init__.py app/__init__.py
+
+RUN pip install --no-cache-dir cryptography fastapi "uvicorn[standard]"
+
+ENV PORT=8080
+
+EXPOSE 8080
+
+CMD ["python", "-m", "uvicorn", "app.validator_app:app", "--host", "0.0.0.0", "--port", "8080"]
