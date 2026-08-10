@@ -246,7 +246,8 @@ async def get_receipt_pdf(request: Request):
 
     env = await request.json()
     pdf_bytes = generate_receipt_pdf(env)
-    rh = (env.get("receipt_hash", "receipt") or "receipt").replace("sha256:", "")[:12]
+    import re as _re
+    rh = _re.sub(r'[^a-fA-F0-9]', '', (env.get("receipt_hash", "") or "").replace("sha256:", ""))[:12] or "receipt"
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
@@ -665,7 +666,9 @@ async def get_bundle_pdf(bundle_name: str, request: Request):
         base_url=base_url,
     )
 
-    filename = "verigate-evidence-" + bundle_name.split("_")[-1].replace(".json", "") + ".pdf"
+    import re
+    safe_id = re.sub(r'[^a-zA-Z0-9_-]', '', bundle_name.split("_")[-1].replace(".json", ""))
+    filename = f"verigate-evidence-{safe_id}.pdf"
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
@@ -731,13 +734,19 @@ async def scheduler_status():
 
 
 @app.post("/api/autonomous-check")
-async def autonomous_check():
+async def autonomous_check(request: Request):
     """Autonomous security check — called by Cloud Scheduler every hour.
 
     Runs a batch of payment intent checks through the real risk scorer,
     stores results as a proof bundle in GCS, and updates the dashboard.
     This demonstrates continuous autonomous operation without human intervention.
     """
+    # Allow Cloud Scheduler (User-Agent) or admin token
+    ua = request.headers.get("user-agent", "")
+    if ADMIN_TOKEN and "Google-Cloud-Scheduler" not in ua:
+        auth = request.headers.get("authorization", "").replace("Bearer ", "")
+        if auth != ADMIN_TOKEN:
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
     from circle.risk_scorer import evaluate_risk
     import secrets as _secrets
 
@@ -797,9 +806,15 @@ async def autonomous_check():
     }
 
 
+ADMIN_TOKEN = os.environ.get("VERIGATE_ADMIN_TOKEN", "")
+
 @app.post("/api/reset-demo")
-async def reset_demo():
-    """Force-clear a stale demo lock."""
+async def reset_demo(request: Request):
+    """Force-clear a stale demo lock. Requires admin token if set."""
+    if ADMIN_TOKEN:
+        auth = request.headers.get("authorization", "").replace("Bearer ", "")
+        if auth != ADMIN_TOKEN:
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
     state["running"] = False
     return {"status": "cleared"}
 
@@ -824,16 +839,33 @@ async def get_proof_bundle(bundle_name: str):
     return bundle
 
 
+import threading
+_demo_lock = threading.Lock()
+
+def _try_acquire_demo() -> bool:
+    """Atomically check and acquire the demo lock. Returns True if acquired."""
+    with _demo_lock:
+        if state["running"]:
+            started = state.get("running_since", 0)
+            if time.time() - started > 300:
+                logger.warning("Stale demo lock detected (>300s), auto-clearing")
+            else:
+                return False
+        state["running"] = True
+        state["running_since"] = time.time()
+        return True
+
 def _is_demo_running() -> bool:
-    """Check if a demo is running, with a 300s auto-expire to prevent stale locks."""
-    if not state["running"]:
-        return False
-    started = state.get("running_since", 0)
-    if time.time() - started > 300:
-        logger.warning("Stale demo lock detected (>300s), auto-clearing")
-        state["running"] = False
-        return False
-    return True
+    """Check if a demo is running."""
+    with _demo_lock:
+        if not state["running"]:
+            return False
+        started = state.get("running_since", 0)
+        if time.time() - started > 300:
+            logger.warning("Stale demo lock detected (>300s), auto-clearing")
+            state["running"] = False
+            return False
+        return True
 
 
 @app.get("/api/run/golden-path")
@@ -844,7 +876,7 @@ async def run_golden_path(dry_run: bool = False):
     This fallback ensures judges always see a working demo even if the wallet
     is underfunded or Circle CLI auth has expired.
     """
-    if _is_demo_running():
+    if not _try_acquire_demo():
         return StreamingResponse(
             _error_stream("A demo is already running. Please wait."),
             media_type="text/event-stream",
@@ -865,7 +897,7 @@ async def run_golden_path(dry_run: bool = False):
 @app.get("/api/run/rogue-path")
 async def run_rogue_path():
     """Run the rogue agent scenario and stream events via SSE."""
-    if _is_demo_running():
+    if not _try_acquire_demo():
         return StreamingResponse(
             _error_stream("A demo is already running. Please wait."),
             media_type="text/event-stream",
@@ -1031,8 +1063,6 @@ def _sse(event_type: str, data: dict) -> str:
 
 async def _golden_path_stream():
     """Stream the golden path execution as SSE events."""
-    state["running"] = True
-    state["running_since"] = time.time()
     state["payments"] = []
     state["receipts"] = []
     state["isolations"] = []
@@ -1233,7 +1263,7 @@ async def _golden_path_stream():
 
         denial_result = None
         try:
-            executor.execute(rogue_intent)
+            await asyncio.to_thread(executor.execute, rogue_intent)
         except PaymentDenied as e:
             denial_result = e.result
             denial_data = {
@@ -1524,6 +1554,7 @@ async def _golden_path_stream():
 
         yield _sse("step", {"id": "receipts", "title": "Receipt Chain", "status": "complete",
                             "desc": str(len(chain_receipts)) + " receipts verified. Hash chain integrity confirmed from genesis.",
+                            "receipts": receipt_summary,
                             "details": {"count": len(chain_receipts)}})
         await asyncio.sleep(0.1)
 
@@ -1711,8 +1742,6 @@ async def _golden_path_stream():
 
 async def _rogue_path_stream():
     """Stream the rogue agent scenario as SSE events."""
-    state["running"] = True
-    state["running_since"] = time.time()
 
     try:
         from circle.executor import PaymentExecutor, PaymentIntent, PaymentDenied
