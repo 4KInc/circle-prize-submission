@@ -120,6 +120,8 @@ async def get_state():
     return state
 
 
+_gcs_cache = {"data": None}  # Cache GCS fallback to avoid repeated slow fetches
+
 @app.get("/api/data")
 async def get_data():
     """Return all persisted demo data for tab views.
@@ -142,7 +144,10 @@ async def get_data():
             "treasury": state["treasury"],
         }
 
-    # Cold start — try to load last GCS proof bundle
+    # Cold start — return cached GCS data or load once
+    if _gcs_cache["data"]:
+        return _gcs_cache["data"]
+
     try:
         from app.storage import list_bundles, get_bundle
         bundles = list_bundles(limit=1)
@@ -173,7 +178,7 @@ async def get_data():
                     app._executor_jwk = bundle_jwk
                     logger.info(f"Loaded signing key from GCS bundle: kid={bundle_jwk['kid']}")
 
-                return {
+                _gcs_cache["data"] = {
                     "receipts": b.get("receipts", []),
                     "agents": b.get("agents", {}),
                     "artifacts": b.get("artifacts", []),
@@ -187,6 +192,7 @@ async def get_data():
                     "source": "gcs-persisted",
                     "bundle_path": bundles[0]["name"],
                 }
+                return _gcs_cache["data"]
     except Exception as e:
         logger.warning(f"GCS fallback for /api/data: {e}")
 
