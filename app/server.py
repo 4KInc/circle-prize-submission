@@ -157,7 +157,7 @@ async def get_data():
                 # Wrap string verification into object format the frontend expects
                 v = b.get("verification")
                 if isinstance(v, str):
-                    v = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "anchor": v}
+                    v = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "x401": v, "anchor": v}
                 # Synthesize spend findings from receipt data
                 comp = b.get("compliance") or {}
                 if comp and not comp.get("spend_findings"):
@@ -282,7 +282,7 @@ async def get_verification_pdf(request: Request):
                     if b and b.get("receipts"):
                         receipts = b["receipts"]
                         v = b.get("verification")
-                        verification = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "anchor": v} if isinstance(v, str) else (v or {})
+                        verification = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "x401": v, "anchor": v} if isinstance(v, str) else (v or {})
                         agents = b.get("agents", {})
                         artifacts = b.get("artifacts", [])
                         jwk = b.get("public_key_jwk") or jwk
@@ -659,7 +659,7 @@ async def get_bundle_pdf(bundle_name: str, request: Request):
     base_url = str(request.base_url).rstrip("/")
     v = bundle.get("verification")
     if isinstance(v, str):
-        v = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "anchor": v}
+        v = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "x401": v, "anchor": v}
 
     pdf_bytes = generate_verification_pdf(
         verification_state=v or {},
