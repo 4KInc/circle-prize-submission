@@ -973,7 +973,7 @@ async def _dry_run_stream():
                 "evaluation_decision": eval_decision,
                 "amount": del_ctx.get("settlement_amount", "0.01") + " USDC",
                 "tx_hash": del_ctx.get("settlement_tx", "dry-run"),
-                "explorer_url": f"https://sepolia.basescan.org/tx/{del_ctx.get('settlement_tx', '')}",
+                "explorer_url": f"https://{'sepolia.' if 'SEPOLIA' in (del_ctx.get('settlement_chain','SEPOLIA')).upper() else ''}basescan.org/tx/{del_ctx.get('settlement_tx', '')}",
                 "receipt_hash": approve_receipt.get("receipt_hash", "")[:40] + "...",
                 "risk_score": risk.get("risk_score", 0),
                 "risk_band": risk.get("risk_band", "LOW"),
@@ -1349,9 +1349,9 @@ async def _golden_path_stream():
                     TREASURY_WALLET, VALIDATOR_WALLET, "0.02",
                     chain, USDC_ADDRESSES.get(chain),
                 )
-                state["treasury"]["spent"] += 0.01
+                state["treasury"]["spent"] += 0.02
                 state["treasury"]["transactions"].append({
-                    "direction": "spend", "amount": "0.01", "to": VALIDATOR_WALLET,
+                    "direction": "spend", "amount": "0.02", "to": VALIDATOR_WALLET,
                     "tx_hash": validator_tx.tx_hash, "service": "evidence_validation",
                 })
 
@@ -1386,7 +1386,7 @@ async def _golden_path_stream():
                     },
                 })
                 yield _sse("treasury", {
-                    "event": "spend", "amount": "0.01", "service": "evidence_validation",
+                    "event": "spend", "amount": "0.02", "service": "evidence_validation",
                     "tx_hash": validator_tx.tx_hash,
                     "validator_verdict": verdict.get("verdict", "VALID"),
                     "earned_total": f"{state['treasury']['earned']:.2f}",
