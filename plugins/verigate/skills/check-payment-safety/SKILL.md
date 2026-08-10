@@ -19,7 +19,7 @@ allowed-tools:
 Verigate is an autonomous payment security agent that checks USDC payments before they execute. It uses a three-state decision engine:
 
 - **APPROVE** — Payment is safe. Proceed with the transfer.
-- **STEP_UP** — Risk is uncertain. Verigate autonomously pays $0.01 to an Evidence Validator for independent verification, then makes a final decision.
+- **STEP_UP** — Risk is uncertain. Verigate autonomously pays $0.02 to an Evidence Validator for independent verification, then makes a final decision.
 - **DENY** — Payment is blocked. Do not proceed.
 
 Every decision produces a signed, independently verifiable receipt.
@@ -53,7 +53,7 @@ Use the check_payment tool with:
 
 **If STEP_UP:**
 - Verigate detected uncertainty (risk score 40-74 or confidence < 60%)
-- Verigate will autonomously purchase evidence from a validator ($0.01 USDC)
+- Verigate will autonomously purchase evidence from a validator ($0.02 USDC)
 - Wait for the final verdict before proceeding
 - The receipt will contain the evidence purchase details
 

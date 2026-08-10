@@ -312,7 +312,7 @@ def get_pricing() -> str:
     """Verigate pricing information."""
     return json.dumps({
         "verification_fee": "$0.05 per transaction",
-        "evidence_cost": "Up to $0.01 per STEP_UP case",
+        "evidence_cost": "$0.02 per STEP_UP case",
         "daily_cap": "$1.00 maximum autonomous spend",
         "payment_method": "USDC via Circle Gateway nanopayments",
         "settlement": "Circle Gateway (gas-free, batched)",

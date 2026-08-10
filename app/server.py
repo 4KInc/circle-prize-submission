@@ -1315,13 +1315,13 @@ async def _golden_path_stream():
         # Verigate autonomously pays Evidence Validator for independent verification
         if isolation_record and isolation_record.severity in ("HIGH", "CRITICAL"):
             yield _sse("step", {"id": "treasury-spend", "title": "Evidence Validation Purchase", "status": "running",
-                                "desc": "Threat severity justifies independent verification. Verigate autonomously pays $0.01 USDC from its security treasury to the Evidence Validator.",
+                                "desc": "Threat severity justifies independent verification. Verigate autonomously pays $0.02 USDC from its security treasury to the Evidence Validator.",
                                 "subtitle": "Escalation policy: severity HIGH, budget available, validator on allowlist..."})
             await asyncio.sleep(0.05)
 
             try:
                 validator_tx = await asyncio.to_thread(wallet_transfer,
-                    TREASURY_WALLET, VALIDATOR_WALLET, "0.01",
+                    TREASURY_WALLET, VALIDATOR_WALLET, "0.02",
                     chain, USDC_ADDRESSES.get(chain),
                 )
                 state["treasury"]["spent"] += 0.01
@@ -1347,7 +1347,7 @@ async def _golden_path_stream():
                 verdict = validator_result.get("verdict", {})
                 yield _sse("step", {
                     "id": "treasury-spend", "title": "Evidence Validation Purchase", "status": "complete",
-                    "desc": f"Verigate spent $0.01 USDC. Validator verdict: {verdict.get('verdict', 'VALID')}. Evidence independently verified.",
+                    "desc": f"Verigate spent $0.02 USDC. Validator verdict: {verdict.get('verdict', 'VALID')}. Evidence independently verified.",
                     "details": {
                         "direction": "Verigate → Evidence Validator",
                         "amount": "0.01 USDC",

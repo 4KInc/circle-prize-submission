@@ -12,7 +12,7 @@ Its purpose is to demonstrate the autonomous payment and validation
 interface; external validator operators can implement the same interface.
 
 Payment flow:
-    Verigate Treasury wallet pays $0.01 USDC to the Validator wallet
+    Verigate Treasury wallet pays $0.02 USDC to the Validator wallet
     via x402 protocol. Payment must settle before validation begins.
 """
 
@@ -40,7 +40,7 @@ VALIDATOR_WALLET = os.environ.get(
     "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558",
 )
 
-VALIDATOR_PRICE_USDC = "0.01"
+VALIDATOR_PRICE_USDC = "0.02"
 
 # Validator's own Ed25519 signing key (independent from Verigate)
 _validator_key = Ed25519PrivateKey.generate()

@@ -336,7 +336,8 @@ class PaymentExecutor:
                         step_up_data["validator_response"] = vdata.get("verdict", {})
                         logger.info(f"Validator verdict: {validator_verdict}")
                 except Exception as ve:
-                    logger.warning(f"Validator endpoint call failed: {ve}, using payment confirmation as proof")
+                    logger.warning(f"Validator endpoint call failed: {ve}")
+                    validator_verdict = "UNAVAILABLE"
 
                 step_up_data["validator_verdict"] = validator_verdict
                 logger.info(f"STEP_UP verification paid from treasury: tx={validator_tx.tx_hash[:16]}...")
@@ -345,9 +346,8 @@ class PaymentExecutor:
                 step_up_data["validator_verdict"] = "UNAVAILABLE"
 
             # Validator verdict can override to DENY
-            # (for now, verification always confirms — in production,
-            #  the validator would return a real verdict)
-            if step_up_data["validator_verdict"] == "DENY":
+            verdict = step_up_data.get("validator_verdict", "VERIFIED")
+            if verdict in ("DENY", "INSUFFICIENT_EVIDENCE"):
                 deny_delegation = {"x401_credential_hash": x401_hash} if x401_hash else {}
                 deny_delegation["blockintel"] = risk.to_dict()
                 deny_delegation["step_up"] = step_up_data
