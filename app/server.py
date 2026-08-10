@@ -636,12 +636,25 @@ async def api_check(request: Request):
 @app.get("/api/bundles-pdf/{bundle_name:path}")
 async def get_bundle_pdf(bundle_name: str, request: Request):
     """Generate a PDF verification report from a GCS proof bundle."""
-    from app.storage import get_bundle
+    from app.storage import get_bundle, list_bundles
     from app.report_pdf import generate_verification_pdf
 
     bundle = get_bundle(bundle_name)
     if bundle is None:
         return JSONResponse({"error": "Bundle not found"}, status_code=404)
+
+    # If this is a scheduler/auto bundle (no receipts), find the latest full demo bundle
+    if not bundle.get("receipts"):
+        try:
+            all_bundles = list_bundles(limit=20)
+            for b_meta in all_bundles:
+                if "auto" not in b_meta["name"] and "sched" not in b_meta["name"]:
+                    full = get_bundle(b_meta["name"])
+                    if full and full.get("receipts"):
+                        bundle = full
+                        break
+        except Exception:
+            pass
 
     base_url = str(request.base_url).rstrip("/")
     v = bundle.get("verification")
