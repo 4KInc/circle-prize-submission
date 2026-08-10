@@ -96,7 +96,7 @@ Call Verigate check_payment (costs $0.05 USDC)
 ├─────────────┼──────────────┼─────────────┤
 │ Proceed     │ Wait for     │ Do NOT      │
 │ with payment│ evidence     │ proceed     │
-│             │ ($0.01 spent)│             │
+│             │ ($0.02 spent)│             │
 │             │ Then decide  │             │
 └─────────────┴──────────────┴─────────────┘
     ↓                ↓               ↓

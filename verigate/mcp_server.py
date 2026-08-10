@@ -377,7 +377,7 @@ def _explain_decision(risk) -> str:
             f"Uncertain. Risk score {risk.score}/100 "
             f"({risk.band}), confidence {risk.confidence:.0%}. "
             f"Signals: {signals}. "
-            f"Verigate will pay $0.01 for independent verification before deciding."
+            f"Verigate will pay $0.02 for independent verification before deciding."
         )
     else:
         signals = ", ".join(risk.signals) if risk.signals else "policy violation"

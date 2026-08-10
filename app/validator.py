@@ -197,6 +197,7 @@ def _verify_evidence(evidence: dict) -> list[dict]:
 
     # Check 2: All receipts have valid hashes
     hash_valid = True
+    hash_mismatches = 0
     for r in receipts:
         rh = r.get("receipt_hash", "")
         body = r.get("body", {})
@@ -204,16 +205,17 @@ def _verify_evidence(evidence: dict) -> list[dict]:
             recomputed = "sha256:" + hashlib.sha256(
                 json.dumps(body, sort_keys=True, separators=(",", ":"), default=str).encode()
             ).hexdigest()
-            if not rh.startswith("sha256:"):
+            if rh != recomputed:
+                hash_mismatches += 1
                 hash_valid = False
         elif not rh:
             hash_valid = False
 
     checks.append({
         "name": "receipt_hashes",
-        "description": "Receipt hashes are well-formed SHA-256",
+        "description": "Receipt hashes match recomputed SHA-256",
         "pass": hash_valid and len(receipts) > 0,
-        "detail": f"{len(receipts)} hash(es) verified",
+        "detail": f"{len(receipts)} hash(es) verified" + (f", {hash_mismatches} mismatch(es)" if hash_mismatches else ""),
     })
 
     # Check 3: Merkle root exists
