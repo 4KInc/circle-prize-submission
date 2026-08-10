@@ -258,12 +258,38 @@ async def get_verification_pdf(request: Request):
     from app.report_pdf import generate_verification_pdf
 
     base_url = str(request.base_url).rstrip("/")
+
+    # Use live state if available, otherwise fall back to GCS
+    receipts = state.get("receipts", [])
+    verification = state.get("verification", {})
+    agents = state.get("agents", {})
+    artifacts = state.get("artifacts", [])
+    jwk = getattr(app, "_executor_jwk", None)
+
+    if not receipts:
+        try:
+            from app.storage import list_bundles, get_bundle
+            bundles = list_bundles(limit=1)
+            for b_meta in bundles:
+                if "auto" not in b_meta["name"] and "sched" not in b_meta["name"]:
+                    b = get_bundle(b_meta["name"])
+                    if b and b.get("receipts"):
+                        receipts = b["receipts"]
+                        v = b.get("verification")
+                        verification = {"overall": v, "signatures": v, "hash_chain": v, "merkle": v, "anchor": v} if isinstance(v, str) else (v or {})
+                        agents = b.get("agents", {})
+                        artifacts = b.get("artifacts", [])
+                        jwk = b.get("public_key_jwk") or jwk
+                        break
+        except Exception as e:
+            logger.warning(f"PDF GCS fallback failed: {e}")
+
     pdf_bytes = generate_verification_pdf(
-        verification_state=state.get("verification", {}),
-        receipts=state.get("receipts", []),
-        agents=state.get("agents", {}),
-        artifacts=state.get("artifacts", []),
-        public_key_jwk=getattr(app, "_executor_jwk", None),
+        verification_state=verification,
+        receipts=receipts,
+        agents=agents,
+        artifacts=artifacts,
+        public_key_jwk=jwk,
         base_url=base_url,
     )
     return StreamingResponse(

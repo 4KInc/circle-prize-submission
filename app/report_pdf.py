@@ -181,7 +181,7 @@ def generate_verification_pdf(
         "The Ed25519 receipt chain, hash integrity, Merkle root, x401 identity binding, "
         "and wallet-signed anchor have all been verified. This receipt chain has not been tampered with."
         if is_pass else
-        "Run the Golden Path demo to generate a complete receipt chain with verification."
+        "No verification data available. Run a security check to generate a complete receipt chain."
     )
     v_color = GREEN if is_pass else RED
     v_bg = GREEN_BG if is_pass else RED_BG
