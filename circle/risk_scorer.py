@@ -35,20 +35,31 @@ STEP_UP_CEILING = 74       # score 40-74 → STEP_UP
 DENY_FLOOR = 75            # score 75-100 → DENY
 CONFIDENCE_FLOOR = 0.60    # below this → STEP_UP regardless of score
 
-# ── Known-bad addresses (real OFAC/sanctions examples, truncated) ────
-# These are publicly listed sanctioned addresses from OFAC's SDN list.
-# A production system queries the full list via API; this static subset
-# demonstrates real sanctions screening.
-SANCTIONED_PREFIXES = frozenset({
-    "0xd882cfc20f52f2599d84b8e8d58b7915a68c7a4c",  # Tornado Cash: Router
-    "0x7f367cc41522ce07553e823bf3be79a889deadbeef",  # Tornado Cash
-    "0x722122df12d4e14e13ac3b6895a86e84145b6967",  # Tornado Cash
-    "0xdd4c48c0b24039969fc16d1cdf626eab821d3384",  # Tornado Cash
-    "0x7db418b5d567a4e0e8c59ad71be1fce48f3e6107",  # Blender.io
-    "0x8589427373d6d84e98730d7795d8f6f8731fda16",  # Blender.io
-    "0x098b716b8aaf21512996dc57eb0615e2383e2f96",  # Ronin Bridge exploiter
-    "0xa7e5d5a720f06526557c513402f2e6b5fa20b008",  # Ronin Bridge exploiter
-    "0x0000000000000000000000000000000000000000",  # Null address
+# ── Sanctioned addresses (real OFAC SDN designations) ────────────────
+# These are genuine Ethereum addresses on OFAC's Specially Designated
+# Nationals (SDN) list. All are valid 40-hex EVM addresses, stored
+# lowercased for exact-match comparison. A production system syncs the
+# full list from Treasury's SDN feed; this verified subset demonstrates
+# real sanctions screening against publicly documented designations.
+#
+# Sources: US Treasury OFAC SDN List — Tornado Cash (2022-08-08) and
+# Lazarus Group / DPRK designations. Screening is EXACT match only,
+# mirroring how real compliance systems operate (no prefix heuristics
+# that would produce false positives).
+SANCTIONED_ADDRESSES = frozenset({
+    # Tornado Cash — OFAC designated 2022-08-08
+    "0x8589427373d6d84e98730d7795d8f6f8731fda16",  # TC: donation
+    "0x722122df12d4e14e13ac3b6895a86e84145b6967",  # TC: router
+    "0xdd4c48c0b24039969fc16d1cdf626eab821d3384",  # TC: pool
+    "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b",  # TC: pool
+    "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf",  # TC: 10 ETH pool
+    "0xa160cdab225685da1d56aa342ad8841c3b53f291",  # TC: 100 ETH pool
+    "0xf60dd140cff0706bae9cd734ac3ae76ad9ebc32a",  # TC: proxy
+    "0xba214c1c1928a32bffe790263e38b4af9bfcd659",  # TC: pool
+    # Lazarus Group / DPRK — OFAC designated
+    "0x098b716b8aaf21512996dc57eb0615e2383e2f96",  # Ronin bridge exploiter
+    "0xa0e1c89ef1a489c9c7de96311ed5ce5d32c20e4b",  # Lazarus
+    "0x3cffd56b47b7b41c56258d9c7731abadc360e073",  # Lazarus
 })
 
 # Known high-risk service name patterns
@@ -63,12 +74,14 @@ HIGH_RISK_SERVICES = frozenset({
 INJECTION_PATTERNS = [
     # Role/identity hijacking
     (re.compile(r"(?:you are|act as|pretend to be|your (?:new )?role is)", re.I), "role_hijack", 20),
-    # Instruction override
-    (re.compile(r"(?:ignore (?:all |previous |prior )?(?:instructions?|rules?|policies?|constraints?))", re.I), "instruction_override", 25),
+    # Instruction override — tolerate stacked qualifiers ("all previous")
+    # and the common override verbs.
+    (re.compile(r"(?:ignore|disregard|forget|override|bypass)\s+(?:(?:all|any|previous|prior|the|your)\s+)*(?:instructions?|rules?|policies?|constraints?|guidelines?|directives?)", re.I), "instruction_override", 25),
     # System prompt leakage
     (re.compile(r"(?:system\s*(?:prompt|override|message)|<\|?system\|?>)", re.I), "system_prompt_inject", 25),
-    # Urgency manipulation (social engineering)
-    (re.compile(r"(?:urgent(?:ly)?|immediate(?:ly)?|emergency|asap|right\s*now)\s+(?:transfer|send|pay|move|withdraw)", re.I), "urgency_manipulation", 15),
+    # Urgency manipulation (social engineering) — allow punctuation between
+    # the urgency cue and the action verb ("URGENT: transfer", "now, send").
+    (re.compile(r"(?:urgent(?:ly)?|immediate(?:ly)?|emergency|asap|right\s*now)[\s:;,.\-]+(?:transfer|send|pay|move|withdraw|wire|release)", re.I), "urgency_manipulation", 15),
     # Authority impersonation
     (re.compile(r"(?:authorized?\s+by|approved?\s+by|(?:ceo|cto|cfo|admin|founder)\s+(?:said|approved|authorized))", re.I), "authority_spoof", 20),
     # Delimiter injection
@@ -125,14 +138,15 @@ def _score_band(score: int) -> str:
 
 
 def _check_sanctions(payee: str) -> tuple[bool, str]:
-    """Check payee against real sanctioned address list."""
+    """Screen payee against the OFAC SDN address list.
+
+    Exact-match only — the same discipline real compliance systems use.
+    Partial/prefix matching is deliberately avoided because it produces
+    false positives that would wrongly block legitimate counterparties.
+    """
     normalized = payee.lower().strip()
-    if normalized in SANCTIONED_PREFIXES:
-        return True, f"exact match: {normalized[:10]}..."
-    # Prefix matching (some sanctioned entities use address clusters)
-    for prefix in SANCTIONED_PREFIXES:
-        if normalized[:10] == prefix[:10] and len(normalized) > 10:
-            return True, f"prefix cluster: {normalized[:10]}..."
+    if normalized in SANCTIONED_ADDRESSES:
+        return True, f"OFAC SDN exact match: {normalized[:10]}…{normalized[-6:]}"
     return False, ""
 
 
@@ -297,15 +311,21 @@ def evaluate_risk(
 
     amount_f = float(amount)
 
-    # 1. Sanctions screening (real address list)
+    # 1. Sanctions screening (real OFAC SDN list). A confirmed match is a
+    #    hard block: high score + high confidence guarantees a DENY verdict,
+    #    never a STEP_UP. There is no "second opinion" on a sanctioned payee.
     is_sanctioned, sanction_detail = _check_sanctions(payee)
     if is_sanctioned:
         all_signals.append("sanctioned_address")
-        total_score += 40
-        confidence = max(confidence, 0.95)
+        total_score += 80
+        confidence = 0.99
         all_details["sanctions"] = sanction_detail
 
-    # 2. Prompt injection (structural analysis)
+    # 2. Prompt injection (structural analysis). A detected manipulation
+    #    attempt in the justification text is disqualifying on its own: we
+    #    never auto-APPROVE a payment whose reason is trying to steer the
+    #    agent. One signal floors the verdict to STEP_UP; a strong pattern
+    #    (override / system-prompt / role hijack) or two+ signals → DENY.
     inj_score, inj_conf, inj_signals, inj_details = _check_injection(reason)
     total_score += inj_score
     confidence += inj_conf
@@ -332,6 +352,18 @@ def evaluate_risk(
     confidence += svc_conf
     all_signals.extend(svc_signals)
     all_details.update(svc_details)
+
+    # Injection escalation (applied after all components accumulate). A
+    # detected manipulation attempt in the justification text is
+    # disqualifying: we never auto-APPROVE a payment whose reason is trying
+    # to steer the agent. One signal floors the verdict to STEP_UP; a strong
+    # pattern (override / system-prompt / role hijack) or two+ signals → DENY.
+    if inj_signals:
+        strong_injection = {"instruction_override", "system_prompt_inject", "role_hijack"}
+        total_score = max(total_score, APPROVE_CEILING + 1)   # >= 40 → STEP_UP
+        if len(inj_signals) >= 2 or (strong_injection & set(inj_signals)):
+            total_score = max(total_score, DENY_FLOOR)         # >= 75 → DENY
+            confidence = max(confidence, CONFIDENCE_FLOOR)     # ensure DENY, not STEP_UP
 
     # Clamp
     total_score = max(0, min(total_score, 100))
