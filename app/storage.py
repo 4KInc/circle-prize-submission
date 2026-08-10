@@ -104,6 +104,57 @@ def list_bundles(limit: int = 50) -> list[dict]:
         return []
 
 
+def store_json(path: str, obj: dict) -> str | None:
+    """Store an arbitrary JSON object at an exact object path.
+
+    Used for singleton state (sanctions cache, behavioral history) that
+    must survive Cloud Run restarts. Falls back to a local file under
+    ./cache/ when GCS is unavailable, so it still works offline/in tests.
+    Returns the location string or None.
+    """
+    payload = json.dumps(obj, default=str, indent=2)
+    if GCS_ENABLED:
+        bucket = _get_bucket()
+        if bucket is not None:
+            try:
+                blob = bucket.blob(path)
+                blob.upload_from_string(payload, content_type="application/json")
+                return f"gs://{BUCKET_NAME}/{path}"
+            except Exception as e:
+                logger.warning("store_json GCS failed for %s: %s", path, e)
+    # Local fallback
+    try:
+        local = os.path.join("cache", path)
+        os.makedirs(os.path.dirname(local), exist_ok=True)
+        with open(local, "w") as f:
+            f.write(payload)
+        return local
+    except Exception as e:
+        logger.warning("store_json local fallback failed for %s: %s", path, e)
+        return None
+
+
+def load_json(path: str) -> dict | None:
+    """Load a JSON object previously written by store_json. Never raises."""
+    if GCS_ENABLED:
+        bucket = _get_bucket()
+        if bucket is not None:
+            try:
+                blob = bucket.blob(path)
+                if blob.exists():
+                    return json.loads(blob.download_as_text())
+            except Exception as e:
+                logger.debug("load_json GCS miss for %s: %s", path, e)
+    try:
+        local = os.path.join("cache", path)
+        if os.path.exists(local):
+            with open(local) as f:
+                return json.loads(f.read())
+    except Exception as e:
+        logger.debug("load_json local miss for %s: %s", path, e)
+    return None
+
+
 def get_bundle(path: str) -> dict | None:
     """Retrieve a proof bundle from GCS by its object path."""
     if not GCS_ENABLED:

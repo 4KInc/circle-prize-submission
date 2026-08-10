@@ -7,6 +7,10 @@ dist/
 build/
 .pytest_cache/
 
+# Local singleton-state fallback (sanctions cache, behavioral history)
+cache/
+out/
+
 # Never commit secrets
 *.pem
 *.key

@@ -245,7 +245,9 @@ All three are Circle Agent Wallets with independent spending policies. Mainnet t
 | Module | Purpose |
 |--------|---------|
 | `circle/executor.py` | Gated payment executor — policy eval, token issuance, Circle CLI, receipt signing |
-| `circle/risk_scorer.py` | BlockIntel heuristic risk scorer (blockintel-heuristic-v2) — real OFAC/SDN denylist, structural prompt-injection detection, deterministic signals |
+| `circle/risk_scorer.py` | BlockIntel heuristic risk scorer (blockintel-heuristic-v2) — live OFAC/SDN screening, structural prompt-injection detection, behavioral anomaly folding, deterministic signals |
+| `circle/sanctions.py` | OFAC SDN screening — hand-verified static seed + live SDN-feed sync (`refresh()`); receipts attest the feed source, publish date, and content digest |
+| `circle/behavioral.py` | Per-agent behavioral layer — robust z-score (median/MAD) amount outliers, velocity bursts, novel counterparty; honest statistics (not ML), GCS-persisted history |
 | `circle/gateway.py` | Circle Gateway nanopayments client — settle, verify, balances via facilitator API |
 | `circle/x401.py` | x401 credential issuance + verification — binds agent identity into receipt chain |
 | `circle/isolator.py` | Forensic recorder — signed incident evidence + findings |
@@ -271,7 +273,9 @@ All three are Circle Agent Wallets with independent spending policies. Mainnet t
 - **Settlement binding** — tx hash embedded in receipt body
 - **ERC-8004 reputation** — isolation events published to on-chain registry
 - **Validator can DENY** — evidence purchase has real consequences (not always confirmed)
-- **GCS persistence** — proof bundles survive Cloud Run cold starts
+- **GCS persistence** — proof bundles, sanctions cache, and behavioral history survive Cloud Run cold starts
+- **Live OFAC SDN sync** — background daemon refreshes the sanctions set; every decision attests which feed version it screened against
+- **Behavioral baseline** — per-agent transaction history drives amount/velocity/novelty anomaly signals (honest statistics, deterministic)
 
 ### Stack
 
@@ -298,13 +302,13 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
 | Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
 | Demo command | `make demo` |
-| Tests | 42 passing (policy, risk scorer, receipts, merkle, isolation) |
+| Tests | 86 passing (policy, risk scorer, adversarial injection, sanctions parser/feed, behavioral anomaly, receipts, merkle, isolation) |
 
 ## Pre-Existing Work Disclosure
 
 The `engine/` directory is a git submodule referencing [agent-authorization-gateway](https://github.com/4KInc/agent-authorization-gateway), an Apache-2.0 licensed framework that predates this hackathon. It provides foundational primitives (receipt signing, policy engine, Merkle trees, canonical JSON).
 
-Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built for this hackathon. The Circle integration layer — three-state decision engine, BlockIntel risk scorer, Gateway nanopayments, x402 endpoints, MCP server, Circle Skills, GCS proof bundles, and the live dashboard — is entirely new work.
+Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built for this hackathon. The Circle integration layer — three-state decision engine, BlockIntel risk scorer, live OFAC SDN screening, behavioral anomaly layer, Gateway nanopayments, x402 endpoints, MCP server, Circle Skills, GCS proof bundles, and the live dashboard — is entirely new work.
 
 ## Limitations & Honest Assessment
 
@@ -313,7 +317,9 @@ Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built
 | **Three-state engine** | Real — APPROVE/STEP_UP/DENY with autonomous evidence purchase | Core innovation, fully functional |
 | **Mainnet transactions** | Real — STEP_UP flow on Base mainnet ([tx](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732)) | Not just testnet |
 | **Receipt chain** | Real — Ed25519 signed, hash-chained, Merkle-anchored | Tamper-evident audit trail |
-| **Risk scorer** | Real — deterministic, tested (17 tests), same input = same score | Server-side, not fake |
+| **Risk scorer** | Real — deterministic, tested (44 tests), same input = same score | Server-side, not fake |
+| **OFAC SDN screening** | Real — hand-verified seed + live SDN-feed sync, exact-match, feed version attested in receipt | Not a hardcoded demo list |
+| **Behavioral layer** | Real — robust-z/velocity/novelty over persisted per-agent history; honest statistics, not ML | Deterministic, no fabricated "ML" |
 | **Gateway nanopayments** | Real — facilitator API integration (settle, verify, balances) | Circle's newest product |
 | **x402 endpoint** | Real — returns 402 with payment requirements, Gateway-compatible | Standard protocol |
 | **GCS proof bundles** | Real — persists across cold starts, carrier-retrievable | Production infrastructure |

@@ -36,31 +36,19 @@ DENY_FLOOR = 75            # score 75-100 → DENY
 CONFIDENCE_FLOOR = 0.60    # below this → STEP_UP regardless of score
 
 # ── Sanctioned addresses (real OFAC SDN designations) ────────────────
-# These are genuine Ethereum addresses on OFAC's Specially Designated
-# Nationals (SDN) list. All are valid 40-hex EVM addresses, stored
-# lowercased for exact-match comparison. A production system syncs the
-# full list from Treasury's SDN feed; this verified subset demonstrates
-# real sanctions screening against publicly documented designations.
+# Screening is delegated to circle.sanctions, which maintains the active
+# set: a hand-verified static seed of genuinely OFAC-listed ETH addresses,
+# optionally merged with a live sync of OFAC's official SDN export. The
+# active list's provenance (source, publish date, content digest) is
+# attested inside every receipt via `sanctions_feed`.
 #
-# Sources: US Treasury OFAC SDN List — Tornado Cash (2022-08-08) and
-# Lazarus Group / DPRK designations. Screening is EXACT match only,
-# mirroring how real compliance systems operate (no prefix heuristics
-# that would produce false positives).
-SANCTIONED_ADDRESSES = frozenset({
-    # Tornado Cash — OFAC designated 2022-08-08
-    "0x8589427373d6d84e98730d7795d8f6f8731fda16",  # TC: donation
-    "0x722122df12d4e14e13ac3b6895a86e84145b6967",  # TC: router
-    "0xdd4c48c0b24039969fc16d1cdf626eab821d3384",  # TC: pool
-    "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b",  # TC: pool
-    "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf",  # TC: 10 ETH pool
-    "0xa160cdab225685da1d56aa342ad8841c3b53f291",  # TC: 100 ETH pool
-    "0xf60dd140cff0706bae9cd734ac3ae76ad9ebc32a",  # TC: proxy
-    "0xba214c1c1928a32bffe790263e38b4af9bfcd659",  # TC: pool
-    # Lazarus Group / DPRK — OFAC designated
-    "0x098b716b8aaf21512996dc57eb0615e2383e2f96",  # Ronin bridge exploiter
-    "0xa0e1c89ef1a489c9c7de96311ed5ce5d32c20e4b",  # Lazarus
-    "0x3cffd56b47b7b41c56258d9c7731abadc360e073",  # Lazarus
-})
+# `SANCTIONED_ADDRESSES` is re-exported for backward compatibility and
+# equals the always-available static seed. Live-synced additions are
+# reachable via circle.sanctions.active_addresses(). Screening is EXACT
+# match only — no prefix heuristics that would produce false positives.
+from circle import sanctions as _sanctions
+
+SANCTIONED_ADDRESSES = _sanctions.STATIC_OFAC_ETH
 
 # Known high-risk service name patterns
 HIGH_RISK_SERVICES = frozenset({
@@ -99,6 +87,7 @@ class RiskAssessment:
     model_version: str = MODEL_VERSION
     feature_version: str = FEATURE_VERSION
     evaluated_at: str = ""
+    sanctions_feed: dict = field(default_factory=dict)  # OFAC list provenance
 
     def __post_init__(self):
         if not self.evaluated_at:
@@ -124,6 +113,7 @@ class RiskAssessment:
             "model_version": self.model_version,
             "feature_version": self.feature_version,
             "evaluated_at": self.evaluated_at,
+            "sanctions_feed": self.sanctions_feed,
         }
 
 
@@ -145,7 +135,7 @@ def _check_sanctions(payee: str) -> tuple[bool, str]:
     false positives that would wrongly block legitimate counterparties.
     """
     normalized = payee.lower().strip()
-    if normalized in SANCTIONED_ADDRESSES:
+    if normalized in _sanctions.active_addresses():
         return True, f"OFAC SDN exact match: {normalized[:10]}…{normalized[-6:]}"
     return False, ""
 
@@ -294,15 +284,24 @@ def evaluate_risk(
     source_wallet: str,
     chain: str,
     known_payees: Optional[list[str]] = None,
+    behavioral=None,
 ) -> RiskAssessment:
     """Evaluate transaction risk using multi-signal analysis.
 
     Each signal inspects actual properties of the input data:
-    - Sanctions screening against real OFAC-listed addresses
+    - Sanctions screening against the live OFAC SDN list
     - Structural prompt injection detection (not keyword matching)
     - Amount anomaly relative to service context
     - Payee address validation and reputation
     - Service risk classification
+    - Behavioral anomaly vs the agent's own history (optional)
+
+    Args:
+        behavioral: an optional circle.behavioral.BehavioralEngine. When
+            provided, its read-only assessment (amount-deviation, velocity,
+            novel-counterparty) is folded into the score. Recording new
+            history is the caller's responsibility (engine.record(...)), so
+            pre-flight/quick-check scoring never mutates history.
     """
     all_signals = []
     all_details = {}
@@ -353,6 +352,17 @@ def evaluate_risk(
     all_signals.extend(svc_signals)
     all_details.update(svc_details)
 
+    # 6. Behavioral anomaly (optional; read-only against agent history)
+    if behavioral is not None:
+        try:
+            bsig = behavioral.assess(source_wallet, payee, amount_f, service)
+            total_score += bsig.score
+            confidence += bsig.confidence_delta
+            all_signals.extend(bsig.signals)
+            all_details.update(bsig.details)
+        except Exception:  # noqa: BLE001 — behavioral is advisory, never fatal
+            pass
+
     # Injection escalation (applied after all components accumulate). A
     # detected manipulation attempt in the justification text is
     # disqualifying: we never auto-APPROVE a payment whose reason is trying
@@ -380,4 +390,5 @@ def evaluate_risk(
         confidence=round(confidence, 2),
         signals=all_signals,
         signal_details=all_details,
+        sanctions_feed=_sanctions.feed_metadata(),
     )

@@ -89,6 +89,22 @@ async def lifespan(app: FastAPI):
     from app.scheduler import start_scheduler
     start_scheduler()
 
+    # Warm-start the OFAC SDN list from cache, then keep it synced live so
+    # sanctions screening reflects the current designation list (and receipts
+    # can attest which published version was used).
+    try:
+        from circle import sanctions
+        sanctions.start_background_refresh(interval_hours=12.0)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Sanctions background refresh not started: %s", e)
+
+    # Restore behavioral history so per-agent baselines survive restarts.
+    try:
+        from circle.behavioral import get_engine
+        get_engine()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Behavioral engine not restored: %s", e)
+
     yield
 
 app = FastAPI(title="Verigate Live Dashboard", lifespan=lifespan)
@@ -603,6 +619,9 @@ async def api_check(request: Request):
     service = body.get("service", "unknown")
     reason = body.get("reason", "")
 
+    from circle.behavioral import get_engine
+    behavioral = get_engine()
+
     risk = evaluate_risk(
         payee=payee,
         amount=amount,
@@ -610,7 +629,16 @@ async def api_check(request: Request):
         reason=reason,
         source_wallet=CUSTOMER_WALLET,
         chain=state["chain"],
+        behavioral=behavioral,
     )
+
+    # Record this observation so the agent's behavioral baseline grows, then
+    # persist so it survives restarts (continuous autonomous operation).
+    try:
+        behavioral.record(CUSTOMER_WALLET, payee, float(amount), service)
+        behavioral.persist()
+    except Exception:  # noqa: BLE001
+        pass
 
     return {
         "decision": risk.decision,
@@ -620,6 +648,7 @@ async def api_check(request: Request):
         "signals": risk.signals,
         "model_version": risk.model_version,
         "evaluated_at": risk.evaluated_at,
+        "sanctions_feed": risk.sanctions_feed,
         "thresholds": {
             "approve_ceiling": 39,
             "step_up_range": "40-74",
@@ -750,7 +779,10 @@ async def autonomous_check(request: Request):
         if not ADMIN_TOKEN or auth != ADMIN_TOKEN:
             return JSONResponse({"error": "Unauthorized"}, status_code=401)
     from circle.risk_scorer import evaluate_risk
+    from circle.behavioral import get_engine
     import secrets as _secrets
+
+    behavioral = get_engine()
 
     scenarios = [
         {"payee": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD28", "amount": "0.50",
@@ -766,7 +798,13 @@ async def autonomous_check(request: Request):
         risk = evaluate_risk(
             payee=s["payee"], amount=s["amount"], service=s["service"],
             reason=s["reason"], source_wallet=CUSTOMER_WALLET, chain=state["chain"],
+            behavioral=behavioral,
         )
+        # Record the observation so hourly runs build a real baseline over time.
+        try:
+            behavioral.record(CUSTOMER_WALLET, s["payee"], float(s["amount"]), s["service"])
+        except Exception:  # noqa: BLE001
+            pass
         results.append({
             "intent": s,
             "decision": risk.decision,
@@ -798,6 +836,12 @@ async def autonomous_check(request: Request):
         gcs_path = store_proof_bundle(bundle, run_id)
     except Exception as e:
         logger.warning(f"Autonomous check GCS storage failed: {e}")
+
+    # Persist the updated behavioral baseline so it accumulates across runs.
+    try:
+        behavioral.persist()
+    except Exception:  # noqa: BLE001
+        pass
 
     return {
         "status": "completed",
