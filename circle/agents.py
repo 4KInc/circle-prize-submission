@@ -203,7 +203,7 @@ class AuditorAgent(AgentBase):
 
     def generate_compliance_report(
         self, receipts: list[dict], isolations: list[dict],
-        spend: float, verification_status: str,
+        spend, verification_status: str,
     ) -> SignedArtifact:
         """Generate a comprehensive compliance report using Gemini."""
         # Try Gemini for the narrative
@@ -234,7 +234,7 @@ class AuditorAgent(AgentBase):
             client = genai.Client(api_key=api_key)
             prompt = f"""Analyze this AI agent payment governance data and produce a compliance narrative.
 
-Governed spend: ${spend:.2f} USDC
+Governed spend: {spend} USDC
 Receipts: {len(receipts)} ({sum(1 for r in receipts if r.get('body',{}).get('decision')=='approve')} approved, {sum(1 for r in receipts if r.get('body',{}).get('decision')=='deny')} denied)
 Isolations: {len(isolations)} rogue agents contained
 Verification: {verification}
