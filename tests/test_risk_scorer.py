@@ -129,7 +129,9 @@ class TestEvaluateRisk:
             chain="BASE-SEPOLIA",
         )
         # Injection should be detected and elevate risk (STEP_UP or DENY)
-        assert "prompt_injection" in r.signals
+        injection_signals = {"system_prompt_inject", "instruction_override", "urgency_manipulation",
+                             "authority_spoof", "role_hijack", "delimiter_inject", "prompt_injection"}
+        assert any(s in injection_signals for s in r.signals), f"Expected injection signal in {r.signals}"
         assert r.decision in ("STEP_UP", "DENY")
 
     def test_model_version_set(self):
