@@ -1971,13 +1971,19 @@ async function toggleBundlePreview(idx,name){
     const d=await resp.json();
     const receipts=d.receipts||[];
     const artifacts=d.artifacts||[];
-    const verification=d.verification||{};
+    const verRaw=d.verification||{};
+    const verification=typeof verRaw==='object'?verRaw.overall||'--':verRaw;
     const agents=d.agents||{};
+    const agentCount=typeof agents==='object'&&!Array.isArray(agents)?Object.keys(agents).length:(Array.isArray(agents)?agents.length:0);
+    // Scheduler bundles: single check in d.check or array in d.checks
+    const schedChecks=d.checks||[];
+    const schedCheck=d.check||null;
+    const isSchedulerBundle=!receipts.length&&(schedCheck||schedChecks.length);
     let h='<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">';
-    h+='<div class="rounded-lg p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Receipts</div><div class="font-display text-lg font-bold text-on-surface">'+receipts.length+'</div></div>';
+    h+='<div class="rounded-lg p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Receipts</div><div class="font-display text-lg font-bold text-on-surface">'+(isSchedulerBundle?'1 check':receipts.length)+'</div></div>';
     h+='<div class="rounded-lg p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Artifacts</div><div class="font-display text-lg font-bold text-on-surface">'+artifacts.length+'</div></div>';
-    h+='<div class="rounded-lg p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Agents</div><div class="font-display text-lg font-bold text-on-surface">'+Object.keys(agents).length+'</div></div>';
-    h+='<div class="rounded-lg p-3 border border-'+(verification==='PASS'?'primary-fixed':'error')+'/20" style="background:rgba('+(verification==='PASS'?'184,246,0':'255,107,107')+',0.04)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Verification</div><div class="font-display text-lg font-bold '+(verification==='PASS'?'text-primary-fixed':'text-error')+'">'+(verification||'--')+'</div></div>';
+    h+='<div class="rounded-lg p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Agents</div><div class="font-display text-lg font-bold text-on-surface">'+agentCount+'</div></div>';
+    h+='<div class="rounded-lg p-3 border border-'+(verification==='PASS'?'primary-fixed':'error')+'/20" style="background:rgba('+(verification==='PASS'?'184,246,0':'255,107,107')+',0.04)"><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Verification</div><div class="font-display text-lg font-bold '+(verification==='PASS'?'text-primary-fixed':'text-error')+'">'+verification+'</div></div>';
     h+='</div>';
     // Receipt details
     if(receipts.length){
@@ -1997,6 +2003,28 @@ async function toggleBundlePreview(idx,name){
         h+='</div>';
       });
       h+='</div>';
+    }
+    // Scheduler bundles: show the autonomous check result(s)
+    if(isSchedulerBundle){
+      const allChecks=schedCheck?[schedCheck]:schedChecks;
+      const summary=d.summary||d.scheduler||{};
+      h+='<div class="font-mono text-[9px] text-on-surface-variant/40 uppercase tracking-wider mb-2">Autonomous Security Check'+(allChecks.length>1?'s ('+allChecks.length+')':'')+'</div>';
+      h+='<div class="space-y-1.5">';
+      allChecks.forEach(ck=>{
+        const dec=ck.decision||'?';const score=ck.score||0;const band=ck.band||'?';
+        const signals=ck.signals||[];const intent=ck.intent||{};
+        const isApprove=dec==='APPROVE';const isDeny=dec==='DENY';
+        const color=isApprove?'primary-fixed':(isDeny?'error':'[#ffaf00]');
+        h+='<div class="flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[.04]" style="background:rgba(255,255,255,0.015)">';
+        h+='<span class="font-mono text-[10px] font-bold text-'+color+'">'+dec+'</span>';
+        h+='<span class="font-mono text-[10px] text-on-surface-variant/50">score '+score+'</span>';
+        h+='<span class="font-mono text-[10px] text-on-surface-variant/50">'+band+'</span>';
+        if(signals.length)h+='<span class="font-mono text-[9px] text-on-surface-variant/40 ml-auto">'+signals.join(', ')+'</span>';
+        h+='</div>';
+      });
+      h+='</div>';
+      if(summary.total_runs)h+='<div class="mt-2 font-mono text-[10px] text-on-surface-variant/30">Scheduler: '+summary.total_runs+' total runs · $'+(summary.total_earned||0).toFixed(2)+' earned</div>';
+      h+='<div class="mt-1 font-mono text-[10px] text-on-surface-variant/30">'+d.timestamp?.substring(0,19)+'</div>';
     }
     if(d.merkle_root)h+='<div class="mt-3 font-mono text-[10px] text-on-surface-variant/30 truncate">Merkle root: '+d.merkle_root+'</div>';
     el.innerHTML=h;
