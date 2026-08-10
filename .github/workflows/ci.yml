@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: lint · type-check · test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[all]"
+          pip install pytest pytest-cov ruff mypy
+
+      # Lint gates on the security-critical core + its tests — the code
+      # whose correctness a reviewer must trust. Fully clean.
+      - name: Ruff (trusted core, gating)
+        run: >
+          ruff check
+          circle/sanctions.py circle/behavioral.py circle/risk_scorer.py
+          tests/test_sanctions.py tests/test_behavioral.py
+          tests/test_risk_scorer_adversarial.py tests/test_risk_explainability.py
+
+      - name: Ruff (full tree, non-gating)
+        run: ruff check . || true
+
+      # The risk engine, sanctions screening, and behavioral layer are fully
+      # typed. mypy is scoped to those files via pyproject.toml.
+      - name: Mypy (trusted core)
+        run: mypy
+
+      - name: Pytest + coverage
+        run: pytest --cov --cov-report=term-missing

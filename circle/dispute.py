@@ -32,8 +32,7 @@ import json
 import logging
 import os
 import sys
-from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger("circle.dispute")
@@ -71,7 +70,7 @@ def export_chain(
 
     export = {
         "schema": "verigate-chain-export-v0.2",
-        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "exported_at": datetime.now(UTC).isoformat(),
         "tenant": executor.tenant,
         "public_key_jwk": executor.get_public_key_jwk(),
         "public_key_anchor": public_key_anchor,
@@ -109,7 +108,7 @@ def verify_export(export_path: str) -> dict:
     if os.path.isdir(ENGINE_PATH) and ENGINE_PATH not in sys.path:
         sys.path.insert(0, ENGINE_PATH)
 
-    from circle.verifier import verify_payment_chain, print_report
+    from circle.verifier import print_report, verify_payment_chain
 
     with open(export_path) as f:
         export = json.load(f)
@@ -218,11 +217,11 @@ def verify_export(export_path: str) -> dict:
 
 def generate_dispute_report_pdf(export_path: str, output_path: str | None = None) -> str:
     """Generate a PDF dispute resolution report from an exported chain."""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import mm
     from reportlab.lib.colors import HexColor
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     result = verify_export(export_path)
 
@@ -244,7 +243,7 @@ def generate_dispute_report_pdf(export_path: str, output_path: str | None = None
 
     elements.append(Paragraph("Verigate Dispute Resolution Report", title_s))
     elements.append(Paragraph(f"Export: {export_path}", small_s))
-    elements.append(Paragraph(f"Verified: {datetime.now(timezone.utc).isoformat()}", small_s))
+    elements.append(Paragraph(f"Verified: {datetime.now(UTC).isoformat()}", small_s))
     elements.append(Spacer(1, 8*mm))
 
     # Verdict

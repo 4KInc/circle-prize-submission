@@ -1,5 +1,7 @@
 # Verigate — Circle Agentic Economy Prize Submission
 
+[![CI](https://github.com/4KInc/circle-prize-submission/actions/workflows/ci.yml/badge.svg)](https://github.com/4KInc/circle-prize-submission/actions/workflows/ci.yml)
+
 > Submission for the [$50K Circle Agentic Economy Prize](https://www.xprize.org/prizes/build-with-gemini) (Build with Gemini XPRIZE)
 
 ## What Is This?
@@ -274,8 +276,10 @@ All three are Circle Agent Wallets with independent spending policies. Mainnet t
 - **ERC-8004 reputation** — isolation events published to on-chain registry
 - **Validator can DENY** — evidence purchase has real consequences (not always confirmed)
 - **GCS persistence** — proof bundles, sanctions cache, and behavioral history survive Cloud Run cold starts
-- **Live OFAC SDN sync** — background daemon refreshes the sanctions set; every decision attests which feed version it screened against
-- **Behavioral baseline** — per-agent transaction history drives amount/velocity/novelty anomaly signals (honest statistics, deterministic)
+- **Live OFAC SDN sync** — background daemon refreshes the sanctions set via a streaming parser (handles the real ~28MB feed); every decision attests which feed version it screened against
+- **Behavioral baseline** — per-agent transaction history drives amount/velocity/novelty anomaly signals (honest statistics, deterministic); baseline is reconstructed from stored proof bundles on cold start
+- **Explainable verdicts** — every score is attributed to named categories (`contributions`) with a one-line `rationale` naming the threshold rule that fired — no black box
+- **CI-enforced rigor** — GitHub Actions gates the security-critical core on ruff (lint), mypy (types), and the full pytest suite on every push
 
 ### Stack
 
@@ -302,7 +306,7 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
 | Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
 | Demo command | `make demo` |
-| Tests | 86 passing (policy, risk scorer, adversarial injection, sanctions parser/feed, behavioral anomaly, receipts, merkle, isolation) |
+| Tests | 102 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) — CI-enforced with ruff + mypy |
 
 ## Pre-Existing Work Disclosure
 
@@ -317,9 +321,11 @@ Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built
 | **Three-state engine** | Real — APPROVE/STEP_UP/DENY with autonomous evidence purchase | Core innovation, fully functional |
 | **Mainnet transactions** | Real — STEP_UP flow on Base mainnet ([tx](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732)) | Not just testnet |
 | **Receipt chain** | Real — Ed25519 signed, hash-chained, Merkle-anchored | Tamper-evident audit trail |
-| **Risk scorer** | Real — deterministic, tested (44 tests), same input = same score | Server-side, not fake |
-| **OFAC SDN screening** | Real — hand-verified seed + live SDN-feed sync, exact-match, feed version attested in receipt | Not a hardcoded demo list |
-| **Behavioral layer** | Real — robust-z/velocity/novelty over persisted per-agent history; honest statistics, not ML | Deterministic, no fabricated "ML" |
+| **Risk scorer** | Real — deterministic, tested (42 risk tests), same input = same score | Server-side, not fake |
+| **Explainable verdicts** | Real — per-category `contributions` + one-line `rationale` in every response and receipt | Auditable, not a black box |
+| **OFAC SDN screening** | Real — hand-verified seed + live SDN-feed streaming sync, exact-match, feed version attested in receipt | Not a hardcoded demo list |
+| **Behavioral layer** | Real — robust-z/velocity/novelty over persisted per-agent history, bootstrapped from stored bundles; honest statistics, not ML | Deterministic, no fabricated "ML" |
+| **CI pipeline** | Real — GitHub Actions: ruff + mypy + 102-test pytest on every push | Rigor is enforced, not just claimed |
 | **Gateway nanopayments** | Real — facilitator API integration (settle, verify, balances) | Circle's newest product |
 | **x402 endpoint** | Real — returns 402 with payment requirements, Gateway-compatible | Standard protocol |
 | **GCS proof bundles** | Real — persists across cold starts, carrier-retrievable | Production infrastructure |

@@ -11,11 +11,8 @@ Shows:
 
 from __future__ import annotations
 
-import json
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
 
 PROTOCOL_FEE_BPS = 25  # 0.25% protocol fee on governed spend
 
@@ -53,7 +50,7 @@ def generate_dashboard(
         for p in payments if p.get("decision") == "approve" and p.get("transfer")
     )
     protocol_fee = total_spend * PROTOCOL_FEE_BPS / 10000
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     explorer_base = "https://sepolia.basescan.org" if "SEPOLIA" in chain.upper() else "https://basescan.org"
 

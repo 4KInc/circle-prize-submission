@@ -521,6 +521,27 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
           <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-2">Risk Factors</div>
           <div id="tryit-factors" class="flex flex-wrap gap-1.5"></div>
         </div>
+        <!-- Rationale: why this decision -->
+        <div id="tryit-rationale-box" class="hidden mb-4 rounded-xl p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)">
+          <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1">Why this decision</div>
+          <div id="tryit-rationale" class="text-xs text-on-surface-variant/80 leading-relaxed"></div>
+        </div>
+        <!-- Score attribution: per-category contributions -->
+        <div id="tryit-contrib-box" class="hidden mb-4">
+          <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-2">Score Attribution</div>
+          <div id="tryit-contrib" class="space-y-1"></div>
+        </div>
+        <!-- OFAC feed provenance + behavioral baseline -->
+        <div id="tryit-provenance-box" class="hidden mb-4 grid grid-cols-2 gap-2">
+          <div class="rounded-xl p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)">
+            <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1">OFAC SDN Feed</div>
+            <div id="tryit-sanctions" class="text-[11px] text-on-surface-variant/70 font-mono leading-relaxed"></div>
+          </div>
+          <div class="rounded-xl p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)">
+            <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1">Agent Baseline</div>
+            <div id="tryit-baseline" class="text-[11px] text-on-surface-variant/70 font-mono leading-relaxed"></div>
+          </div>
+        </div>
         <!-- Step-up details (hidden unless STEP_UP) -->
         <div id="tryit-stepup-box" class="hidden mb-4 rounded-xl p-4 border border-[#ffaf00]/20" style="background:rgba(255,175,0,0.04)">
           <div class="flex items-center gap-2 mb-2">
@@ -1898,7 +1919,46 @@ async function runTryIt(){
       'unknown_payee':'Payee not in known allowlist',
     };
     const factorsEl=document.getElementById('tryit-factors');
-    factorsEl.innerHTML=factors.map(f=>'<span class="font-mono text-[10px] px-2 py-1 rounded-full border border-white/[.06] cursor-help" style="background:rgba(255,255,255,0.03);color:'+color+'" title="'+(signalExplain[f]||f)+'">'+f+'</span>').join('');
+    factorsEl.innerHTML=factors.length?factors.map(f=>'<span class="font-mono text-[10px] px-2 py-1 rounded-full border border-white/[.06] cursor-help" style="background:rgba(255,255,255,0.03);color:'+color+'" title="'+(signalExplain[f]||f)+'">'+f+'</span>').join(''):'<span class="text-xs text-on-surface-variant/50">No risk signals — clean baseline</span>';
+
+    // Rationale — the honest "why this decision" sentence from the engine
+    const ratBox=document.getElementById('tryit-rationale-box');
+    if(d.rationale){document.getElementById('tryit-rationale').textContent=d.rationale;ratBox.classList.remove('hidden')}else{ratBox.classList.add('hidden')}
+
+    // Score attribution — per-category contributions (fully auditable)
+    const contribBox=document.getElementById('tryit-contrib-box');
+    const contribs=(d.contributions||[]).filter(c=>c.score_delta>0).sort((a,b)=>b.score_delta-a.score_delta);
+    if(contribs.length){
+      const maxDelta=Math.max.apply(null,contribs.map(c=>c.score_delta));
+      document.getElementById('tryit-contrib').innerHTML=contribs.map(c=>{
+        const pct=Math.max(6,Math.round(100*c.score_delta/maxDelta));
+        const label=c.category.replace(/_/g,' ');
+        return '<div class="flex items-center gap-2">'+
+          '<div class="w-24 shrink-0 font-mono text-[10px] text-on-surface-variant/60 capitalize">'+label+'</div>'+
+          '<div class="flex-1 h-2 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.05)"><div style="width:'+pct+'%;height:100%;background:'+color+'"></div></div>'+
+          '<div class="w-10 text-right font-mono text-[10px]" style="color:'+color+'">+'+c.score_delta+'</div>'+
+        '</div>';
+      }).join('');
+      contribBox.classList.remove('hidden');
+    }else{contribBox.classList.add('hidden')}
+
+    // Provenance — OFAC feed version + agent behavioral baseline
+    const provBox=document.getElementById('tryit-provenance-box');
+    const sf=d.sanctions_feed||{};
+    const ab=d.agent_baseline||{};
+    if(sf.source||ab.observations!==undefined){
+      const src=sf.source==='ofac-sdn-live'?'live sync':(sf.source||'static seed');
+      document.getElementById('tryit-sanctions').innerHTML=
+        '<div>'+(sf.entry_count||0)+' ETH addrs · '+src+'</div>'+
+        (sf.published?'<div class="text-on-surface-variant/50">pub '+sf.published+'</div>':'')+
+        (sf.digest?'<div class="text-on-surface-variant/40 break-all">'+String(sf.digest).slice(0,22)+'…</div>':'');
+      const obs=ab.observations||0;
+      document.getElementById('tryit-baseline').innerHTML=
+        '<div>'+obs+' prior obs · '+(ab.distinct_payees||0)+' payees</div>'+
+        (ab.median_amount!==null&&ab.median_amount!==undefined?'<div class="text-on-surface-variant/50">median $'+ab.median_amount+'</div>':'')+
+        (obs===0?'<div class="text-on-surface-variant/40">cold start — no history yet</div>':'');
+      provBox.classList.remove('hidden');
+    }else{provBox.classList.add('hidden')}
 
     // Step-up box
     const stepBox=document.getElementById('tryit-stepup-box');
@@ -1916,7 +1976,12 @@ async function runTryIt(){
       confidence:confidence,
       risk_band:band,
       factors:factors,
+      rationale:d.rationale,
+      contributions:d.contributions,
+      sanctions_feed:d.sanctions_feed,
+      agent_baseline:d.agent_baseline,
       model_version:d.model_version,
+      feature_version:d.feature_version,
       thresholds:d.thresholds,
       intent:{payee,amount,service,reason},
       settlement_method:'circle-gateway-nanopayment',
@@ -1942,6 +2007,7 @@ async function runTryIt(){
     document.getElementById('tryit-factors').innerHTML='<span class="text-xs text-on-surface-variant/60">The server may be waking from sleep. Click Check Payment again.</span>';
     document.getElementById('tryit-hash').textContent='--';
     document.getElementById('tryit-stepup-box').classList.add('hidden');
+    ['tryit-rationale-box','tryit-contrib-box','tryit-provenance-box'].forEach(id=>document.getElementById(id).classList.add('hidden'));
   });
 }
 

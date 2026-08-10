@@ -32,7 +32,7 @@ import hashlib
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
@@ -117,7 +117,7 @@ class X401Issuer:
         ttl_seconds: int = 3600,
     ) -> X401Credential:
         """Issue a new x401 credential authorizing an agent."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         from datetime import timedelta
         expires = now + timedelta(seconds=ttl_seconds)
 
@@ -223,7 +223,7 @@ class X401Verifier:
             )
 
         # Check expiry
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = datetime.fromisoformat(credential.expires_at)
         if now > expires:
             errors.append(f"Credential expired at {credential.expires_at}")

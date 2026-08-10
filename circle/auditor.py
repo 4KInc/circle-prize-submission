@@ -14,7 +14,7 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ENGINE_PATH = os.path.join(os.path.dirname(__file__), "..", "engine")
@@ -168,8 +168,8 @@ def _fallback_report(
 ) -> dict:
     """Deterministic fallback when Gemini is unavailable."""
     return {
-        "report_id": f"audit-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "report_id": f"audit-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}",
+        "generated_at": datetime.now(UTC).isoformat(),
         "executive_summary": (
             f"Verigate governed ${spend_summary['total_spend_usdc']:.2f} USDC in agent payments. "
             f"{spend_summary['total_approved']} payments approved, {spend_summary['total_denied']} blocked. "
@@ -204,11 +204,11 @@ def _fallback_report(
 
 def export_report_pdf(report: dict, output_path: str | None = None) -> str:
     """Export the compliance report to PDF using reportlab."""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import mm
     from reportlab.lib.colors import HexColor
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     out = Path(output_path or "/tmp/verigate-compliance-report.pdf")
     doc = SimpleDocTemplate(str(out), pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)

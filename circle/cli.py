@@ -50,7 +50,7 @@ async def _run_async(args: list[str], timeout: int = 180) -> dict:
     )
     try:
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         proc.kill()
         raise RuntimeError(f"circle {' '.join(args)} timed out after {timeout}s")
     if proc.returncode != 0:

@@ -32,8 +32,9 @@ import logging
 import re
 import threading
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from collections.abc import Callable, Iterable, Iterator
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 logger = logging.getLogger("circle.sanctions")
 
@@ -137,27 +138,71 @@ def is_sanctioned(address: str) -> bool:
     return address.lower().strip() in _snapshot.addresses
 
 
+# Overlap retained between streamed chunks so an ETH id block that straddles
+# a chunk boundary is still matched. Must exceed the longest possible match
+# span (idType…idNumber block ≈ 120–200 chars even with pretty-print indent).
+_STREAM_OVERLAP = 512
+_HEADER_SCAN_CAP = 65536  # publish date / record count live in the file header
+
+
+def stream_parse_sdn(chunks: Iterable[str]) -> tuple[frozenset[str], str | None, int | None]:
+    """Incrementally parse an iterable of SDN XML text chunks.
+
+    Production-grade path for the real ~28MB feed: never materializes the
+    whole document, keeps only a small overlap buffer across chunk
+    boundaries, and scans just the header for publish date / record count.
+    Deterministic; a boundary-straddling address is still captured because
+    the overlap tail is prepended to the next chunk (the address set dedups
+    any re-matched entries).
+    """
+    addresses: set[str] = set()
+    published: str | None = None
+    record_count: int | None = None
+    header_parts: list[str] = []
+    header_len = 0
+    carry = ""
+    for chunk in chunks:
+        if not chunk:
+            continue
+        buf = carry + chunk
+        for m in _ETH_ID_RE.finditer(buf):
+            addresses.add(m.group(1).lower())
+        if (published is None or record_count is None) and header_len < _HEADER_SCAN_CAP:
+            header_parts.append(chunk)
+            header_len += len(chunk)
+            htext = "".join(header_parts)
+            if published is None:
+                pm = _PUBLISH_DATE_RE.search(htext)
+                if pm:
+                    published = pm.group(1)
+            if record_count is None:
+                cm = _RECORD_COUNT_RE.search(htext)
+                if cm:
+                    record_count = int(cm.group(1))
+        carry = buf[-_STREAM_OVERLAP:] if len(buf) > _STREAM_OVERLAP else buf
+    return frozenset(addresses), published, record_count
+
+
 def parse_sdn_xml(text: str) -> tuple[frozenset[str], str | None, int | None]:
     """Parse OFAC SDN XML text → (eth_addresses, publish_date, record_count).
 
     Pure function — no I/O. Deterministic. Safe to unit-test with a fixture.
+    Delegates to the streaming parser (single chunk) so both paths share one
+    implementation and stay behaviorally identical.
     """
-    addresses = {m.group(1).lower() for m in _ETH_ID_RE.finditer(text)}
-    pub_m = _PUBLISH_DATE_RE.search(text)
-    cnt_m = _RECORD_COUNT_RE.search(text)
-    published = pub_m.group(1) if pub_m else None
-    record_count = int(cnt_m.group(1)) if cnt_m else None
-    return frozenset(addresses), published, record_count
+    return stream_parse_sdn([text])
 
 
-def _default_fetcher(timeout: float) -> str:
+def _default_stream_fetcher(timeout: float) -> Iterator[str]:
+    """Stream the live OFAC SDN export in chunks (no 28MB in-memory copy)."""
     import httpx
-    resp = httpx.get(OFAC_SDN_URL, timeout=timeout, follow_redirects=True)
-    resp.raise_for_status()
-    return resp.text
+    with httpx.stream("GET", OFAC_SDN_URL, timeout=timeout, follow_redirects=True) as resp:
+        resp.raise_for_status()
+        yield from resp.iter_text()
 
 
-def refresh(fetcher=None, timeout: float = 90.0, persist: bool = True) -> SanctionsSnapshot:
+def refresh(fetcher: Callable[[float], str] | None = None,
+            timeout: float = 90.0, persist: bool = True) -> SanctionsSnapshot:
     """Fetch + parse the live OFAC SDN feed and merge into the active set.
 
     The active set is always seed ∪ live, so a live sync can only ADD
@@ -165,16 +210,18 @@ def refresh(fetcher=None, timeout: float = 90.0, persist: bool = True) -> Sancti
     snapshot is preserved and returned unchanged (fail-safe).
 
     Args:
-        fetcher: callable(timeout)->str returning SDN XML. Defaults to httpx.
-                 Injectable for tests (no network).
+        fetcher: callable(timeout)->str returning the FULL SDN XML. Injectable
+                 for tests (no network). When omitted, the production path
+                 streams the live feed in chunks via ``stream_parse_sdn``.
         timeout: fetch timeout in seconds.
         persist: write the parsed set to the GCS/local cache on success.
     """
     global _snapshot
-    fetch = fetcher or _default_fetcher
     try:
-        text = fetch(timeout)
-        eth, published, _record_count = parse_sdn_xml(text)
+        if fetcher is not None:
+            eth, published, _record_count = parse_sdn_xml(fetcher(timeout))
+        else:
+            eth, published, _record_count = stream_parse_sdn(_default_stream_fetcher(timeout))
         if not eth:
             logger.warning("OFAC refresh parsed 0 ETH addresses — keeping current snapshot")
             return _snapshot
@@ -183,7 +230,7 @@ def refresh(fetcher=None, timeout: float = 90.0, persist: bool = True) -> Sancti
             addresses=merged,
             source="ofac-sdn-live",
             published=published,
-            fetched_at=datetime.now(timezone.utc).isoformat(),
+            fetched_at=datetime.now(UTC).isoformat(),
             entry_count=len(merged),
             digest=_digest(merged),
         )

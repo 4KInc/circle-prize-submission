@@ -10,9 +10,9 @@ than the toy string match it used to.
 import pytest
 
 from circle.risk_scorer import (
-    evaluate_risk,
-    SANCTIONED_ADDRESSES,
     DENY_FLOOR,
+    SANCTIONED_ADDRESSES,
+    evaluate_risk,
 )
 
 
@@ -143,7 +143,7 @@ class TestValidatorIndependentRisk:
         assert "well-formed" in reason
 
     def test_amount_over_ceiling_flagged(self):
-        from app.validator import _independent_risk, VALIDATOR_AMOUNT_CEILING
+        from app.validator import VALIDATOR_AMOUNT_CEILING, _independent_risk
         deny, reason = _independent_risk("0x" + "ab" * 20,
                                          str(VALIDATOR_AMOUNT_CEILING + 1))
         assert deny is True

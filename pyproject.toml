@@ -48,6 +48,37 @@ Homepage = "https://github.com/4KInc/circle-prize-submission"
 Repository = "https://github.com/4KInc/circle-prize-submission"
 Documentation = "https://github.com/4KInc/circle-prize-submission#readme"
 
+# ── Tooling ──────────────────────────────────────────────────────────
+# Lint + type-check are enforced in CI, but scoped to the security-critical
+# core (the risk engine, sanctions screening, behavioral layer). Those are
+# the modules whose correctness a reviewer must be able to trust; they are
+# fully typed and clean. The rest of the app is checked for lint only.
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["engine", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true
+# The trusted core is type-checked strictly; app glue is not gated on mypy.
+files = ["circle/sanctions.py", "circle/behavioral.py", "circle/risk_scorer.py"]
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["circle", "verigate", "app"]
+omit = ["*/tests/*", "engine/*"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

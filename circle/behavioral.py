@@ -29,11 +29,23 @@ import logging
 import statistics
 import threading
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import datetime
 
 logger = logging.getLogger("circle.behavioral")
 
 HISTORY_STATE_PATH = "behavioral/agent_history.json"
+
+
+def _epoch_from_iso(ts: str | None) -> float:
+    """Best-effort ISO-8601 → epoch seconds; falls back to now() on junk."""
+    if ts:
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+        except (ValueError, TypeError):
+            pass
+    return time.time()
 
 # Tunables (declared, auditable — not magic numbers buried in code).
 MAX_HISTORY_PER_AGENT = 500     # cap memory / state size
@@ -54,7 +66,7 @@ class Observation:
         return {"at": self.at, "amount": self.amount, "payee": self.payee, "service": self.service}
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Observation":
+    def from_dict(cls, d: dict) -> Observation:
         return cls(
             at=float(d.get("at", 0.0)),
             amount=float(d.get("amount", 0.0)),
@@ -181,6 +193,11 @@ class BehavioralEngine:
                 del lst[: len(lst) - self._max]
             self._payees.setdefault(agent, set()).add(p)
 
+    def observation_count(self, source_wallet: str) -> int:
+        agent = (source_wallet or "").lower()
+        with self._lock:
+            return len(self._hist.get(agent, []))
+
     def agent_stats(self, source_wallet: str) -> dict:
         """Compact per-agent summary for receipt attestation / dashboards."""
         agent = (source_wallet or "").lower()
@@ -193,6 +210,40 @@ class BehavioralEngine:
             "distinct_payees": payees,
             "median_amount": round(statistics.median(amounts), 4) if amounts else None,
         }
+
+    def bootstrap_from_bundles(self, bundles: Iterable[dict], agent: str) -> int:
+        """Reconstruct history from previously-stored autonomous-check proof
+        bundles when the persisted baseline is empty.
+
+        This is honest history recovery, not fabrication: each observation is
+        a real past decision that this system actually made (payee, amount,
+        service, timestamp read straight from the stored bundle). It only fills
+        a cold engine — de-duplicated against what is already loaded — so a
+        redeploy that predates the behavioral layer still starts with the true
+        baseline the agent accumulated. Returns the number of observations added.
+        """
+        agent_l = (agent or "").lower()
+        with self._lock:
+            existing = {(o.at, o.payee, o.amount) for o in self._hist.get(agent_l, [])}
+        added = 0
+        # Oldest-first so the rolling cap keeps the most recent observations.
+        for bundle in sorted(bundles, key=lambda b: str(b.get("timestamp", ""))):
+            at = _epoch_from_iso(bundle.get("timestamp"))
+            for check in bundle.get("checks", []):
+                intent = check.get("intent", {})
+                payee = str(intent.get("payee", "")).lower()
+                if not payee:
+                    continue
+                try:
+                    amount = float(intent.get("amount", 0.0))
+                except (TypeError, ValueError):
+                    continue
+                if (at, payee, amount) in existing:
+                    continue
+                existing.add((at, payee, amount))
+                self.record(agent_l, payee, amount, str(intent.get("service", "")), at=at)
+                added += 1
+        return added
 
     # ── Persistence ─────────────────────────────────────────────────
     def to_state(self) -> dict:

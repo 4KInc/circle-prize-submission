@@ -4,17 +4,14 @@ Covers the core innovation: APPROVE / STEP_UP / DENY decision logic
 with threshold-based scoring and confidence-gated escalation.
 """
 
-import pytest
 from circle.risk_scorer import (
+    APPROVE_CEILING,
+    CONFIDENCE_FLOOR,
+    DENY_FLOOR,
+    MODEL_VERSION,
     RiskAssessment,
     evaluate_risk,
-    APPROVE_CEILING,
-    STEP_UP_CEILING,
-    DENY_FLOOR,
-    CONFIDENCE_FLOOR,
-    MODEL_VERSION,
 )
-
 
 # ── Decision threshold tests ─────────────────────────────────────────
 

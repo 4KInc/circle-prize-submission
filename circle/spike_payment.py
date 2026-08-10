@@ -15,25 +15,23 @@ Usage:
 from __future__ import annotations
 
 import hashlib
-import json
+import os
 import secrets
 import sys
-import os
 
 # Add the engine to the path so we can import gateway modules
 ENGINE_PATH = os.path.join(os.path.dirname(__file__), "..", "engine")
 if os.path.isdir(ENGINE_PATH) and ENGINE_PATH not in sys.path:
     sys.path.insert(0, ENGINE_PATH)
 
-from gateway.canonical import canonicalize
-from gateway.policy import Policy, PolicyEngine, PolicyRule, EvaluationResult
-from gateway.receipts import ReceiptChain
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from gateway.canonical import canonicalize
+from gateway.policy import Policy, PolicyEngine, PolicyRule
+from gateway.receipts import ReceiptChain
 
 from circle.cli import (
     USDC_ADDRESSES,
     wallet_balance,
-    wallet_list,
     wallet_transfer,
 )
 
@@ -236,7 +234,7 @@ def run_spike():
     print("SPIKE COMPLETE")
     print("=" * 70)
     print(f"  Approved payment tx:  {tx.explorer_url}")
-    print(f"  Denied payment:       blocked pre-settlement (signed denial receipt)")
+    print("  Denied payment:       blocked pre-settlement (signed denial receipt)")
     print(f"  Receipt chain:        {len(receipts)} receipts, hash-linked, Ed25519 signed")
     print(f"  Intent digest bound:  {intent_digest[:40]}...")
     print(f"  JTI bound to Circle:  {token_jti} (idempotency key)")

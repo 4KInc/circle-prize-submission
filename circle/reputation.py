@@ -21,13 +21,12 @@ The contract implements the ERC-8004 data model:
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 logger = logging.getLogger("circle.reputation")
 
@@ -109,7 +108,7 @@ class ReputationWriter:
             isolation_id=isolation_id,
             receipt_hash=receipt_hash,
             reason=reason,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
         # Attempt on-chain publication

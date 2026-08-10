@@ -8,12 +8,13 @@ network: every input is explicit and every assertion is exact.
 
 from __future__ import annotations
 
+import time
+
 from circle.behavioral import (
-    BehavioralEngine,
-    _robust_zscore,
-    MIN_SAMPLES_FOR_ZSCORE,
     VELOCITY_MIN_COUNT,
     VELOCITY_WINDOW_S,
+    BehavioralEngine,
+    _robust_zscore,
 )
 
 AGENT = "0x008ed50be2cd35f6333a37542a76a227e3b16acc"
@@ -173,3 +174,50 @@ def test_agent_stats_empty():
     assert stats["observations"] == 0
     assert stats["distinct_payees"] == 0
     assert stats["median_amount"] is None
+
+
+# ── bootstrap from persisted proof bundles ──────────────────────────
+_BUNDLES = [
+    {"timestamp": "2026-08-09T10:00:00+00:00", "checks": [
+        {"intent": {"payee": PAYEE_A, "amount": "0.50", "service": "market-data"}},
+        {"intent": {"payee": PAYEE_B, "amount": "0.85", "service": "analytics"}},
+    ]},
+    {"timestamp": "2026-08-09T11:00:00+00:00", "checks": [
+        {"intent": {"payee": PAYEE_A, "amount": "0.52", "service": "market-data"}},
+    ]},
+]
+
+
+def test_bootstrap_reconstructs_history():
+    eng = BehavioralEngine()
+    added = eng.bootstrap_from_bundles(_BUNDLES, AGENT)
+    assert added == 3
+    stats = eng.agent_stats(AGENT)
+    assert stats["observations"] == 3
+    assert stats["distinct_payees"] == 2
+
+
+def test_bootstrap_is_idempotent():
+    eng = BehavioralEngine()
+    eng.bootstrap_from_bundles(_BUNDLES, AGENT)
+    added_again = eng.bootstrap_from_bundles(_BUNDLES, AGENT)
+    assert added_again == 0  # de-duplicated, no double count
+
+
+def test_bootstrap_skips_malformed_intents():
+    bundles = [{"timestamp": "2026-08-09T10:00:00+00:00", "checks": [
+        {"intent": {"payee": "", "amount": "1.0", "service": "x"}},        # no payee
+        {"intent": {"payee": PAYEE_A, "amount": "notanumber", "service": "x"}},  # bad amount
+        {"intent": {"payee": PAYEE_B, "amount": "2.0", "service": "ok"}},   # valid
+    ]}]
+    eng = BehavioralEngine()
+    assert eng.bootstrap_from_bundles(bundles, AGENT) == 1
+
+
+def test_bootstrap_uses_bundle_timestamp():
+    eng = BehavioralEngine()
+    eng.bootstrap_from_bundles(_BUNDLES, AGENT)
+    # A real past timestamp (2026-08-09) is far from "now", so the reconstructed
+    # observations do not register as a velocity spike.
+    sig = eng.assess(AGENT, PAYEE_A, 0.51, "market-data", at=time.time())
+    assert "velocity_spike" not in sig.signals

@@ -18,8 +18,8 @@ import hashlib
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -218,7 +218,7 @@ class CorrelationEngine:
             total_agents_scanned=len(agents_seen) + 1,  # +1 for trigger agent
             risk_assessment=risk,
             recommended_actions=actions,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
         # Sign the report

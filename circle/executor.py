@@ -44,12 +44,12 @@ ENGINE_PATH = os.path.join(os.path.dirname(__file__), "..", "engine")
 if os.path.isdir(ENGINE_PATH) and ENGINE_PATH not in sys.path:
     sys.path.insert(0, ENGINE_PATH)
 
-from gateway.canonical import canonicalize
-from gateway.policy import Policy, PolicyEngine, PolicyRule
-from gateway.receipts import Receipt, ReceiptChain
-from gateway.tokens import issue_token
-from gateway.merkle import compute_unified_root, compute_inclusion_proof
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from gateway.canonical import canonicalize
+from gateway.merkle import compute_inclusion_proof, compute_unified_root
+from gateway.policy import Policy, PolicyEngine, PolicyRule
+from gateway.receipts import ReceiptChain
+from gateway.tokens import issue_token
 
 from circle.cli import USDC_ADDRESSES, TransferResult, wallet_transfer
 
@@ -397,7 +397,7 @@ class PaymentExecutor:
                     url=intent.x402_endpoint, address=self.source_wallet,
                     chain=intent.chain, max_amount=intent.amount,
                 )
-                logger.info(f"Gateway nanopayment confirmed — settlement via Circle Gateway")
+                logger.info("Gateway nanopayment confirmed — settlement via Circle Gateway")
                 payment_info = x402_response.get("payment", {})
                 settlement_info = x402_response.get("settlement", {})
                 chain_upper = intent.chain.upper()
@@ -527,6 +527,7 @@ class PaymentExecutor:
         by the on-chain wallet.
         """
         import json
+
         from circle.cli import wallet_sign_message
 
         jwk = self.get_public_key_jwk()

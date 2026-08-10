@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import circle.sanctions as sanctions
 
-
 # A minimal, realistic SDN XML fixture: namespaced, pretty-printed,
 # containing two ETH addresses (one already in the static seed, one new)
 # plus a BTC entry and a non-currency record that must be ignored.
@@ -132,3 +131,44 @@ def test_digest_is_order_independent():
     a = sanctions._digest(frozenset({"0xaaa", "0xbbb"}))
     b = sanctions._digest(frozenset({"0xbbb", "0xaaa"}))
     assert a == b
+
+
+# ── streaming parser (production path for the ~28MB feed) ────────────
+def test_stream_parse_matches_whole_string():
+    whole = sanctions.parse_sdn_xml(SDN_XML_FIXTURE)
+    streamed = sanctions.stream_parse_sdn([SDN_XML_FIXTURE])
+    assert whole == streamed
+
+
+def test_stream_parse_survives_chunk_boundaries():
+    """An ETH id block split across chunk boundaries must still be captured."""
+    expected, _, _ = sanctions.parse_sdn_xml(SDN_XML_FIXTURE)
+    for size in (7, 13, 30, 64, 200):
+        chunks = [SDN_XML_FIXTURE[i:i + size] for i in range(0, len(SDN_XML_FIXTURE), size)]
+        eth, pub, rc = sanctions.stream_parse_sdn(chunks)
+        assert eth == expected, f"mismatch at chunk size {size}"
+        assert pub == "08/07/2026"
+        assert rc == 19199
+
+
+def test_stream_parse_char_by_char():
+    expected, _, _ = sanctions.parse_sdn_xml(SDN_XML_FIXTURE)
+    eth, _, _ = sanctions.stream_parse_sdn(list(SDN_XML_FIXTURE))  # 1-char chunks
+    assert eth == expected
+
+
+def test_stream_parse_ignores_empty_chunks():
+    eth, pub, rc = sanctions.stream_parse_sdn(["", SDN_XML_FIXTURE, ""])
+    assert len(eth) == 2 and pub == "08/07/2026"
+
+
+def test_refresh_default_path_uses_streaming(monkeypatch):
+    """With no injected fetcher, refresh() consumes the streaming fetcher."""
+    monkeypatch.setattr(sanctions, "_snapshot", sanctions._static_snapshot())
+    monkeypatch.setattr(
+        sanctions, "_default_stream_fetcher",
+        lambda timeout: iter([SDN_XML_FIXTURE[:100], SDN_XML_FIXTURE[100:]]),
+    )
+    snap = sanctions.refresh(persist=False)  # no fetcher → streaming path
+    assert snap.source == "ofac-sdn-live"
+    assert "0x1111111111111111111111111111111111111111" in snap.addresses

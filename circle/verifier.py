@@ -13,8 +13,6 @@ it uses only the public key (from JWK) and on-chain data.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import os
 import sys
@@ -24,10 +22,8 @@ ENGINE_PATH = os.path.join(os.path.dirname(__file__), "..", "engine")
 if os.path.isdir(ENGINE_PATH) and ENGINE_PATH not in sys.path:
     sys.path.insert(0, ENGINE_PATH)
 
-from gateway.canonical import canonicalize
-from gateway.verify import verify_chain, verify_receipt, _base64url_decode
 from gateway.merkle import compute_unified_root
-from gateway.receipts import GENESIS_PREV_RECEIPT
+from gateway.verify import verify_chain
 
 logger = logging.getLogger("circle.verifier")
 
@@ -254,7 +250,7 @@ def print_report(report: VerificationReport) -> None:
     }
 
     print(f"\n{'=' * 60}")
-    print(f"OFFLINE VERIFICATION REPORT")
+    print("OFFLINE VERIFICATION REPORT")
     print(f"{'=' * 60}")
     print(f"  Receipts:      {report.receipt_count}")
     print(f"  Signatures:    {status.get(report.signature_check, '?')}")
@@ -264,7 +260,7 @@ def print_report(report: VerificationReport) -> None:
     print(f"  Anchor:        {status.get(report.anchor_check, '?')}")
 
     if report.settlement_checks:
-        print(f"\n  Settlement cross-references:")
+        print("\n  Settlement cross-references:")
         for sc in report.settlement_checks:
             if sc.has_settlement:
                 print(f"    [{sc.receipt_hash[:20]}...] tx={sc.tx_hash[:20]}...")
@@ -276,7 +272,7 @@ def print_report(report: VerificationReport) -> None:
         print(f"\n  Merkle root:   {report.merkle_root[:40]}...")
 
     if report.errors:
-        print(f"\n  Errors:")
+        print("\n  Errors:")
         for e in report.errors:
             print(f"    - {e}")
 

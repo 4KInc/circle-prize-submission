@@ -18,13 +18,14 @@ The score drives Verigate's three-state decision engine:
 
 from __future__ import annotations
 
-import hashlib
 import math
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from circle.behavioral import BehavioralEngine
 
 MODEL_VERSION = "blockintel-heuristic-v2"
 FEATURE_VERSION = "signals-v2"
@@ -46,7 +47,7 @@ CONFIDENCE_FLOOR = 0.60    # below this → STEP_UP regardless of score
 # equals the always-available static seed. Live-synced additions are
 # reachable via circle.sanctions.active_addresses(). Screening is EXACT
 # match only — no prefix heuristics that would produce false positives.
-from circle import sanctions as _sanctions
+from circle import sanctions as _sanctions  # noqa: E402 — placed after the doc block above by design
 
 SANCTIONED_ADDRESSES = _sanctions.STATIC_OFAC_ETH
 
@@ -88,6 +89,8 @@ class RiskAssessment:
     feature_version: str = FEATURE_VERSION
     evaluated_at: str = ""
     sanctions_feed: dict = field(default_factory=dict)  # OFAC list provenance
+    contributions: list[dict] = field(default_factory=list)  # per-category score attribution
+    rationale: str = ""                 # human-readable "why this decision"
 
     def __post_init__(self):
         if not self.evaluated_at:
@@ -114,6 +117,8 @@ class RiskAssessment:
             "feature_version": self.feature_version,
             "evaluated_at": self.evaluated_at,
             "sanctions_feed": self.sanctions_feed,
+            "contributions": self.contributions,
+            "rationale": self.rationale,
         }
 
 
@@ -161,7 +166,7 @@ def _check_injection(reason: str) -> tuple[int, float, list[str], dict]:
     # Shannon entropy of the reason text — high entropy can indicate
     # encoded payloads or obfuscated injection attempts
     if len(reason) > 20:
-        freq = {}
+        freq: dict[str, int] = {}
         for c in reason.lower():
             freq[c] = freq.get(c, 0) + 1
         entropy = -sum((f / len(reason)) * math.log2(f / len(reason)) for f in freq.values())
@@ -283,8 +288,8 @@ def evaluate_risk(
     reason: str,
     source_wallet: str,
     chain: str,
-    known_payees: Optional[list[str]] = None,
-    behavioral=None,
+    known_payees: list[str] | None = None,
+    behavioral: BehavioralEngine | None = None,
 ) -> RiskAssessment:
     """Evaluate transaction risk using multi-signal analysis.
 
@@ -305,10 +310,24 @@ def evaluate_risk(
     """
     all_signals = []
     all_details = {}
+    contributions: list[dict] = []
     total_score = 0
     confidence = 0.85
 
     amount_f = float(amount)
+
+    def _add(category: str, score_delta: int, conf_delta: float,
+             signals: list[str], detail: object) -> None:
+        """Record a category's contribution to the aggregate so the final
+        verdict is fully attributable (no black-box scoring)."""
+        if score_delta or conf_delta or signals:
+            contributions.append({
+                "category": category,
+                "score_delta": int(score_delta),
+                "confidence_delta": round(float(conf_delta), 3),
+                "signals": list(signals),
+                "detail": detail,
+            })
 
     # 1. Sanctions screening (real OFAC SDN list). A confirmed match is a
     #    hard block: high score + high confidence guarantees a DENY verdict,
@@ -317,8 +336,10 @@ def evaluate_risk(
     if is_sanctioned:
         all_signals.append("sanctioned_address")
         total_score += 80
+        conf_before = confidence
         confidence = 0.99
         all_details["sanctions"] = sanction_detail
+        _add("sanctions", 80, confidence - conf_before, ["sanctioned_address"], sanction_detail)
 
     # 2. Prompt injection (structural analysis). A detected manipulation
     #    attempt in the justification text is disqualifying on its own: we
@@ -330,6 +351,7 @@ def evaluate_risk(
     confidence += inj_conf
     all_signals.extend(inj_signals)
     all_details.update(inj_details)
+    _add("injection", inj_score, inj_conf, inj_signals, inj_details)
 
     # 3. Amount analysis
     amt_score, amt_conf, amt_signals, amt_details = _check_amount(amount_f, service)
@@ -337,6 +359,7 @@ def evaluate_risk(
     confidence += amt_conf
     all_signals.extend(amt_signals)
     all_details.update(amt_details)
+    _add("amount", amt_score, amt_conf, amt_signals, amt_details)
 
     # 4. Payee analysis
     payee_score, payee_conf, payee_signals, payee_details = _check_payee(payee, known_payees)
@@ -344,6 +367,7 @@ def evaluate_risk(
     confidence += payee_conf
     all_signals.extend(payee_signals)
     all_details.update(payee_details)
+    _add("payee", payee_score, payee_conf, payee_signals, payee_details)
 
     # 5. Service analysis
     svc_score, svc_conf, svc_signals, svc_details = _check_service(service)
@@ -351,6 +375,7 @@ def evaluate_risk(
     confidence += svc_conf
     all_signals.extend(svc_signals)
     all_details.update(svc_details)
+    _add("service", svc_score, svc_conf, svc_signals, svc_details)
 
     # 6. Behavioral anomaly (optional; read-only against agent history)
     if behavioral is not None:
@@ -360,6 +385,7 @@ def evaluate_risk(
             confidence += bsig.confidence_delta
             all_signals.extend(bsig.signals)
             all_details.update(bsig.details)
+            _add("behavioral", bsig.score, bsig.confidence_delta, bsig.signals, bsig.details)
         except Exception:  # noqa: BLE001 — behavioral is advisory, never fatal
             pass
 
@@ -370,10 +396,14 @@ def evaluate_risk(
     # pattern (override / system-prompt / role hijack) or two+ signals → DENY.
     if inj_signals:
         strong_injection = {"instruction_override", "system_prompt_inject", "role_hijack"}
+        pre_esc = total_score
         total_score = max(total_score, APPROVE_CEILING + 1)   # >= 40 → STEP_UP
         if len(inj_signals) >= 2 or (strong_injection & set(inj_signals)):
             total_score = max(total_score, DENY_FLOOR)         # >= 75 → DENY
             confidence = max(confidence, CONFIDENCE_FLOOR)     # ensure DENY, not STEP_UP
+        if total_score != pre_esc:
+            _add("injection_escalation", total_score - pre_esc, 0.0, [],
+                 "manipulation in justification floors the verdict")
 
     # Clamp
     total_score = max(0, min(total_score, 100))
@@ -384,11 +414,42 @@ def evaluate_risk(
         total_score = max(total_score, 5)
         confidence = 0.95
 
-    return RiskAssessment(
+    confidence = round(confidence, 2)
+    assessment = RiskAssessment(
         score=total_score,
         band=_score_band(total_score),
-        confidence=round(confidence, 2),
+        confidence=confidence,
         signals=all_signals,
         signal_details=all_details,
         sanctions_feed=_sanctions.feed_metadata(),
+        contributions=contributions,
     )
+    assessment.rationale = _build_rationale(assessment, contributions)
+    return assessment
+
+
+def _build_rationale(assessment: RiskAssessment, contributions: list[dict]) -> str:
+    """Explain the verdict in one honest sentence: which threshold rule
+    fired and which categories drove the score. No hand-waving — the drivers
+    are the exact category deltas that produced this number."""
+    decision = assessment.decision
+    score = assessment.score
+    conf = assessment.confidence
+    drivers = sorted(
+        (c for c in contributions if c["score_delta"] > 0),
+        key=lambda c: c["score_delta"], reverse=True,
+    )
+    driver_str = ", ".join(f"{c['category']} (+{c['score_delta']})" for c in drivers[:3])
+    if not driver_str:
+        driver_str = "no risk signals (clean baseline)"
+
+    if decision == "APPROVE":
+        rule = f"score {score} ≤ {APPROVE_CEILING} and confidence {conf} ≥ {CONFIDENCE_FLOOR}"
+    elif decision == "DENY":
+        rule = f"score {score} ≥ {DENY_FLOOR} at confidence {conf} ≥ {CONFIDENCE_FLOOR}"
+    else:  # STEP_UP
+        if conf < CONFIDENCE_FLOOR:
+            rule = f"confidence {conf} < {CONFIDENCE_FLOOR} (uncertain → verify)"
+        else:
+            rule = f"score {score} in the {APPROVE_CEILING + 1}–{STEP_UP_CEILING} uncertainty band"
+    return f"{decision}: {rule}. Primary drivers: {driver_str}."

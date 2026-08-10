@@ -13,10 +13,8 @@ Tests:
 
 from __future__ import annotations
 
-import hashlib
 import os
 import sys
-import uuid
 
 import pytest
 
@@ -28,17 +26,14 @@ if os.path.isdir(ENGINE_PATH):
     sys.path.insert(0, ENGINE_PATH)
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-from gateway.canonical import canonicalize
-from gateway.policy import Policy, PolicyEngine, PolicyRule, EvaluationResult
-from gateway.receipts import ReceiptChain, GENESIS_PREV_RECEIPT
+from gateway.merkle import compute_inclusion_proof, compute_unified_root
+from gateway.policy import Policy, PolicyEngine, PolicyRule
+from gateway.receipts import ReceiptChain
 from gateway.tokens import issue_token, verify_token
 from gateway.verify import verify_chain
-from gateway.merkle import compute_unified_root, compute_inclusion_proof
 
-from circle.executor import PaymentExecutor, PaymentIntent, PaymentDenied
+from circle.executor import PaymentExecutor, PaymentIntent
 from circle.isolator import Isolator, classify_severity
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────
 

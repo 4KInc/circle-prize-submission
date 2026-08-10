@@ -24,15 +24,15 @@ import logging
 import os
 import sys
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 ENGINE_PATH = os.path.join(os.path.dirname(__file__), "..", "engine")
 if os.path.isdir(ENGINE_PATH) and ENGINE_PATH not in sys.path:
     sys.path.insert(0, ENGINE_PATH)
 
-from gateway.canonical import canonicalize
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from gateway.canonical import canonicalize
 
 logger = logging.getLogger("circle.agents")
 
@@ -132,7 +132,7 @@ class CoordinatorAgent(AgentBase):
             "discovery_id": f"disc-{uuid.uuid4().hex[:12]}",
             "tenant": self.tenant,
             "query": query,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "services_found": len(services),
             "services": services,
             "sources": ["local_x402", "circle_marketplace"],
@@ -190,7 +190,7 @@ class AuditorAgent(AgentBase):
         audit_body = {
             "audit_id": f"audit-{uuid.uuid4().hex[:12]}",
             "tenant": self.tenant,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "receipt_hash": receipt_envelope.get("receipt_hash", ""),
             "decision_audited": decision,
             "verdict": verdict,
@@ -212,7 +212,7 @@ class AuditorAgent(AgentBase):
         report_body = {
             "report_id": f"report-{uuid.uuid4().hex[:12]}",
             "tenant": self.tenant,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "total_receipts_audited": len(receipts),
             "total_governed_spend_usdc": str(spend),
             "verification_status": verification_status,
@@ -221,7 +221,7 @@ class AuditorAgent(AgentBase):
             "frameworks": ["EU AI Act (Art 14, 15, 52)", "NIST AI RMF", "NIST SP 800-53"],
         }
         artifact = self._sign_artifact("compliance_report", report_body)
-        logger.info(f"Auditor: compliance report generated")
+        logger.info("Auditor: compliance report generated")
         return artifact
 
     def _gemini_compliance_narrative(self, receipts, isolations, spend, verification) -> dict:
@@ -297,7 +297,7 @@ class InvestigatorAgent(AgentBase):
         body = {
             "incident_id": f"inc-{uuid.uuid4().hex[:12]}",
             "tenant": self.tenant,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "severity": narrative.get("severity", "MEDIUM"),
             "trigger": {
                 "type": "PAYMENT_DENIAL",
@@ -412,7 +412,7 @@ class RecommenderAgent(AgentBase):
         body = {
             "proposal_id": f"prop-{uuid.uuid4().hex[:12]}",
             "tenant": self.tenant,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "trigger": {
                 "type": "INCIDENT_REPORT",
                 "incident_id": incident.get("incident_id", ""),

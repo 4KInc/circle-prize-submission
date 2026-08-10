@@ -23,15 +23,15 @@ import logging
 import os
 import sys
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 ENGINE_PATH = os.path.join(os.path.dirname(__file__), "..", "engine")
 if os.path.isdir(ENGINE_PATH) and ENGINE_PATH not in sys.path:
     sys.path.insert(0, ENGINE_PATH)
 
-from gateway.canonical import canonicalize
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from gateway.canonical import canonicalize
 
 logger = logging.getLogger("circle.isolator")
 
@@ -353,7 +353,7 @@ class Isolator:
             trigger=trigger,
             findings=findings,
             recommendations=recommendations,
-            recorded_at=datetime.now(timezone.utc).isoformat(),
+            recorded_at=datetime.now(UTC).isoformat(),
         )
 
         body_bytes = canonicalize(record.body_dict())

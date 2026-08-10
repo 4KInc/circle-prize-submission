@@ -99,9 +99,25 @@ async def lifespan(app: FastAPI):
         logger.warning("Sanctions background refresh not started: %s", e)
 
     # Restore behavioral history so per-agent baselines survive restarts.
+    # If the restored baseline is empty (e.g. a redeploy that predates the
+    # behavioral layer), reconstruct it from the real autonomous-check proof
+    # bundles already in GCS — honest history recovery, not fabrication.
     try:
-        from circle.behavioral import get_engine
-        get_engine()
+        from circle.behavioral import MIN_SAMPLES_FOR_ZSCORE, get_engine
+        eng = get_engine()
+        if eng.observation_count(CUSTOMER_WALLET) < MIN_SAMPLES_FOR_ZSCORE:
+            from app.storage import get_bundle, list_bundles
+            bundles = []
+            for meta in list_bundles(limit=200):
+                b = get_bundle(meta.get("name", ""))
+                if b:
+                    bundles.append(b)
+            if bundles:
+                added = eng.bootstrap_from_bundles(bundles, CUSTOMER_WALLET)
+                if added:
+                    eng.persist()
+                    logger.info("Behavioral baseline bootstrapped: +%d observations from %d bundles",
+                                added, len(bundles))
     except Exception as e:  # noqa: BLE001
         logger.warning("Behavioral engine not restored: %s", e)
 
@@ -632,6 +648,14 @@ async def api_check(request: Request):
         behavioral=behavioral,
     )
 
+    # The baseline the decision was screened against (BEFORE this observation
+    # is folded in) — so the demo shows the real prior history that drove the
+    # behavioral signals, not a count inflated by the current check.
+    try:
+        baseline_stats = behavioral.agent_stats(CUSTOMER_WALLET)
+    except Exception:  # noqa: BLE001
+        baseline_stats = {}
+
     # Record this observation so the agent's behavioral baseline grows, then
     # persist so it survives restarts (continuous autonomous operation).
     try:
@@ -646,9 +670,14 @@ async def api_check(request: Request):
         "band": risk.band,
         "confidence": risk.confidence,
         "signals": risk.signals,
+        "signal_details": risk.signal_details,
+        "contributions": risk.contributions,   # per-category score attribution
+        "rationale": risk.rationale,           # human-readable "why this decision"
         "model_version": risk.model_version,
+        "feature_version": risk.feature_version,
         "evaluated_at": risk.evaluated_at,
-        "sanctions_feed": risk.sanctions_feed,
+        "sanctions_feed": risk.sanctions_feed,  # OFAC feed source/date/digest
+        "agent_baseline": baseline_stats,       # observations the decision drew on
         "thresholds": {
             "approve_ceiling": 39,
             "step_up_range": "40-74",
