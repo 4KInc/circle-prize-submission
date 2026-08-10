@@ -167,6 +167,12 @@ async def get_data():
                         "receipt_chain_integrity": v.get("overall", "PASS") if isinstance(v, dict) else v,
                     }
                     comp["executive_summary"] = comp.get("summary", "")
+                # Load the signing key from the bundle so /api/verify-artifact works on cold start
+                bundle_jwk = b.get("public_key_jwk")
+                if bundle_jwk and bundle_jwk.get("kid"):
+                    app._executor_jwk = bundle_jwk
+                    logger.info(f"Loaded signing key from GCS bundle: kid={bundle_jwk['kid']}")
+
                 return {
                     "receipts": b.get("receipts", []),
                     "agents": b.get("agents", {}),

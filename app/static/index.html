@@ -1337,7 +1337,7 @@ function loadWallets(){
       h+='<div class="flex items-center gap-2">';
       if(isFrozen)h+='<span class="px-2 py-0.5 rounded-full bg-error/10 border border-error/20 font-mono text-[10px] text-error">Isolated</span>';
       h+='<span class="px-2 py-0.5 rounded-full bg-secondary-container/20 border border-secondary/20 font-mono text-[10px] text-secondary">'+(isSepolia?'Base Sepolia':'Base Mainnet')+'</span></div>';
-      h+='<a href="'+w.explorer_url+'" target="_blank" class="font-mono text-[10px] text-primary-fixed hover:underline flex items-center gap-1">View on Basescan <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></a>';
+      h+='<a href="'+w.explorer_url+'#tokentxns" target="_blank" class="font-mono text-[10px] text-primary-fixed hover:underline flex items-center gap-1">View on Basescan <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></a>';
       h+='</div></div>';
     });
     el.innerHTML=h;
@@ -1594,7 +1594,7 @@ function loadData(){
         wLink.href=explorerBase+'/address/'+d.anchor.wallet;
         wLink.textContent=d.anchor.wallet;wLink.classList.remove('hidden');
         const bLink=document.getElementById('anchor-basescan-link');bLink.classList.remove('hidden');
-        bLink.href=explorerBase+'/address/'+d.anchor.wallet;
+        bLink.href=explorerBase+'/address/'+d.anchor.wallet+'#tokentxns';
       }
     }
     // Default agents if none loaded yet
