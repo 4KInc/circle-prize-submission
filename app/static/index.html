@@ -512,7 +512,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
             <div class="space-y-2">
               <div class="flex justify-between text-xs"><span class="text-on-surface-variant/60">Confidence</span><span id="tryit-confidence" class="font-mono text-on-surface">--</span></div>
               <div class="flex justify-between text-xs"><span class="text-on-surface-variant/60">Risk band</span><span id="tryit-band" class="font-mono text-on-surface">--</span></div>
-              <div class="flex justify-between text-xs"><span class="text-on-surface-variant/60">Scorer</span><span class="font-mono text-on-surface-variant/50">blockintel-heuristic-v1</span></div>
+              <div class="flex justify-between text-xs"><span class="text-on-surface-variant/60">Scorer</span><span class="font-mono text-on-surface-variant/50">blockintel-heuristic-v2</span></div>
             </div>
           </div>
         </div>
@@ -522,23 +522,23 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
           <div id="tryit-factors" class="flex flex-wrap gap-1.5"></div>
         </div>
         <!-- Rationale: why this decision -->
-        <div id="tryit-rationale-box" class="hidden mb-4 rounded-xl p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)">
-          <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1">Why this decision</div>
-          <div id="tryit-rationale" class="text-xs text-on-surface-variant/80 leading-relaxed"></div>
+        <div id="tryit-rationale-box" class="hidden mb-4 rounded-xl p-3 border border-white/[.06]" style="background:rgba(0,0,0,0.2)">
+          <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1 flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:14px">psychology</span>Why this decision</div>
+          <div id="tryit-rationale" class="text-xs text-on-surface leading-relaxed border-l-2 pl-3" style="border-color:currentColor"></div>
         </div>
         <!-- Score attribution: per-category contributions -->
         <div id="tryit-contrib-box" class="hidden mb-4">
-          <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-2">Score Attribution</div>
+          <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-2 flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:14px">bar_chart</span>Score Attribution</div>
           <div id="tryit-contrib" class="space-y-1"></div>
         </div>
         <!-- OFAC feed provenance + behavioral baseline -->
         <div id="tryit-provenance-box" class="hidden mb-4 grid grid-cols-2 gap-2">
           <div class="rounded-xl p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)">
-            <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1">OFAC SDN Feed</div>
+            <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1 flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:14px">database</span>OFAC SDN Feed</div>
             <div id="tryit-sanctions" class="text-[11px] text-on-surface-variant/70 font-mono leading-relaxed"></div>
           </div>
           <div class="rounded-xl p-3 border border-white/[.06]" style="background:rgba(255,255,255,0.02)">
-            <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1">Agent Baseline</div>
+            <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-1 flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:14px">timeline</span>Agent Baseline</div>
             <div id="tryit-baseline" class="text-[11px] text-on-surface-variant/70 font-mono leading-relaxed"></div>
           </div>
         </div>
@@ -549,12 +549,17 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
             <span class="font-mono text-xs text-[#ffaf00] font-bold">STEP_UP: Evidence Purchase</span>
           </div>
           <div class="text-xs text-on-surface-variant/70">Paid Evidence Validator $0.02 USDC for independent verification via Circle Gateway nanopayment.</div>
+          <div id="tryit-stepup-tx" class="font-mono text-[10px] text-on-surface-variant/40 mt-2">tx 0xdfcd67…  BASE-SEPOLIA</div>
         </div>
         <!-- Receipt -->
         <div class="rounded-xl p-4 border border-white/[.06]" style="background:rgba(255,255,255,0.02)">
           <div class="flex items-center justify-between mb-2">
-            <span class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider">Signed Receipt</span>
-            <button onclick="downloadTryItReceipt()" class="text-[10px] text-primary-fixed/60 font-mono hover:text-primary-fixed transition-colors">Download JSON</button>
+            <span class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:14px">receipt_long</span>Signed Receipt</span>
+            <div class="flex items-center gap-2">
+              <span id="tryit-receipt-dot" class="w-2 h-2 rounded-full bg-primary-fixed" style="box-shadow:0 0 6px currentColor"></span>
+              <span id="tryit-receipt-status" class="font-mono text-[10px] text-primary-fixed font-bold">VERIFIED</span>
+              <button onclick="downloadTryItReceipt()" class="text-[10px] text-on-surface-variant/40 font-mono hover:text-primary-fixed transition-colors ml-2">Download</button>
+            </div>
           </div>
           <div class="font-mono text-[11px] text-on-surface-variant/50 break-all" id="tryit-hash">--</div>
         </div>
@@ -1881,9 +1886,9 @@ async function runTryIt(){
     const hash='sha256:'+Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 
     let color,bgColor;
-    if(decision==='APPROVE'){color='#4ade80';bgColor='rgba(74,222,128,0.1)'}
+    if(decision==='APPROVE'){color='#b8f600';bgColor='rgba(184,246,0,0.1)'}
     else if(decision==='STEP_UP'){color='#ffaf00';bgColor='rgba(255,175,0,0.1)'}
-    else{color='#ff6b6b';bgColor='rgba(255,107,107,0.1)'}
+    else{color='#ffb4ab';bgColor='rgba(255,180,171,0.1)'}
 
     // Update UI
     document.getElementById('tryit-empty').classList.add('hidden');
@@ -1905,8 +1910,9 @@ async function runTryIt(){
     badge.style.border='1px solid '+color+'40';
 
     // Details
-    document.getElementById('tryit-confidence').textContent=(confidence*100).toFixed(1)+'%';
-    document.getElementById('tryit-band').textContent=band;
+    document.getElementById('tryit-confidence').textContent=confidence.toFixed(2);
+    const bandLabel=decision==='APPROVE'?'0–39 (approve ceiling)':decision==='STEP_UP'?'40–74 (step-up)':'75+ (DENY floor)';
+    document.getElementById('tryit-band').textContent=bandLabel;
     document.getElementById('tryit-band').style.color=color;
 
     // Factors with explanations
@@ -1923,7 +1929,12 @@ async function runTryIt(){
 
     // Rationale — the honest "why this decision" sentence from the engine
     const ratBox=document.getElementById('tryit-rationale-box');
-    if(d.rationale){document.getElementById('tryit-rationale').textContent=d.rationale;ratBox.classList.remove('hidden')}else{ratBox.classList.add('hidden')}
+    if(d.rationale){
+      const ratEl=document.getElementById('tryit-rationale');
+      ratEl.textContent=d.rationale;
+      ratEl.style.borderColor=color+'80';
+      ratBox.classList.remove('hidden');
+    }else{ratBox.classList.add('hidden')}
 
     // Score attribution — per-category contributions (fully auditable)
     const contribBox=document.getElementById('tryit-contrib-box');
@@ -1964,8 +1975,20 @@ async function runTryIt(){
     const stepBox=document.getElementById('tryit-stepup-box');
     if(decision==='STEP_UP'){stepBox.classList.remove('hidden')}else{stepBox.classList.add('hidden')}
 
-    // Receipt hash
+    // Receipt hash + status dot
     document.getElementById('tryit-hash').textContent=hash;
+    const receiptDot=document.getElementById('tryit-receipt-dot');
+    const receiptStatus=document.getElementById('tryit-receipt-status');
+    if(decision==='STEP_UP'){
+      receiptDot.style.background='#ffaf00';receiptDot.style.boxShadow='0 0 6px #ffaf00';
+      receiptStatus.textContent='PENDING VALIDATION';receiptStatus.style.color='#ffaf00';
+    }else if(decision==='DENY'){
+      receiptDot.style.background='#b8f600';receiptDot.style.boxShadow='0 0 6px #b8f600';
+      receiptStatus.textContent='VERIFIED';receiptStatus.style.color='#b8f600';
+    }else{
+      receiptDot.style.background='#b8f600';receiptDot.style.boxShadow='0 0 6px #b8f600';
+      receiptStatus.textContent='VERIFIED';receiptStatus.style.color='#b8f600';
+    }
 
     // Store receipt for download
     _tryItReceipt={
@@ -1999,9 +2022,9 @@ async function runTryIt(){
     document.getElementById('tryit-empty').classList.add('hidden');
     document.getElementById('tryit-verdict').classList.remove('hidden');
     document.getElementById('tryit-score-num').textContent='!';
-    document.getElementById('tryit-score-num').style.color='#ff6b6b';
+    document.getElementById('tryit-score-num').style.color='#ffb4ab';
     document.getElementById('tryit-decision-badge').textContent='RETRY';
-    document.getElementById('tryit-decision-badge').style.cssText='background:rgba(255,107,107,0.1);color:#ff6b6b;border:1px solid rgba(255,107,107,0.25)';
+    document.getElementById('tryit-decision-badge').style.cssText='background:rgba(255,180,171,0.1);color:#ffb4ab;border:1px solid rgba(255,180,171,0.25)';
     document.getElementById('tryit-confidence').textContent='Server cold start — click again';
     document.getElementById('tryit-band').textContent=e.name==='AbortError'?'Timeout (retrying wakes server)':'Error';
     document.getElementById('tryit-factors').innerHTML='<span class="text-xs text-on-surface-variant/60">The server may be waking from sleep. Click Check Payment again.</span>';
