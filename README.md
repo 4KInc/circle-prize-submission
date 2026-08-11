@@ -10,7 +10,7 @@
 |------|------|
 | **Live demo** | [Try a Security Check](https://verigate-dashboard-1031148889398.us-central1.run.app) — type any payee/amount/reason, get a real risk verdict |
 | **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) — autonomous evidence purchase, real USDC on Base |
-| **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) — 107 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
+| **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) — 116 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
 | **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) — 4-step flow, 3 wallets, 5/5 Circle stack |
 
 ## What Is This?
@@ -312,8 +312,10 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | PyPI | [`pip install verigate`](https://pypi.org/project/verigate/) |
 | MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
 | Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
+| Autonomy proof | [`/proof/{receipt_hash}`](https://verigate-dashboard-1031148889398.us-central1.run.app/proof/sha256) — full causal chain for any receipt |
+| Control attestation | [`/v1/carrier/insureds/demo/control-attestation`](https://verigate-dashboard-1031148889398.us-central1.run.app/v1/carrier/insureds/demo/control-attestation) |
 | Demo command | `make demo` |
-| Tests | 107 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) — CI-enforced with ruff + mypy |
+| Tests | 116 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) — CI-enforced with ruff + mypy |
 
 ## Pre-Existing Work Disclosure
 
@@ -332,7 +334,7 @@ Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built
 | **Explainable verdicts** | Real — per-category `contributions` + one-line `rationale` in every response and receipt | Auditable, not a black box |
 | **OFAC SDN screening** | Real — hand-verified seed + live SDN-feed streaming sync, exact-match, feed version attested in receipt | Not a hardcoded demo list |
 | **Behavioral layer** | Real — robust-z/velocity/novelty over persisted per-agent history, bootstrapped from stored bundles; honest statistics, not ML | Deterministic, no fabricated "ML" |
-| **CI pipeline** | Real — GitHub Actions: ruff + mypy + 107-test pytest on every push | Rigor is enforced, not just claimed |
+| **CI pipeline** | Real — GitHub Actions: ruff + mypy + 116-test pytest on every push | Rigor is enforced, not just claimed |
 | **Gateway nanopayments** | Real — facilitator API integration (settle, verify, balances) | Circle's newest product |
 | **x402 endpoint** | Real — returns 402 with payment requirements, Gateway-compatible | Standard protocol |
 | **GCS proof bundles** | Real — persists across cold starts, carrier-retrievable | Production infrastructure |
@@ -358,23 +360,32 @@ Pre-production pipeline. $0 arms-length revenue (disclosed honestly). No product
 make test
 ```
 
-42 unit tests covering:
-- Policy evaluation (approve/deny/step_up paths)
-- Payment intent digest binding (deterministic, canonical)
-- Replay/nonce+JTI blocking
-- Deny path produces signed denial receipt
-- Per-tenant key isolation (cross-tenant verification fails)
-- Forensic severity classification
-- Receipt chain integrity (tamper detection)
-- Merkle inclusion proofs
-- Three-state decision thresholds (APPROVE/STEP_UP/DENY boundaries)
-- Low-confidence override to STEP_UP
-- Risk signal detection (amount anomaly, unknown payee, prompt injection)
-- Risk score bounding and serialization
+116 tests across 8 test files:
+
+| Suite | Tests | Covers |
+|-------|-------|--------|
+| `test_circle_golden_path` | 25 | Policy, digests, replay, receipts, Merkle, isolation, per-tenant keys |
+| `test_risk_scorer` | 17 | Decision thresholds, score bounding, signal detection, serialization |
+| `test_risk_scorer_adversarial` | 18 | Injection evasion, obfuscation, encoding attacks |
+| `test_risk_explainability` | 7 | Contributions, rationale text, sanctions feed attestation |
+| `test_sanctions` | 14 | OFAC SDN static seed, live feed parsing, streaming, exact-match |
+| `test_behavioral` | 21 | Amount outliers, velocity bursts, novel counterparty, cold-start, persistence |
+| `test_fail_closed` | 5 | Scorer crash→error, sanctioned→DENY, no dry-run in auth path |
+| `test_validator_decorrelation` | 4 | Validator/scorer disagreement, independent thresholds |
+| `test_deterministic_floor` | 5 | Deterministic controls hold when injection heuristic misses |
+
+## Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| [`SECURITY.md`](SECURITY.md) | Key custody, fail-closed guarantees, sanctions screening, injection scoping |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Settlement boundary, authorization path, Gemini usage, rail-agnostic moat |
+| [`ECONOMICS.md`](ECONOMICS.md) | Unit economics, break-even STEP_UP rate, infrastructure costs, tier model |
+| [`CARRIER_API.md`](CARRIER_API.md) | Insurance evidence rail, consent model, stubbed endpoints, attestation format |
 
 ## The One Sentence
 
-> Verigate is an autonomous security agent that gets paid by other AI agents to check their payments, buys independent evidence when it's not sure, and gives insurers a signed proof of every decision. All on Circle.
+> Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers — screening every payment against policy, sanctions, and anomaly signals, autonomously purchasing evidence when uncertain, and producing signed receipts designed for carrier underwriting and claims. All on Circle.
 
 **Corporate entity:** BlockIntel, Inc. Delaware C-Corp (EIN 41-4617459)
 
