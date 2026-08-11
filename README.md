@@ -1,4 +1,4 @@
-# Verigate — Circle Agentic Economy Prize Submission
+# Verigate - Circle Agentic Economy Prize Submission
 
 [![CI](https://github.com/4KInc/circle-prize-submission/actions/workflows/ci.yml/badge.svg)](https://github.com/4KInc/circle-prize-submission/actions/workflows/ci.yml)
 
@@ -8,10 +8,10 @@
 
 | What | Link |
 |------|------|
-| **Live demo** | [Try a Security Check](https://verigate-dashboard-1031148889398.us-central1.run.app) — type any payee/amount/reason, get a real risk verdict |
-| **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) — autonomous evidence purchase, real USDC on Base |
-| **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) — 116 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
-| **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) — 4-step flow, 3 wallets, 5/5 Circle stack |
+| **Live demo** | [Try a Security Check](https://verigate-dashboard-1031148889398.us-central1.run.app) - type any payee/amount/reason, get a real risk verdict |
+| **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) - autonomous evidence purchase, real USDC on Base |
+| **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) - 116 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
+| **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) - 4-step flow, 3 wallets, 5/5 Circle stack |
 
 ## What Is This?
 
@@ -56,7 +56,7 @@ The STEP_UP flow has been executed on **Base mainnet** with real USDC:
 | **STEP_UP evidence** | Treasury `0x0c74...` | Validator `0xbe14...` | $0.02 | [View tx](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) |
 | Treasury funding | Customer `0x5c34...` | Treasury `0x0c74...` | $0.10 | [View tx](https://basescan.org/tx/0x958f2c400d0f955dc02678ff1172cd055305842f18d32a73783386e295af59b5) |
 
-These are real, independently verifiable USDC transactions on Base mainnet. The STEP_UP tx shows the Treasury autonomously spending its earnings to purchase evidence — the core innovation.
+These are real, independently verifiable USDC transactions on Base mainnet. The STEP_UP tx shows the Treasury autonomously spending its earnings to purchase evidence - the core innovation.
 
 ## Real Use Case: AI Agent With a Company Wallet
 
@@ -123,7 +123,7 @@ The insurance carrier calls `GET /api/carrier/evidence-bundle` and gets back eve
 
 ### Interactive Security Check
 
-Visit the [live dashboard](https://verigate-dashboard-1031148889398.us-central1.run.app) and click **"Try a Security Check"**. Enter any payee address, amount, and reason — the real BlockIntel risk scorer runs server-side and returns a deterministic verdict.
+Visit the [live dashboard](https://verigate-dashboard-1031148889398.us-central1.run.app) and click **"Try a Security Check"**. Enter any payee address, amount, and reason - the real BlockIntel risk scorer runs server-side and returns a deterministic verdict.
 
 Try these scenarios (scores are deterministic but depend on the exact inputs):
 - **Safe:** `0x742d35...`, $0.50, "Fetch latest price data" → APPROVE (low score)
@@ -136,22 +136,22 @@ A background scheduler runs risk checks every 30 minutes without human intervent
 
 ### Dry-Run Mode
 
-If Circle CLI auth expires or the wallet is underfunded, click **"Dry Run"** on the demo page. This replays the last successful GCS proof bundle as a simulated SSE stream — same UI flow, real data, no wallet needed. The Golden Path also auto-falls back to dry-run on error.
+If Circle CLI auth expires or the wallet is underfunded, click **"Dry Run"** on the demo page. This replays the last successful GCS proof bundle as a simulated SSE stream - same UI flow, real data, no wallet needed. The Golden Path also auto-falls back to dry-run on error.
 
 ### Gemini in Production
 
 Gemini 2.5 Flash runs in production on Cloud Run for:
-- **Ops agent reasoning** — analyzes tasks, selects services, forms payment intents
-- **Forensic analysis** — incident severity classification and attack vector analysis
-- **Compliance reports** — EU AI Act + NIST AI RMF narrative generation over real receipt data
-- **Policy recommendations** — suggests Circle Action Gate policy changes
+- **Ops agent reasoning** - analyzes tasks, selects services, forms payment intents
+- **Forensic analysis** - incident severity classification and attack vector analysis
+- **Compliance reports** - EU AI Act + NIST AI RMF narrative generation over real receipt data
+- **Policy recommendations** - suggests Circle Action Gate policy changes
 
 All Gemini calls have deterministic fallbacks for testing/CI.
 
 ### x402 Payment (Circle CLI)
 
 ```bash
-# Hit the x402 endpoint — returns 402 with Gateway payment requirements
+# Hit the x402 endpoint - returns 402 with Gateway payment requirements
 curl https://verigate-dashboard-1031148889398.us-central1.run.app/x402/security-check
 
 # Pay via Circle CLI (real USDC, Circle Gateway nanopayment)
@@ -172,7 +172,7 @@ from verigate import Gate, Intent
 
 gate = Gate("circle://agent-wallet", allowed_payees=["0xabc..."], max_amount=1.0)
 receipt = gate.authorize(Intent(payee="0xabc...", amount=0.01, service="market-data"))
-gate.verify()  # PASS — signatures, hash chain, merkle all verified
+gate.verify()  # PASS - signatures, hash chain, merkle all verified
 ```
 
 [![PyPI](https://img.shields.io/pypi/v/verigate)](https://pypi.org/project/verigate/)
@@ -253,40 +253,40 @@ All three are Circle Agent Wallets with independent spending policies. Mainnet t
 
 | Module | Purpose |
 |--------|---------|
-| `circle/executor.py` | Gated payment executor — policy eval, token issuance, Circle CLI, receipt signing |
-| `circle/risk_scorer.py` | BlockIntel heuristic risk scorer (blockintel-heuristic-v2) — live OFAC/SDN screening, structural prompt-injection detection, behavioral anomaly folding, deterministic signals |
-| `circle/sanctions.py` | OFAC SDN screening — hand-verified static seed + live SDN-feed sync (`refresh()`); receipts attest the feed source, publish date, and content digest |
-| `circle/behavioral.py` | Per-agent behavioral layer — robust z-score (median/MAD) amount outliers, velocity bursts, novel counterparty; honest statistics (not ML), GCS-persisted history |
-| `circle/gateway.py` | Circle Gateway nanopayments client — settle, verify, balances via facilitator API |
-| `circle/x401.py` | x401 credential issuance + verification — binds agent identity into receipt chain |
-| `circle/isolator.py` | Forensic recorder — signed incident evidence + findings |
-| `circle/reputation.py` | ERC-8004 reputation writer — publishes isolation events to on-chain registry |
-| `circle/verifier.py` | Offline verifier — Ed25519 sigs, hash chain, Merkle proofs, settlement cross-reference |
+| `circle/executor.py` | Gated payment executor - policy eval, token issuance, Circle CLI, receipt signing |
+| `circle/risk_scorer.py` | BlockIntel heuristic risk scorer (blockintel-heuristic-v2) - live OFAC/SDN screening, structural prompt-injection detection, behavioral anomaly folding, deterministic signals |
+| `circle/sanctions.py` | OFAC SDN screening - hand-verified static seed + live SDN-feed sync (`refresh()`); receipts attest the feed source, publish date, and content digest |
+| `circle/behavioral.py` | Per-agent behavioral layer - robust z-score (median/MAD) amount outliers, velocity bursts, novel counterparty; honest statistics (not ML), GCS-persisted history |
+| `circle/gateway.py` | Circle Gateway nanopayments client - settle, verify, balances via facilitator API |
+| `circle/x401.py` | x401 credential issuance + verification - binds agent identity into receipt chain |
+| `circle/isolator.py` | Forensic recorder - signed incident evidence + findings |
+| `circle/reputation.py` | ERC-8004 reputation writer - publishes isolation events to on-chain registry |
+| `circle/verifier.py` | Offline verifier - Ed25519 sigs, hash chain, Merkle proofs, settlement cross-reference |
 | `circle/auditor.py` | Gemini compliance report (EU AI Act + NIST AI RMF) + PDF export |
 | `circle/cli.py` | Circle CLI Python wrapper + settlement binding |
-| `verigate/` | Python SDK — `Gate` and `Intent` API |
-| `verigate/mcp_server.py` | MCP server — 6 tools + 3 resources for agent-to-agent discovery |
-| `app/server.py` | Live dashboard — FastAPI + SSE streaming + GCS proof bundle storage |
-| `app/x402.py` | x402-paywalled endpoints — security check + market data via Circle Gateway |
-| `app/validator.py` | Evidence Validator — independent x402-paywalled verification service |
-| `app/storage.py` | GCS persistence — proof bundles stored on Google Cloud Storage |
-| `plugins/verigate/` | Circle Skills plugin — SKILL.md + MCP config for agent integration |
-| `engine/` | Git submodule — [agent-authorization-gateway](https://github.com/4KInc/agent-authorization-gateway) (Apache-2.0) |
+| `verigate/` | Python SDK - `Gate` and `Intent` API |
+| `verigate/mcp_server.py` | MCP server - 6 tools + 3 resources for agent-to-agent discovery |
+| `app/server.py` | Live dashboard - FastAPI + SSE streaming + GCS proof bundle storage |
+| `app/x402.py` | x402-paywalled endpoints - security check + market data via Circle Gateway |
+| `app/validator.py` | Evidence Validator - independent x402-paywalled verification service |
+| `app/storage.py` | GCS persistence - proof bundles stored on Google Cloud Storage |
+| `plugins/verigate/` | Circle Skills plugin - SKILL.md + MCP config for agent integration |
+| `engine/` | Git submodule - [agent-authorization-gateway](https://github.com/4KInc/agent-authorization-gateway) (Apache-2.0) |
 
 ### Key Properties
 
-- **Zero LLM in the authorization trust path** — policy evaluation is deterministic Python
-- **Three-state decisions** — APPROVE / STEP_UP / DENY (STEP_UP triggers autonomous evidence purchase)
-- **Ed25519 (EdDSA) only** — no HS256 anywhere
-- **Receipt chain** — hash-linked, Ed25519 signed, Merkle-anchored
-- **Settlement binding** — tx hash embedded in receipt body
-- **ERC-8004 reputation** — isolation events published to on-chain registry
-- **Validator can DENY** — evidence purchase has real consequences (not always confirmed)
-- **GCS persistence** — proof bundles, sanctions cache, and behavioral history survive Cloud Run cold starts
-- **Live OFAC SDN sync** — background daemon refreshes the sanctions set via a streaming parser (handles the real ~28MB feed); every decision attests which feed version it screened against
-- **Behavioral baseline** — per-agent transaction history drives amount/velocity/novelty anomaly signals (honest statistics, deterministic); baseline is reconstructed from stored proof bundles on cold start
-- **Explainable verdicts** — every score is attributed to named categories (`contributions`) with a one-line `rationale` naming the threshold rule that fired — no black box
-- **CI-enforced rigor** — GitHub Actions gates the security-critical core on ruff (lint), mypy (types), and the full pytest suite on every push
+- **Zero LLM in the authorization trust path** - policy evaluation is deterministic Python
+- **Three-state decisions** - APPROVE / STEP_UP / DENY (STEP_UP triggers autonomous evidence purchase)
+- **Ed25519 (EdDSA) only** - no HS256 anywhere
+- **Receipt chain** - hash-linked, Ed25519 signed, Merkle-anchored
+- **Settlement binding** - tx hash embedded in receipt body
+- **ERC-8004 reputation** - isolation events published to on-chain registry
+- **Validator can DENY** - evidence purchase has real consequences (not always confirmed)
+- **GCS persistence** - proof bundles, sanctions cache, and behavioral history survive Cloud Run cold starts
+- **Live OFAC SDN sync** - background daemon refreshes the sanctions set via a streaming parser (handles the real ~28MB feed); every decision attests which feed version it screened against
+- **Behavioral baseline** - per-agent transaction history drives amount/velocity/novelty anomaly signals (honest statistics, deterministic); baseline is reconstructed from stored proof bundles on cold start
+- **Explainable verdicts** - every score is attributed to named categories (`contributions`) with a one-line `rationale` naming the threshold rule that fired - no black box
+- **CI-enforced rigor** - GitHub Actions gates the security-critical core on ruff (lint), mypy (types), and the full pytest suite on every push
 
 ### Stack
 
@@ -305,41 +305,41 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | Verigate Treasury wallet | [`0x0c744...44d`](https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d) |
 | Evidence Validator wallet | [`0xbe14...a558`](https://basescan.org/address/0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558) |
 | ERC-8004 contract | [`0xf5FE...5AA`](https://sepolia.basescan.org/address/0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA) on Base Sepolia |
-| x402 endpoint | [`/x402/security-check`](https://verigate-dashboard-1031148889398.us-central1.run.app/x402/health) — returns 402 with Gateway payment requirements |
+| x402 endpoint | [`/x402/security-check`](https://verigate-dashboard-1031148889398.us-central1.run.app/x402/health) - returns 402 with Gateway payment requirements |
 | OpenAPI spec | [`/static/openapi.json`](https://verigate-dashboard-1031148889398.us-central1.run.app/static/openapi.json) |
-| Gateway status | [`/api/gateway`](https://verigate-dashboard-1031148889398.us-central1.run.app/api/gateway) — Circle Gateway facilitator connectivity |
+| Gateway status | [`/api/gateway`](https://verigate-dashboard-1031148889398.us-central1.run.app/api/gateway) - Circle Gateway facilitator connectivity |
 | GCS proof bundles | `gs://verigate-proof-bundles/` |
 | PyPI | [`pip install verigate`](https://pypi.org/project/verigate/) |
 | MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
 | Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
-| Autonomy proof | [`/proof/{receipt_hash}`](https://verigate-dashboard-1031148889398.us-central1.run.app/proof/sha256) — full causal chain for any receipt |
+| Autonomy proof | [`/proof/{receipt_hash}`](https://verigate-dashboard-1031148889398.us-central1.run.app/proof/sha256) - full causal chain for any receipt |
 | Control attestation | [`/v1/carrier/insureds/demo/control-attestation`](https://verigate-dashboard-1031148889398.us-central1.run.app/v1/carrier/insureds/demo/control-attestation) |
 | Demo command | `make demo` |
-| Tests | 116 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) — CI-enforced with ruff + mypy |
+| Tests | 116 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) - CI-enforced with ruff + mypy |
 
 ## Pre-Existing Work Disclosure
 
 The `engine/` directory is a git submodule referencing [agent-authorization-gateway](https://github.com/4KInc/agent-authorization-gateway), an Apache-2.0 licensed framework that predates this hackathon. It provides foundational primitives (receipt signing, policy engine, Merkle trees, canonical JSON).
 
-Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built for this hackathon. The Circle integration layer — three-state decision engine, BlockIntel risk scorer, live OFAC SDN screening, behavioral anomaly layer, Gateway nanopayments, x402 endpoints, MCP server, Circle Skills, GCS proof bundles, and the live dashboard — is entirely new work.
+Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built for this hackathon. The Circle integration layer - three-state decision engine, BlockIntel risk scorer, live OFAC SDN screening, behavioral anomaly layer, Gateway nanopayments, x402 endpoints, MCP server, Circle Skills, GCS proof bundles, and the live dashboard - is entirely new work.
 
 ## Limitations & Honest Assessment
 
 | Feature | Status | What It Proves |
 |---|---|---|
-| **Three-state engine** | Real — APPROVE/STEP_UP/DENY with autonomous evidence purchase | Core innovation, fully functional |
-| **Mainnet transactions** | Real — STEP_UP flow on Base mainnet ([tx](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732)) | Not just testnet |
-| **Receipt chain** | Real — Ed25519 signed, hash-chained, Merkle-anchored | Tamper-evident audit trail |
-| **Risk scorer** | Real — deterministic, tested (42 risk tests), same input = same score | Server-side, not fake |
-| **Explainable verdicts** | Real — per-category `contributions` + one-line `rationale` in every response and receipt | Auditable, not a black box |
-| **OFAC SDN screening** | Real — hand-verified seed + live SDN-feed streaming sync, exact-match, feed version attested in receipt | Not a hardcoded demo list |
-| **Behavioral layer** | Real — robust-z/velocity/novelty over persisted per-agent history, bootstrapped from stored bundles; honest statistics, not ML | Deterministic, no fabricated "ML" |
-| **CI pipeline** | Real — GitHub Actions: ruff + mypy + 116-test pytest on every push | Rigor is enforced, not just claimed |
-| **Gateway nanopayments** | Real — facilitator API integration (settle, verify, balances) | Circle's newest product |
-| **x402 endpoint** | Real — returns 402 with payment requirements, Gateway-compatible | Standard protocol |
-| **GCS proof bundles** | Real — persists across cold starts, carrier-retrievable | Production infrastructure |
-| **ERC-8004 reputation** | Real — deployed contract on Base Sepolia | [Contract on Basescan](https://sepolia.basescan.org/address/0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA) |
-| **Evidence Validator** | Demo — same operator, own wallet, not organizationally independent | Architecture ready for independent validators |
+| **Three-state engine** | Real - APPROVE/STEP_UP/DENY with autonomous evidence purchase | Core innovation, fully functional |
+| **Mainnet transactions** | Real - STEP_UP flow on Base mainnet ([tx](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732)) | Not just testnet |
+| **Receipt chain** | Real - Ed25519 signed, hash-chained, Merkle-anchored | Tamper-evident audit trail |
+| **Risk scorer** | Real - deterministic, tested (42 risk tests), same input = same score | Server-side, not fake |
+| **Explainable verdicts** | Real - per-category `contributions` + one-line `rationale` in every response and receipt | Auditable, not a black box |
+| **OFAC SDN screening** | Real - hand-verified seed + live SDN-feed streaming sync, exact-match, feed version attested in receipt | Not a hardcoded demo list |
+| **Behavioral layer** | Real - robust-z/velocity/novelty over persisted per-agent history, bootstrapped from stored bundles; honest statistics, not ML | Deterministic, no fabricated "ML" |
+| **CI pipeline** | Real - GitHub Actions: ruff + mypy + 116-test pytest on every push | Rigor is enforced, not just claimed |
+| **Gateway nanopayments** | Real - facilitator API integration (settle, verify, balances) | Circle's newest product |
+| **x402 endpoint** | Real - returns 402 with payment requirements, Gateway-compatible | Standard protocol |
+| **GCS proof bundles** | Real - persists across cold starts, carrier-retrievable | Production infrastructure |
+| **ERC-8004 reputation** | Real - deployed contract on Base Sepolia | [Contract on Basescan](https://sepolia.basescan.org/address/0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA) |
+| **Evidence Validator** | Demo - same operator, own wallet, not organizationally independent | Architecture ready for independent validators |
 | **Revenue** | $0 arms-length revenue (disclosed honestly) | In active evaluation with 5 carriers |
 
 ## Customer Validation
@@ -385,7 +385,7 @@ make test
 
 ## The One Sentence
 
-> Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers — screening every payment against policy, sanctions, and anomaly signals, autonomously purchasing evidence when uncertain, and producing signed receipts designed for carrier underwriting and claims. All on Circle.
+> Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers - screening every payment against policy, sanctions, and anomaly signals, autonomously purchasing evidence when uncertain, and producing signed receipts designed for carrier underwriting and claims. All on Circle.
 
 **Corporate entity:** BlockIntel, Inc. Delaware C-Corp (EIN 41-4617459)
 
