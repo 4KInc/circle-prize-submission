@@ -1103,7 +1103,9 @@ async def _dry_run_stream():
                             "details": {"overall": verification}})
         await asyncio.sleep(0.3)
 
-        # Populate state for tabs
+        # Populate state for dashboard display only (NOT for authorization decisions).
+        # dry_run_source marks this data as replayed — the /api/check endpoint
+        # never reads from state; it always calls the live scorer directly.
         state["receipts"] = receipts
         state["agents"] = agents
         state["artifacts"] = artifacts
@@ -1111,6 +1113,7 @@ async def _dry_run_stream():
         state["verification"] = bundle.get("verification")
         state["compliance"] = bundle.get("compliance")
         state["anchor"] = bundle.get("anchor_data")
+        state["dry_run_source"] = True
 
         yield _sse("complete", {
             "dry_run": True,

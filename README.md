@@ -8,7 +8,7 @@
 
 AI agents are starting to make their own payments using USDC. But who checks if those payments are safe?
 
-**Verigate is a security guard for AI agent payments.** Other agents pay it to check their transactions. If Verigate isn't sure about a payment, it buys a second opinion from an independent validator. Then it approves or blocks the payment and issues a signed receipt as proof.
+**Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers.** Other agents pay Verigate to screen their transactions against policy, sanctions, and anomaly signals. When risk is uncertain, Verigate autonomously purchases a separate verification. Every decision produces a cryptographically signed receipt that the insured can expose to its carrier for underwriting, renewal, or claims.
 
 Every payment Verigate receives, every evidence purchase it makes, and every receipt it signs happens through **Circle's Agent Stack**. Remove Circle and the business stops working.
 
@@ -204,7 +204,7 @@ Circle's Agent Wallets already have spending limits, allowlists, and rate limits
 
 | | Circle Agent Wallet | Verigate |
 |---|---|---|
-| **Question answered** | "Is this payment within the rules?" | "Is this payment safe?" |
+| **Question answered** | "Is this payment within the rules?" | "Has this payment been screened against policy, sanctions, and injection/anomaly signals?" |
 | **Decision type** | Binary: ALLOW or BLOCK | Three-state: APPROVE, STEP_UP, or DENY |
 | **Can buy a second opinion?** | No | Yes. Treasury autonomously pays a validator when uncertain. |
 | **Looks at context?** | No. Sees amount, payee, chain. | Yes. First-time payee? Injection language? Behavioral pattern? |
@@ -220,7 +220,7 @@ Could this business work without Circle? **No.**
 | Without Circle... | What breaks |
 |---|---|
 | No Agent Wallets | Verigate can't hold money or enforce spending limits |
-| No USDC | Agents can't pay per-request (credit cards don't work for sub-cent machine payments) |
+| No USDC | Agents can't pay per-request (traditional payment rails are poorly suited to high-frequency, programmatic micropayments) |
 | No Gateway Nanopayments | $0.05 fee can't be settled gas-free at scale |
 | No Spending Policies | Verigate's autonomous evidence purchase has no guardrails |
 | No x402 | The validator can't be paid as an on-demand service |
@@ -234,7 +234,7 @@ Circle isn't a payment method added to a security product. **Circle is the econo
 |--------|-----|-------------|---------|---------|
 | **Customer Agent** | AI agent that needs a payment checked | Pays Verigate $0.05 per check | `0x5c34...431a2` | `0x008e...16acc` |
 | **Verigate Treasury** | The security guard | Earns from customers. Spends on evidence. | `0x0c74...5eec44d` | `0x0c74...5eec44d` |
-| **Evidence Validator** | Independent checker | Gets paid $0.02 on STEP_UP | `0xbe14...ba558` | `0xbe14...ba558` |
+| **Evidence Validator** | Separate validator service | Gets paid $0.02 on STEP_UP | `0xbe14...ba558` | `0xbe14...ba558` |
 
 Money flow: `Customer ($0.05) → Verigate Treasury → Validator ($0.02)`
 

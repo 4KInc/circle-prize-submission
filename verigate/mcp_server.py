@@ -39,7 +39,7 @@ mcp = FastMCP(
     instructions=(
         "Verigate is an autonomous transaction-security agent built on "
         "Circle Agent Stack. AI agents call these tools to check if a "
-        "USDC payment is safe before executing it. Verigate scores risk, "
+        "USDC payment against policy, sanctions, and anomaly signals. Verigate scores risk,"
         "buys independent evidence when uncertain (STEP_UP), and returns "
         "a signed receipt. Fees are $0.05 USDC per check, settled via "
         "Circle Gateway nanopayments (gas-free, batched). "
@@ -56,7 +56,7 @@ def check_payment(
     reason: str,
     chain: str = "BASE-SEPOLIA",
 ) -> dict:
-    """Check if a USDC payment is safe before executing it.
+    """Screen a USDC payment against policy, sanctions, and anomaly signals.
 
     Runs deterministic policy checks and BlockIntel risk scoring.
     Returns one of three decisions:
