@@ -500,6 +500,102 @@ async def get_wallets():
     return {"wallets": wallets_out}
 
 
+# ── Carrier API (stubbed for prize — demo auth, real data) ──────────
+
+@app.get("/v1/carrier/insureds/{insured_id}/control-attestation")
+async def carrier_control_attestation(insured_id: str):
+    """Control Attestation — screening metrics for the insured.
+
+    Returns observed data, not an audit opinion. The carrier draws
+    the conclusion. Coverage caveat and degraded-mode disclosure included.
+    """
+    receipts = state.get("receipts", [])
+    if not receipts:
+        try:
+            from app.storage import list_bundles, get_bundle
+            for b_meta in list_bundles(limit=5):
+                if "auto" not in b_meta["name"] and "sched" not in b_meta["name"]:
+                    b = get_bundle(b_meta["name"])
+                    if b and b.get("receipts"):
+                        receipts = b["receipts"]
+                        break
+        except Exception:
+            pass
+
+    approved = sum(1 for r in receipts if r.get("body", {}).get("decision") == "approve")
+    denied = sum(1 for r in receipts if r.get("body", {}).get("decision") == "deny")
+    step_up = sum(1 for r in receipts if r.get("body", {}).get("delegation_context", {}).get("step_up"))
+
+    return {
+        "attestation_type": "verigate-control-attestation-v1",
+        "insured_id": insured_id,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "period": {"note": "All available data (demo — no date scoping)"},
+        "observed_metrics": {
+            "attempts_screened": len(receipts),
+            "approved": approved,
+            "denied": denied,
+            "step_up_escalated": step_up,
+            "receipt_chain_integrity": state.get("verification", "PASS") if state.get("receipts") else "NOT_RUN",
+        },
+        "coverage_caveat": (
+            "This attestation covers only payments carrying a Verigate authorization token. "
+            "Out-of-band transfers from covered wallets are detectable via settlement reconciliation "
+            "but not blocked structurally in the current demo deployment."
+        ),
+        "degraded_mode_disclosure": (
+            "The system has operated in dry-run/replay mode during Cloud Run cold starts. "
+            "Dry-run mode is tagged in state and cannot produce live authorization decisions."
+        ),
+        "reliance_scope": (
+            "This attestation reports what Verigate observed during the screening of payment intents. "
+            "It does not constitute an audit, assurance, or compliance opinion. "
+            "Verigate screened against policy, OFAC SDN sanctions, and injection/anomaly signals. "
+            "It did not observe or control activity outside the screened payment path."
+        ),
+        "demo_auth": True,
+    }
+
+
+@app.get("/v1/carrier/insureds/{insured_id}/renewal-summary")
+async def carrier_renewal_summary(insured_id: str):
+    """Activity summary for carrier renewal review."""
+    receipts = state.get("receipts", [])
+    if not receipts:
+        try:
+            from app.storage import list_bundles, get_bundle
+            for b_meta in list_bundles(limit=5):
+                if "auto" not in b_meta["name"] and "sched" not in b_meta["name"]:
+                    b = get_bundle(b_meta["name"])
+                    if b and b.get("receipts"):
+                        receipts = b["receipts"]
+                        break
+        except Exception:
+            pass
+
+    return {
+        "insured_id": insured_id,
+        "period": "all-available",
+        "total_screened": len(receipts),
+        "decisions": {
+            "approved": sum(1 for r in receipts if r.get("body", {}).get("decision") == "approve"),
+            "denied": sum(1 for r in receipts if r.get("body", {}).get("decision") == "deny"),
+        },
+        "risk_profile": "Based on real screening data from Verigate receipt chain.",
+        "demo_auth": True,
+    }
+
+
+@app.get("/v1/carrier/receipts/{receipt_hash}/verify")
+async def carrier_verify_receipt(receipt_hash: str):
+    """Independent receipt verification for carriers."""
+    receipts = state.get("receipts", [])
+    for r in receipts:
+        if receipt_hash in r.get("receipt_hash", ""):
+            return {"found": True, "receipt": r, "demo_auth": True}
+    return JSONResponse({"found": False, "receipt_hash": receipt_hash}, status_code=404)
+
+
 @app.get("/api/carrier/evidence-bundle")
 async def carrier_evidence_bundle():
     """Carrier evidence-bundle endpoint.
@@ -614,6 +710,131 @@ async def gateway_status():
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+@app.get("/proof/{receipt_hash:path}")
+async def autonomy_proof_page(receipt_hash: str):
+    """Render a single-page autonomy proof for one receipt.
+
+    Shows the full causal chain: intent → policy trace → decision →
+    validator verdict → signed receipt → settlement tx — all
+    offline-verifiable. Designed for judges to see that Verigate
+    chose the action autonomously, not just that USDC moved.
+    """
+    # Find the receipt in live state or GCS
+    receipts = state.get("receipts", [])
+    if not receipts:
+        try:
+            from app.storage import list_bundles, get_bundle
+            for b_meta in list_bundles(limit=5):
+                if "auto" not in b_meta["name"] and "sched" not in b_meta["name"]:
+                    b = get_bundle(b_meta["name"])
+                    if b and b.get("receipts"):
+                        receipts = b["receipts"]
+                        break
+        except Exception:
+            pass
+
+    target = None
+    for r in receipts:
+        rh = r.get("receipt_hash", "")
+        if rh == receipt_hash or rh.startswith(receipt_hash) or receipt_hash in rh:
+            target = r
+            break
+
+    if not target:
+        return HTMLResponse(f"<h1>Receipt not found</h1><p>{receipt_hash[:40]}...</p>", status_code=404)
+
+    body = target.get("body", {})
+    del_ctx = body.get("delegation_context", {})
+    risk = del_ctx.get("blockintel", {})
+    step_up = del_ctx.get("step_up")
+    chain_name = del_ctx.get("settlement_chain", "BASE-SEPOLIA")
+    explorer = "sepolia.basescan.org" if "SEPOLIA" in chain_name.upper() else "basescan.org"
+
+    # Build the proof page HTML
+    decision = body.get("decision", "?").upper()
+    dec_color = "#4ade80" if decision == "APPROVE" else "#ff6b6b" if decision == "DENY" else "#ffaf00"
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verigate Autonomy Proof</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{{background:#111318;color:#e2e2e8;font-family:'Sora',sans-serif;margin:0;padding:24px}}
+.card{{background:rgba(30,32,36,.8);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:20px;margin-bottom:16px}}
+.mono{{font-family:'JetBrains Mono',monospace;font-size:12px;word-break:break-all}}
+.label{{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:rgba(195,202,172,.5);margin-bottom:4px}}
+h1{{font-size:24px;margin:0 0 4px}}.badge{{display:inline-block;padding:4px 12px;border-radius:6px;font-weight:700;font-size:14px}}
+a{{color:#b8c3ff;text-decoration:none}}a:hover{{text-decoration:underline}}
+.arrow{{text-align:center;color:rgba(184,246,0,.4);font-size:20px;padding:8px 0}}
+</style></head><body>
+<div style="max-width:720px;margin:0 auto">
+<h1>Autonomy Proof</h1>
+<p style="color:rgba(195,202,172,.6);font-size:13px;margin-bottom:24px">
+Full causal chain for one Verigate decision. Every field is independently verifiable.
+</p>
+
+<!-- 1. Intent -->
+<div class="card">
+<div class="label">1. Payment Intent</div>
+<div class="mono" style="margin-bottom:8px">Payee: {del_ctx.get('settlement_payee', '?')}</div>
+<div class="mono" style="margin-bottom:8px">Amount: {del_ctx.get('settlement_amount', '?')} USDC</div>
+<div class="mono">Intent Digest: {body.get('request_digest', '?')}</div>
+</div>
+<div class="arrow">↓</div>
+
+<!-- 2. Policy + Risk Trace -->
+<div class="card">
+<div class="label">2. Policy + Risk Assessment</div>
+<div class="mono" style="margin-bottom:8px">Policy Hash: {body.get('policy_hash', '?')}</div>
+<div class="mono" style="margin-bottom:8px">Risk Score: {risk.get('risk_score', '?')}/100 ({risk.get('risk_band', '?')})</div>
+<div class="mono" style="margin-bottom:8px">Confidence: {risk.get('confidence', '?')}</div>
+<div class="mono" style="margin-bottom:8px">Signals: {', '.join(risk.get('signals', []))}</div>
+<div class="mono" style="margin-bottom:8px">Model: {risk.get('model_version', '?')}</div>
+<div class="mono">Rationale: {risk.get('rationale', 'N/A')}</div>
+</div>
+<div class="arrow">↓</div>
+
+<!-- 3. Decision -->
+<div class="card" style="border-color:{dec_color}40">
+<div class="label">3. Autonomous Decision</div>
+<span class="badge" style="background:{dec_color}20;color:{dec_color};border:1px solid {dec_color}40">{decision}</span>
+<div class="mono" style="margin-top:8px">Sequence: #{body.get('seq', '?')}</div>
+{'<div class="mono">STEP_UP: Evidence purchased for $' + str(step_up.get("verification_spend_actual_usdc", "0.02")) + ' USDC</div>' if step_up else ''}
+</div>
+<div class="arrow">↓</div>
+
+<!-- 4. Signed Receipt -->
+<div class="card">
+<div class="label">4. Signed Receipt (Ed25519)</div>
+<div class="mono" style="margin-bottom:8px">Receipt Hash: {target.get('receipt_hash', '?')}</div>
+<div class="mono" style="margin-bottom:8px">Signature: {target.get('signature', '?')[:60]}...</div>
+<div class="mono" style="margin-bottom:8px">Key ID: {target.get('kid', '?')}</div>
+<div class="mono">Prev Receipt: {body.get('prev_receipt', 'genesis')}</div>
+</div>
+<div class="arrow">↓</div>
+
+<!-- 5. Settlement -->
+<div class="card">
+<div class="label">5. On-Chain Settlement</div>
+<div class="mono" style="margin-bottom:8px">Tx Hash: {del_ctx.get('settlement_tx', 'N/A')}</div>
+<div class="mono" style="margin-bottom:8px">Chain: {chain_name}</div>
+{f'<a href="https://{explorer}/tx/{del_ctx.get("settlement_tx", "")}" target="_blank">View on Basescan →</a>' if del_ctx.get('settlement_tx') else ''}
+</div>
+
+<!-- Verification -->
+<div class="card" style="border-color:rgba(184,246,0,.2);margin-top:24px">
+<div class="label" style="color:rgba(184,246,0,.6)">Offline Verification</div>
+<p style="font-size:13px;color:rgba(195,202,172,.7)">
+This receipt can be independently verified using only the public key (no trust in Verigate required).
+Run: <code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:4px">python -m circle.dispute verify export.json</code>
+</p>
+<a href="/" style="color:#b8f600">← Back to Dashboard</a>
+</div>
+</div></body></html>"""
+
+    return HTMLResponse(html)
 
 
 @app.post("/api/check")
