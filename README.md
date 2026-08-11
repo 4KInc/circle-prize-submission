@@ -4,11 +4,18 @@
 
 > Submission for the [$50K Circle Agentic Economy Prize](https://www.xprize.org/prizes/build-with-gemini) (Build with Gemini XPRIZE)
 
+## Judge's Path (60 seconds)
+
+| What | Link |
+|------|------|
+| **Live demo** | [Try a Security Check](https://verigate-dashboard-1031148889398.us-central1.run.app) — type any payee/amount/reason, get a real risk verdict |
+| **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) — autonomous evidence purchase, real USDC on Base |
+| **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) — 107 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
+| **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) — 4-step flow, 3 wallets, 5/5 Circle stack |
+
 ## What Is This?
 
-AI agents are starting to make their own payments using USDC. But who checks if those payments are safe?
-
-**Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers.** Other agents pay Verigate to screen their transactions against policy, sanctions, and anomaly signals. When risk is uncertain, Verigate autonomously purchases a separate verification. Every decision produces a cryptographically signed receipt that the insured can expose to its carrier for underwriting, renewal, or claims.
+**Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers.** Agents pay Verigate to screen transactions against policy, OFAC sanctions, and injection/anomaly signals. When risk is uncertain, Verigate autonomously purchases a separate verification. Every decision produces a cryptographically signed receipt designed for carrier underwriting, claims review, and audit workflows.
 
 Every payment Verigate receives, every evidence purchase it makes, and every receipt it signs happens through **Circle's Agent Stack**. Remove Circle and the business stops working.
 
@@ -306,7 +313,7 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
 | Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
 | Demo command | `make demo` |
-| Tests | 102 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) — CI-enforced with ruff + mypy |
+| Tests | 107 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) — CI-enforced with ruff + mypy |
 
 ## Pre-Existing Work Disclosure
 
@@ -325,7 +332,7 @@ Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built
 | **Explainable verdicts** | Real — per-category `contributions` + one-line `rationale` in every response and receipt | Auditable, not a black box |
 | **OFAC SDN screening** | Real — hand-verified seed + live SDN-feed streaming sync, exact-match, feed version attested in receipt | Not a hardcoded demo list |
 | **Behavioral layer** | Real — robust-z/velocity/novelty over persisted per-agent history, bootstrapped from stored bundles; honest statistics, not ML | Deterministic, no fabricated "ML" |
-| **CI pipeline** | Real — GitHub Actions: ruff + mypy + 102-test pytest on every push | Rigor is enforced, not just claimed |
+| **CI pipeline** | Real — GitHub Actions: ruff + mypy + 107-test pytest on every push | Rigor is enforced, not just claimed |
 | **Gateway nanopayments** | Real — facilitator API integration (settle, verify, balances) | Circle's newest product |
 | **x402 endpoint** | Real — returns 402 with payment requirements, Gateway-compatible | Standard protocol |
 | **GCS proof bundles** | Real — persists across cold starts, carrier-retrievable | Production infrastructure |
@@ -335,15 +342,15 @@ Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built
 
 ## Customer Validation
 
-BlockIntel is in active evaluation with 5 digital asset insurance carriers (not yet production customers):
+Pre-production pipeline. $0 arms-length revenue (disclosed honestly). No production customers.
 
-| Who | Signal |
-|-----|--------|
-| **Risk Collective** (Lloyd's syndicate) | Vendor panel candidacy, shadow mode trial proposed |
-| **Proof Insurance** | Carrier intro commitment, GTM validated |
-| **Relm Insurance** | Shadow mode pilot agreed, escalation to global head of claims |
-| **Breach Insurance** | CEO-level GTM partnership |
-| **Native** (Lloyd's broker) | Technical docs requested, CTO escalation |
+| Carrier | Stage | Next Milestone |
+|---------|-------|----------------|
+| **Risk Collective** (Lloyd's syndicate) | Vendor panel candidacy | Shadow-mode trial with anonymized data |
+| **Relm Insurance** | Shadow-mode pilot agreed | Escalation to global head of claims |
+| **Proof Insurance** | Carrier intro commitment | GTM partnership scope |
+| **Breach Insurance** | CEO-level engagement | Technical integration spec |
+| **Native** (Lloyd's broker) | Technical docs requested | CTO review of evidence bundle format |
 
 ## Tests
 
