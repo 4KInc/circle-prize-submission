@@ -331,7 +331,7 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | PyPI | [`pip install verigate`](https://pypi.org/project/verigate/) |
 | MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
 | Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
-| Autonomy proof | [Signed receipt, decision trace, validator request, settlement binding](https://verigate-dashboard-1031148889398.us-central1.run.app/proof/sha256:6d5390a7b75495cd26582e49314d588a4c2c145274b27f3c92e4fa0ea0ed1f9b) |
+| Autonomy proof | [Signed receipt, decision trace, validator request, settlement binding](https://verigate-dashboard-1031148889398.us-central1.run.app/proof/sha256) |
 | Control attestation | [Carrier API prototype](https://verigate-dashboard-1031148889398.us-central1.run.app/v1/carrier/insureds/demo/control-attestation) - public demo attestation; production carrier auth, tenant authorization, and consent grants documented but not yet deployed |
 | Demo command | `make demo` |
 | Tests | 116 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) - CI-enforced with ruff + mypy |
