@@ -743,7 +743,18 @@ async def autonomy_proof_page(receipt_hash: str):
             break
 
     if not target:
-        return HTMLResponse(f"<h1>Receipt not found</h1><p>{receipt_hash[:40]}...</p>", status_code=404)
+        # Show available receipts so the judge can pick one
+        available = [r.get("receipt_hash", "")[:40] + "..." for r in receipts[:5]]
+        links = "".join(f'<li><a href="/proof/{r.get("receipt_hash","")}" style="color:#b8f600;font-family:monospace;font-size:12px">{r.get("receipt_hash","")[:50]}...</a></li>' for r in receipts[:5])
+        return HTMLResponse(
+            f"""<html><head><style>body{{background:#111318;color:#e2e2e8;font-family:sans-serif;padding:24px}}</style></head>
+            <body><h1>Proof Explorer</h1>
+            <p>Paste a receipt hash in the URL to view the full causal chain.</p>
+            <p style="color:rgba(195,202,172,.6)">Available receipts:</p>
+            <ul>{links or '<li>No receipts available - run a demo first</li>'}</ul>
+            <a href="/" style="color:#b8f600">Back to Dashboard</a></body></html>""",
+            status_code=200,
+        )
 
     body = target.get("body", {})
     del_ctx = body.get("delegation_context", {})
