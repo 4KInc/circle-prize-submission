@@ -56,7 +56,7 @@ The STEP_UP flow has been executed on **Base mainnet** with real USDC:
 | **STEP_UP evidence** | Treasury `0x0c74...` | Validator `0xbe14...` | $0.02 | [View tx](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) |
 | Treasury funding | Customer `0x5c34...` | Treasury `0x0c74...` | $0.10 | [View tx](https://basescan.org/tx/0x958f2c400d0f955dc02678ff1172cd055305842f18d32a73783386e295af59b5) |
 
-These are real, independently verifiable USDC transactions on Base mainnet. The STEP_UP tx shows the Treasury autonomously spending its earnings to purchase evidence - the core innovation.
+These are real, independently verifiable USDC transactions on Base mainnet. The STEP_UP transaction verifies the Treasury-to-Validator USDC settlement. The linked signed receipt and autonomy-proof record bind that settlement to the STEP_UP decision, policy evaluation, and validator request.
 
 ## Real Use Case: AI Agent With a Company Wallet
 
@@ -109,6 +109,23 @@ The insurance carrier calls `GET /api/carrier/evidence-bundle` and gets back eve
 **Without Verigate:** Insurer has to trust that the agent didn't do anything stupid. No proof.
 **With Verigate:** Every money decision has a cryptographic receipt the insurer can independently verify.
 
+### How the Carrier Gets Access
+
+```
+Company authorizes carrier access
+        ↓
+Carrier requests a purpose-scoped evidence package:
+application / renewal / claim
+        ↓
+Verigate returns signed control attestation,
+decision receipts, policy versions, risk rationales,
+validator outcomes, and settlement references
+        ↓
+Carrier verifies signatures and evaluates coverage or risk
+```
+
+The insured controls carrier access through a time-limited, purpose-bound consent grant; the current public endpoint demonstrates the attestation format, while production consent and tenant authorization are documented separately in [`CARRIER_API.md`](CARRIER_API.md).
+
 ## Circle Agent Stack Coverage (5/5)
 
 | Stack Component | How Verigate Uses It |
@@ -150,11 +167,13 @@ All Gemini calls have deterministic fallbacks for testing/CI.
 
 ### x402 Payment (Circle CLI)
 
+The public CLI walkthrough uses Base Sepolia to avoid requiring judge funds; the documented customer-fee and STEP_UP evidence transfers were separately executed with USDC on Base mainnet.
+
 ```bash
 # Hit the x402 endpoint - returns 402 with Gateway payment requirements
 curl https://verigate-dashboard-1031148889398.us-central1.run.app/x402/security-check
 
-# Pay via Circle CLI (real USDC, Circle Gateway nanopayment)
+# Pay via Circle CLI (Base Sepolia testnet)
 circle services pay \
   https://verigate-dashboard-1031148889398.us-central1.run.app/x402/security-check \
   --address 0xYOUR_WALLET \
@@ -218,11 +237,11 @@ Circle's Agent Wallets already have spending limits, allowlists, and rate limits
 | **Produces proof?** | No audit trail of why | Yes. Signed receipt for every decision. |
 | **Serves insurers?** | No | Yes. Carrier evidence bundle API + GCS proof bundles. |
 
-**The key capability Circle can't do: STEP_UP.** Circle's policies are binary. Verigate adds a middle state where the agent spends money to resolve uncertainty before making a final decision. That autonomous evidence purchase is the core of the business.
+Verigate adds an application-layer STEP_UP workflow: it can commission external evidence under a bounded mandate before returning a final decision. Circle's wallet policies are binary (allow/block); Verigate adds a middle state where the agent spends money to resolve uncertainty.
 
 ## Why Circle Is Central (Not Bolted On)
 
-Could this business work without Circle? **No.**
+This submitted product is deliberately Circle-native: removing Circle would break its wallet controls, USDC settlement, Gateway micropayments, x402 service payments, and programmatic wallet operations.
 
 | Without Circle... | What breaks |
 |---|---|
@@ -312,8 +331,8 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | PyPI | [`pip install verigate`](https://pypi.org/project/verigate/) |
 | MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
 | Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
-| Autonomy proof | [`/proof/{receipt_hash}`](https://verigate-dashboard-1031148889398.us-central1.run.app/proof/sha256) - full causal chain for any receipt |
-| Control attestation | [`/v1/carrier/insureds/demo/control-attestation`](https://verigate-dashboard-1031148889398.us-central1.run.app/v1/carrier/insureds/demo/control-attestation) |
+| Autonomy proof | [Signed receipt, decision trace, validator request, settlement binding](https://verigate-dashboard-1031148889398.us-central1.run.app/proof/sha256:6d5390a7b75495cd26582e49314d588a4c2c145274b27f3c92e4f) |
+| Control attestation | [Carrier API prototype](https://verigate-dashboard-1031148889398.us-central1.run.app/v1/carrier/insureds/demo/control-attestation) - public demo attestation; production carrier auth, tenant authorization, and consent grants documented but not yet deployed |
 | Demo command | `make demo` |
 | Tests | 116 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) - CI-enforced with ruff + mypy |
 
@@ -360,7 +379,7 @@ Pre-production pipeline. $0 arms-length revenue (disclosed honestly). No product
 make test
 ```
 
-116 tests across 8 test files:
+116 tests across 9 test files:
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
