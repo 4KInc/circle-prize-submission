@@ -1035,11 +1035,12 @@ async def run_autonomous_single():
     import secrets as _s
 
     # Generate an intent that will trigger STEP_UP (uncertain risk)
+    # Uses $8 on a data service (triggers service_amount_mismatch + urgency)
     intent = {
         "payee": "0x" + _s.token_hex(20),
-        "amount": "2.50",
-        "service": "analytics-vendor",
-        "reason": "Urgent purchase from newly discovered analytics vendor for quarterly report",
+        "amount": "8.00",
+        "service": "market-data-api",
+        "reason": "Urgent: pay new analytics vendor for quarterly compliance report",
     }
 
     risk = evaluate_risk(
