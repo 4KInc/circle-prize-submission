@@ -65,5 +65,10 @@ The Evidence Validator is currently a **separate service** operated by
 the Verigate team on the same server. It has its own Ed25519 signing key
 and wallet, but is not organizationally independent.
 
+The validator endpoint is configurable via `VALIDATOR_URL` env var, so
+the executor can be pointed to an external service (e.g., Blockaid,
+Chainlink oracle, or an independent operator). The current deployment
+is co-deployed but **architecturally separable**.
+
 **Production:** Multiple external validators with independent infrastructure,
 staking/reputation, and decorrelated scoring paths.
