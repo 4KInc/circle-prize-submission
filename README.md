@@ -25,9 +25,11 @@
 
 ## What Is This?
 
-**Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers.** Agents pay Verigate to screen transactions against policy, OFAC sanctions, and injection/anomaly signals. When risk is uncertain, Verigate autonomously purchases a separate verification. Every decision produces a cryptographically signed receipt designed for carrier underwriting, claims review, and audit workflows.
+Most agent-payment demos prove an agent *can* spend money. **Verigate proves spending money can itself be a risk-mitigation decision.**
 
-Every payment Verigate receives and every evidence purchase it makes is settled through **Circle's Agent Stack**. Verigate binds those settlement events to its signed receipt chain.
+When an AI agent wants to make a USDC payment, Verigate screens it against policy, OFAC sanctions, and injection/anomaly signals. If the risk is clear, Verigate approves or denies. If the risk is uncertain, Verigate does something no binary allow/block gate can do: **it autonomously spends a small amount of USDC to purchase external evidence, then decides.** This three-state APPROVE / STEP_UP / DENY model is the core innovation.
+
+Every payment Verigate receives and every evidence purchase it makes is settled through **Circle's Agent Stack**. Verigate binds those settlement events to a cryptographically signed receipt chain designed for carrier underwriting, claims review, and audit workflows.
 
 ## How It Works (4 Steps)
 
@@ -44,9 +46,10 @@ Agent wants to make a payment
    Result: APPROVE, STEP_UP, or DENY
       |
       v
-3. NOT SURE? BUY A SECOND OPINION
-   Verigate Treasury pays a validator $0.02 to check
-   No human involved. Pre-authorized up to $0.02/incident.
+3. UNCERTAIN? SPEND MONEY TO REDUCE UNCERTAINTY (STEP_UP)
+   Verigate Treasury autonomously pays a separate validator.
+   Dynamic fee: max($0.02, min(amount * 0.1%, $5.00)).
+   No human involved. This is the core innovation.
       |
       v
 4. DECISION + SIGNED RECEIPT
@@ -54,11 +57,11 @@ Agent wants to make a payment
    With the insured's authorization, a carrier can retrieve a purpose-scoped evidence package for application, renewal, audit, or claim review.
 ```
 
-**Step 3 is the key.** That's where Verigate autonomously spends money to make a better decision. It's not a demo feature. It's a logically necessary economic action: the system detected uncertainty and purchased evidence within its mandate.
+**Step 3 is the key innovation.** The system detected uncertainty and autonomously spent money to reduce it before deciding. This is not a demo feature - it is a bounded, pre-authorized economic action that distinguishes Verigate from every binary allow/block gate. The evidence cost scales dynamically with the transaction value, so a $10,000 payment triggers deeper verification than a $0.50 one.
 
 ## Mainnet STEP_UP Transaction (Base L2)
 
-The STEP_UP flow has been executed on **Base mainnet** with real USDC:
+The autonomous STEP_UP flow has been executed on **Base mainnet** with real USDC. The STEP_UP transaction verifies the Treasury-to-Validator settlement. The linked signed receipt and proof record bind that settlement to the risk decision, policy evaluation, and validator request:
 
 | Step | From | To | Amount | Basescan |
 |------|------|----|--------|----------|
@@ -414,7 +417,7 @@ make test
 
 ## The One Sentence
 
-> Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers - screening every payment against policy, sanctions, and anomaly signals, autonomously purchasing evidence when uncertain, and producing signed receipts designed for carrier underwriting and claims. All on Circle.
+> Verigate is the first agent-payment system where spending money is itself a risk-mitigation decision: it screens every payment, autonomously purchases evidence when uncertain, and produces signed receipts that bind the decision to the settlement. All on Circle.
 
 **Corporate entity:** BlockIntel, Inc. Delaware C-Corp (EIN 41-4617459)
 
