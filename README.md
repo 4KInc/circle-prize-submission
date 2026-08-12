@@ -60,7 +60,7 @@ These are real, independently verifiable USDC transactions on Base mainnet. The 
 
 ## Real Use Case: AI Agent With a Company Wallet
 
-**Setup:** A startup gives their AI agent a Circle wallet with $50 USDC. The agent's job is to buy market data, analyze competitors, and generate reports. It finds services on Circle's marketplace and pays for them autonomously.
+**Setup:** A startup gives their AI agent a Circle wallet with $50 USDC. The agent's job is to buy market data, analyze competitors, and generate reports. It discovers compatible service endpoints and pays for them autonomously.
 
 **The problem:** What if the agent pays a scam service, gets tricked by a prompt injection into draining the wallet, or overspends on garbage data?
 
