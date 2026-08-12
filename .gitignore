@@ -17,3 +17,5 @@ out/
 sk_live*
 .circle-cli/
 PRIZE_PLAN.md
+circle-vs-verigate-overlap-analysis.pdf
+verigate-proof-bundle.json
