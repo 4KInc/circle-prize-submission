@@ -92,7 +92,7 @@ async def _run_check():
         service=intent["service"],
         reason=intent["reason"],
         source_wallet=source_wallet,
-        chain=os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA"),
+        chain=os.environ.get("CIRCLE_CHAIN", "BASE"),
     )
 
     result = {

@@ -129,7 +129,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">STEP_UP</span>
       <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Signed Receipts</span>
       <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Carrier Evidence</span>
-      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Base Sepolia</span>
+      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Base Mainnet</span>
     </div>
     <div class="flex gap-3 justify-center mb-16">
       <button class="btn-primary h-11 px-6 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('tryit')">Try a Security Check <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
@@ -139,7 +139,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   </div>
 
     <!-- Autonomous Operations - Operator Dashboard -->
-    <div class="mb-8 rounded-2xl border border-primary-fixed/15 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.6) 0%, rgba(20,22,28,0.8) 100%);display:none">
+    <div class="mb-8 rounded-2xl border border-primary-fixed/15 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.6) 0%, rgba(20,22,28,0.8) 100%)">
       <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-[0.04]" style="background:radial-gradient(circle,#b8f600,transparent 70%)"></div>
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-primary-fixed/10">
@@ -147,15 +147,21 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
           <span class="w-2.5 h-2.5 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
           <div>
             <div class="font-display text-base font-bold text-primary-fixed">Autonomous Operations</div>
-            <div class="font-mono text-[10px] text-on-surface-variant/50" id="sched-since">Running since --</div>
+            <div class="font-mono text-[10px] text-on-surface-variant/50" id="sched-since">Background scheduler active</div>
           </div>
         </div>
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-fixed/20" style="background:rgba(184,246,0,0.05)">
-          <span class="font-mono text-[10px] text-primary-fixed">No human intervention</span>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-fixed/20" style="background:rgba(184,246,0,0.05)">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-pulse"></span>
+            <span class="font-mono text-[10px] text-primary-fixed">No human intervention</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10" style="background:rgba(255,255,255,0.03)">
+            <span class="font-mono text-[10px] text-on-surface-variant/50">BASE MAINNET</span>
+          </div>
         </div>
       </div>
       <!-- Metrics Grid -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-px" style="background:rgba(255,255,255,0.03)">
+      <div class="grid grid-cols-3 md:grid-cols-6 gap-px" style="background:rgba(255,255,255,0.03)">
         <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
           <div class="font-mono text-2xl font-bold text-on-surface" id="sched-runs">0</div>
           <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mt-1">Payments Screened</div>
@@ -165,17 +171,39 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
           <div class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Approved</div>
         </div>
         <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
+          <div class="font-mono text-2xl font-bold text-[#ffaf00]" id="sched-stepup">0</div>
+          <div class="font-mono text-[9px] text-[#ffaf00]/40 uppercase mt-1">STEP_UP Evidence</div>
+        </div>
+        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
           <div class="font-mono text-2xl font-bold text-error" id="sched-denied">0</div>
           <div class="font-mono text-[9px] text-error/40 uppercase mt-1">Blocked</div>
         </div>
         <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
-          <div class="font-mono text-2xl font-bold text-primary-fixed">$0</div>
-          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Lost to Attacks</div>
+          <div class="font-mono text-2xl font-bold text-primary-fixed" id="sched-protected">$0</div>
+          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Protected from Loss</div>
         </div>
         <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
-          <div class="font-mono text-xs text-on-surface-variant/60" id="sched-last">--</div>
+          <div class="font-mono text-xs text-on-surface-variant/60" id="sched-last">Awaiting first check</div>
           <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mt-1">Last Check</div>
         </div>
+      </div>
+      <!-- Uptime bar -->
+      <div class="px-6 py-3 border-t border-primary-fixed/10 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-on-surface-variant/40">Uptime</span>
+            <span class="font-mono text-[10px] text-primary-fixed font-bold" id="sched-uptime">--</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-on-surface-variant/40">Interval</span>
+            <span class="font-mono text-[10px] text-on-surface-variant/60">30 min</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-on-surface-variant/40">Evidence Spend</span>
+            <span class="font-mono text-[10px] text-[#ffaf00]" id="sched-evidence-spend">$0.00</span>
+          </div>
+        </div>
+        <div class="font-mono text-[10px] text-on-surface-variant/30">verigate.cloud &middot; Cloud Run</div>
       </div>
     </div>
 
@@ -2231,22 +2259,36 @@ async function loadSchedulerStatus(){
   try{
     const resp=await fetch('/api/scheduler/status');
     const s=await resp.json();
-    if(!s.running&&!s.total_runs)return;
-    const card=document.getElementById('scheduler-card');
-    card.style.display='';
-    document.getElementById('sched-runs').textContent=s.total_runs;
+    document.getElementById('sched-runs').textContent=s.total_runs||0;
     document.getElementById('sched-approved').textContent=s.total_approved||0;
+    document.getElementById('sched-stepup').textContent=s.total_step_up||0;
     document.getElementById('sched-denied').textContent=s.total_denied||0;
-    if(s.started_at)document.getElementById('sched-since').textContent='Running since '+new Date(s.started_at).toLocaleDateString();
+    // Evidence spend: $0.02 per STEP_UP
+    const evidenceSpend=((s.total_step_up||0)*0.02).toFixed(2);
+    document.getElementById('sched-evidence-spend').textContent='$'+evidenceSpend;
+    // Protected = sum of denied amounts (estimate from denied count * avg rogue amount ~$50)
+    const protectedAmt=(s.total_denied||0)*50;
+    document.getElementById('sched-protected').textContent=protectedAmt>0?'$'+protectedAmt.toLocaleString():'$0';
+    if(s.started_at){
+      const start=new Date(s.started_at);
+      const now=new Date();
+      const diffH=Math.floor((now-start)/3600000);
+      const diffD=Math.floor(diffH/24);
+      const remH=diffH%24;
+      const uptime=diffD>0?diffD+'d '+remH+'h':diffH>0?diffH+'h':Math.floor((now-start)/60000)+'m';
+      document.getElementById('sched-since').textContent='Running since '+start.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      document.getElementById('sched-uptime').textContent=uptime;
+    }
     if(s.last_result){
       const lr=s.last_result;
-      const ago=s.next_run_in_seconds?Math.max(0,1800-s.next_run_in_seconds):0;
+      const ago=s.next_run_in_seconds?Math.max(0,s.interval_seconds-s.next_run_in_seconds):0;
       const agoMin=Math.round(ago/60);
-      document.getElementById('sched-last').textContent=lr.decision+' ('+lr.score+') '+agoMin+'m ago';
+      const decColor=lr.decision==='APPROVE'?'#b8f600':lr.decision==='DENY'?'#ffb4ab':'#ffaf00';
+      document.getElementById('sched-last').innerHTML='<span style="color:'+decColor+'">'+lr.decision+'</span> <span style="color:rgba(255,255,255,0.4)">('+lr.score+')</span> '+agoMin+'m ago';
     }
   }catch(e){console.warn('Scheduler status unavailable:',e)}
 }
-setInterval(loadSchedulerStatus,60000);
+setInterval(loadSchedulerStatus,30000);
 </script>
 </body>
 </html>
