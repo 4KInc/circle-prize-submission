@@ -293,12 +293,17 @@ class PaymentExecutor:
         step_up_data = None
         if evaluation_decision == "STEP_UP":
             logger.info(f"STEP_UP triggered: score={risk.score} confidence={risk.confidence}")
+            # Dynamic evidence pricing: scales with transaction value
+            # Base: $0.02 for small txs, up to $5.00 for large txs
+            amount_f = float(intent.amount)
+            evidence_fee = max(0.02, min(amount_f * 0.001, 5.00))
+            evidence_fee_str = f"{evidence_fee:.2f}"
             step_up_data = {
                 "reason": "ELEVATED_RISK_UNCERTAIN_CONFIDENCE",
                 "risk_score": risk.score,
                 "confidence": str(risk.confidence),
                 "signals": risk.signals,
-                "verification_budget_usdc": "0.02",
+                "verification_budget_usdc": evidence_fee_str,
                 "verification_spend_actual_usdc": "0.00",
                 "validator_verdict": "pending",
             }
@@ -310,10 +315,10 @@ class PaymentExecutor:
                     "VALIDATOR_WALLET", "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558")
                 validator_tx = wallet_transfer(
                     source=treasury_wallet, destination=validator_address,
-                    amount="0.02", chain=intent.chain,
+                    amount=evidence_fee_str, chain=intent.chain,
                     token_address=intent.token_address,
                 )
-                step_up_data["verification_spend_actual_usdc"] = "0.02"
+                step_up_data["verification_spend_actual_usdc"] = evidence_fee_str
                 step_up_data["verification_tx"] = validator_tx.tx_hash
                 step_up_data["treasury_source"] = treasury_wallet
 

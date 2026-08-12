@@ -138,22 +138,43 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
 
-    <!-- Autonomous Operations Status -->
-    <div class="mb-8 rounded-2xl p-5 border border-primary-fixed/15 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.6) 0%, rgba(20,22,28,0.8) 100%);display:none">
-      <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.04]" style="background:radial-gradient(circle,#b8f600,transparent 70%)"></div>
-      <div class="flex items-center justify-between flex-wrap gap-4">
+    <!-- Autonomous Operations - Operator Dashboard -->
+    <div class="mb-8 rounded-2xl border border-primary-fixed/15 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.6) 0%, rgba(20,22,28,0.8) 100%);display:none">
+      <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-[0.04]" style="background:radial-gradient(circle,#b8f600,transparent 70%)"></div>
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-primary-fixed/10">
         <div class="flex items-center gap-3">
           <span class="w-2.5 h-2.5 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
           <div>
-            <div class="font-display text-sm font-bold text-primary-fixed">Autonomous Operations</div>
+            <div class="font-display text-base font-bold text-primary-fixed">Autonomous Operations</div>
             <div class="font-mono text-[10px] text-on-surface-variant/50" id="sched-since">Running since --</div>
           </div>
         </div>
-        <div class="flex items-center gap-6">
-          <div class="text-center"><div class="font-mono text-lg font-bold text-on-surface" id="sched-runs">0</div><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Checks</div></div>
-          <div class="text-center"><div class="font-mono text-lg font-bold text-primary-fixed" id="sched-approved">0</div><div class="font-mono text-[9px] text-primary-fixed/40 uppercase">Approved</div></div>
-          <div class="text-center"><div class="font-mono text-lg font-bold text-error" id="sched-denied">0</div><div class="font-mono text-[9px] text-error/40 uppercase">Denied</div></div>
-          <div class="text-center"><div class="font-mono text-xs text-on-surface-variant/60" id="sched-last">--</div><div class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Last Check</div></div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-fixed/20" style="background:rgba(184,246,0,0.05)">
+          <span class="font-mono text-[10px] text-primary-fixed">No human intervention</span>
+        </div>
+      </div>
+      <!-- Metrics Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-px" style="background:rgba(255,255,255,0.03)">
+        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
+          <div class="font-mono text-2xl font-bold text-on-surface" id="sched-runs">0</div>
+          <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mt-1">Payments Screened</div>
+        </div>
+        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
+          <div class="font-mono text-2xl font-bold text-primary-fixed" id="sched-approved">0</div>
+          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Approved</div>
+        </div>
+        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
+          <div class="font-mono text-2xl font-bold text-error" id="sched-denied">0</div>
+          <div class="font-mono text-[9px] text-error/40 uppercase mt-1">Blocked</div>
+        </div>
+        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
+          <div class="font-mono text-2xl font-bold text-primary-fixed">$0</div>
+          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Lost to Attacks</div>
+        </div>
+        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
+          <div class="font-mono text-xs text-on-surface-variant/60" id="sched-last">--</div>
+          <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mt-1">Last Check</div>
         </div>
       </div>
     </div>

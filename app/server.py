@@ -1023,6 +1023,83 @@ async def scheduler_status():
     return get_status()
 
 
+@app.post("/api/run/autonomous-single")
+async def run_autonomous_single():
+    """Execute one full autonomous STEP_UP cycle - no UI, no human button.
+
+    This is the endpoint the video shows: one API call triggers the full
+    agent-driven flow (risk check -> STEP_UP -> evidence purchase -> receipt).
+    Designed to prove autonomy unambiguously.
+    """
+    from circle.risk_scorer import evaluate_risk
+    import secrets as _s
+
+    # Generate an intent that will trigger STEP_UP (uncertain risk)
+    intent = {
+        "payee": "0x" + _s.token_hex(20),
+        "amount": "2.50",
+        "service": "analytics-vendor",
+        "reason": "Urgent purchase from newly discovered analytics vendor for quarterly report",
+    }
+
+    risk = evaluate_risk(
+        payee=intent["payee"], amount=intent["amount"],
+        service=intent["service"], reason=intent["reason"],
+        source_wallet=CUSTOMER_WALLET, chain=state["chain"],
+    )
+
+    result = {
+        "autonomous": True,
+        "human_intervention": False,
+        "intent": intent,
+        "decision": risk.decision,
+        "score": risk.score,
+        "band": risk.band,
+        "confidence": risk.confidence,
+        "signals": risk.signals,
+        "rationale": risk.rationale,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # If STEP_UP, execute real testnet transfer (Treasury -> Validator)
+    if risk.decision == "STEP_UP":
+        try:
+            from circle.cli import wallet_transfer, USDC_ADDRESSES
+            chain = state["chain"]
+            evidence_fee = max(0.02, min(float(intent["amount"]) * 0.001, 5.00))
+            evidence_fee_str = f"{evidence_fee:.2f}"
+            tx = wallet_transfer(
+                source=TREASURY_WALLET, destination=VALIDATOR_WALLET,
+                amount=evidence_fee_str, chain=chain,
+                token_address=USDC_ADDRESSES.get(chain),
+            )
+            result["step_up"] = {
+                "evidence_fee": evidence_fee_str,
+                "tx_hash": tx.tx_hash,
+                "explorer_url": tx.explorer_url,
+                "source": "treasury",
+                "destination": "validator",
+                "settlement": "real_usdc",
+            }
+        except Exception as e:
+            result["step_up"] = {"error": str(e), "evidence_fee": "0.02"}
+
+    # Store to GCS
+    try:
+        from app.storage import store_proof_bundle
+        run_id = f"auto_single_{_s.token_hex(6)}"
+        store_proof_bundle({
+            "schema": "verigate-autonomous-single-v1",
+            "run_id": run_id,
+            "run_type": "autonomous-single",
+            **result,
+        }, run_id)
+    except Exception:
+        pass
+
+    return result
+
+
 @app.post("/api/autonomous-check")
 async def autonomous_check(request: Request):
     """Autonomous security check — called by Cloud Scheduler every hour.

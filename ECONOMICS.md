@@ -5,7 +5,9 @@
 | Item | Amount | When |
 |------|--------|------|
 | Security check fee | $0.05 USDC | Every transaction screened |
-| Evidence purchase cost | $0.02 USDC | Only on STEP_UP (~20-30% of checks) |
+| Evidence purchase cost | Dynamic: `max($0.02, min(amount * 0.1%, $5.00))` | Only on STEP_UP (~20-30% of checks) |
+
+Evidence cost scales with transaction value: a $0.50 payment triggers $0.02 evidence; a $1,000 payment triggers $1.00; a $10,000 payment triggers $5.00 (cap). The system adapts its verification depth to the risk exposure.
 
 ## Break-Even Analysis
 

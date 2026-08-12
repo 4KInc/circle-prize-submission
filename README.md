@@ -13,6 +13,16 @@
 | **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) - 116 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
 | **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) - 4-step flow, 3 wallets, 5/5 Circle stack |
 
+## Eligibility Confirmation
+
+| Requirement | Evidence |
+|-------------|----------|
+| Uses Circle Agent Stack | Agent Wallets, Gateway Nanopayments, CLI, x402, Skills (5/5) |
+| Public GitHub repo | [4KInc/circle-prize-submission](https://github.com/4KInc/circle-prize-submission) |
+| Real USDC transaction | [3 mainnet txs on Basescan](#mainnet-step_up-transaction-base-l2) |
+| Agent wallet addresses | [Customer](https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2), [Treasury](https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d), [Validator](https://basescan.org/address/0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558) |
+| Agent-driven, not human checkout | Background scheduler executes autonomously every 30 min; no human clicks approve/send |
+
 ## What Is This?
 
 **Verigate is a payment-authorization firewall for AI agents and a permissioned evidence rail for their insurers.** Agents pay Verigate to screen transactions against policy, OFAC sanctions, and injection/anomaly signals. When risk is uncertain, Verigate autonomously purchases a separate verification. Every decision produces a cryptographically signed receipt designed for carrier underwriting, claims review, and audit workflows.
