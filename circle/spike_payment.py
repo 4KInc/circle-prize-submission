@@ -36,12 +36,12 @@ from circle.cli import (
 )
 
 # ─── Configuration ───────────────────────────────────────────────────
-CHAIN = os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA")
-AGENT_WALLET = os.environ.get("CIRCLE_AGENT_WALLET", "0x008ed50be2cd35f6333a37542a76a227e3b16acc")
+CHAIN = os.environ.get("CIRCLE_CHAIN", "BASE")
+AGENT_WALLET = os.environ.get("CIRCLE_AGENT_WALLET", "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2")
 # Random payee for spike (in production this comes from Agent Marketplace / x402)
 PAYEE_ADDRESS = os.environ.get("CIRCLE_PAYEE_ADDRESS", "0x" + secrets.token_hex(20))
 PAYMENT_AMOUNT = os.environ.get("CIRCLE_PAYMENT_AMOUNT", "0.01")
-USDC_TOKEN = USDC_ADDRESSES.get(CHAIN, USDC_ADDRESSES["BASE-SEPOLIA"])
+USDC_TOKEN = USDC_ADDRESSES.get(CHAIN, USDC_ADDRESSES["BASE"])
 
 
 def compute_payment_intent_digest(

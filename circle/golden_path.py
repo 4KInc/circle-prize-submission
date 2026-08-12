@@ -36,7 +36,7 @@ X402_ENDPOINT = os.environ.get("X402_ENDPOINT", _default_x402)
 # Payee address for the x402 service (our agent wallet for self-pay demo)
 SERVICE_PAYEE = os.environ.get(
     "SERVICE_PAYEE_ADDRESS",
-    "0x008ed50be2cd35f6333a37542a76a227e3b16acc",
+    "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2",
 )
 
 SERVICE_CATALOG = [
@@ -46,7 +46,7 @@ SERVICE_CATALOG = [
         "endpoint": X402_ENDPOINT,
         "price_usdc": "0.01",
         "payee": SERVICE_PAYEE,
-        "chain": os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA"),
+        "chain": os.environ.get("CIRCLE_CHAIN", "BASE"),
         "x402": True,
         "settlement": "circle-gateway-nanopayment",
     },
@@ -173,8 +173,8 @@ def run_golden_path():
     from circle.reputation import ReputationWriter
     from circle.x401 import X401Issuer, X401Verifier
 
-    wallet = os.environ.get("CIRCLE_AGENT_WALLET", "0x008ed50be2cd35f6333a37542a76a227e3b16acc")
-    chain = os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA")
+    wallet = os.environ.get("CIRCLE_AGENT_WALLET", "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2")
+    chain = os.environ.get("CIRCLE_CHAIN", "BASE")
     service = SERVICE_CATALOG[0]
 
     print("=" * 72)

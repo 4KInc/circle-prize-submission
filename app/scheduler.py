@@ -83,7 +83,7 @@ async def _run_check():
 
     intent = _generate_intent()
     source_wallet = os.environ.get(
-        "CIRCLE_AGENT_WALLET", "0x008ed50be2cd35f6333a37542a76a227e3b16acc"
+        "CIRCLE_AGENT_WALLET", "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2"
     )
 
     risk = evaluate_risk(

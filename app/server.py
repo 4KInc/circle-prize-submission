@@ -38,7 +38,7 @@ logger = logging.getLogger("app.server")
 
 # Shared state for the dashboard
 # Wallet addresses
-CUSTOMER_WALLET = os.environ.get("CIRCLE_AGENT_WALLET", "0x008ed50be2cd35f6333a37542a76a227e3b16acc")
+CUSTOMER_WALLET = os.environ.get("CIRCLE_AGENT_WALLET", "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2")
 TREASURY_WALLET = os.environ.get("VERIGATE_TREASURY_WALLET", "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d")
 VALIDATOR_WALLET = os.environ.get("VALIDATOR_WALLET_ADDRESS", "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558")
 
@@ -49,7 +49,7 @@ state = {
     "merkle_root": None,
     "verification": None,
     "wallet": CUSTOMER_WALLET,
-    "chain": os.environ.get("CIRCLE_CHAIN", "BASE-SEPOLIA"),
+    "chain": os.environ.get("CIRCLE_CHAIN", "BASE"),
     "running": False,
     "running_since": 0,
     "agents": {},
@@ -760,7 +760,7 @@ async def autonomy_proof_page(receipt_hash: str):
     del_ctx = body.get("delegation_context", {})
     risk = del_ctx.get("blockintel", {})
     step_up = del_ctx.get("step_up")
-    chain_name = del_ctx.get("settlement_chain", "BASE-SEPOLIA")
+    chain_name = del_ctx.get("settlement_chain", "BASE")
     explorer = "sepolia.basescan.org" if "SEPOLIA" in chain_name.upper() else "basescan.org"
 
     # Build the proof page HTML
@@ -1429,7 +1429,7 @@ async def _dry_run_stream():
             "dry_run": True,
             "source": "gcs-replay",
             "wallet": bundle.get("wallet", CUSTOMER_WALLET),
-            "chain": bundle.get("chain", "BASE-SEPOLIA"),
+            "chain": bundle.get("chain", "BASE"),
             "payments_approved": sum(1 for r in receipts if r.get("body", {}).get("decision") == "approve"),
             "payments_blocked": sum(1 for r in receipts if r.get("body", {}).get("decision") == "deny"),
             "verification": verification,

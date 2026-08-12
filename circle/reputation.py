@@ -81,7 +81,7 @@ class ReputationWriter:
 
     def __init__(
         self,
-        chain: str = "BASE-SEPOLIA",
+        chain: str = "BASE",
         registry_address: str | None = None,
         wallet_address: str | None = None,
     ):

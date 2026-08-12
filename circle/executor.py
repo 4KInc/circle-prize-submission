@@ -63,14 +63,14 @@ class PaymentIntent:
     amount: str
     service: str
     reason: str
-    chain: str = "BASE-SEPOLIA"
+    chain: str = "BASE"
     token_address: str | None = None
     x402_endpoint: str | None = None  # If set, use x402 protocol instead of direct transfer
     x401_credential: Any | None = None  # x401 credential binding agent identity
 
     def __post_init__(self):
         if self.token_address is None:
-            self.token_address = USDC_ADDRESSES.get(self.chain, USDC_ADDRESSES["BASE-SEPOLIA"])
+            self.token_address = USDC_ADDRESSES.get(self.chain, USDC_ADDRESSES["BASE"])
 
 
 @dataclass

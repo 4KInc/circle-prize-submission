@@ -295,7 +295,7 @@ class Isolator:
         private_key: Ed25519PrivateKey,
         kid: str,
         wallet_address: str | None = None,
-        chain: str = "BASE-SEPOLIA",
+        chain: str = "BASE",
         reputation_writer=None,
         correlation_engine=None,
     ):
