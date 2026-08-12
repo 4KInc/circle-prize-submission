@@ -95,7 +95,8 @@ Agent finds a market data service for $0.01
 5. Verigate: APPROVED. Agent completes the payment.
 6. Signed receipt stored for insurer.
 
-Total cost: $0.08 ($0.05 security + $0.02 evidence + $0.01 service)
+Total cost: $0.08 ($0.05 screening + $0.02 evidence + $0.01 service)
+Evidence cost scales dynamically: max($0.02, min(amount * 0.1%, $5.00))
 Time: ~5 seconds via Circle Gateway
 ```
 
@@ -162,7 +163,15 @@ Try these scenarios (scores are deterministic but depend on the exact inputs):
 
 ### Continuous Autonomous Operation
 
-A background scheduler runs risk checks every 30 minutes without human intervention. Results are stored as GCS proof bundles. The overview page shows a live "Autonomous Operations" card with total checks, approved/denied counts, and last check result. The scheduler has been running since Aug 9, 2026.
+A background scheduler runs risk checks every 30 minutes without human intervention. Results are stored as GCS proof bundles. The overview page shows a live "Autonomous Operations" dashboard with total payments screened, approved/blocked counts, and last check result. The scheduler has been running since Aug 9, 2026.
+
+For a single on-demand autonomous STEP_UP cycle (no UI, no human button):
+
+```bash
+curl -X POST https://verigate-dashboard-1031148889398.us-central1.run.app/api/run/autonomous-single
+```
+
+Returns: risk assessment, STEP_UP evidence purchase (real testnet transfer), signed receipt, and GCS bundle - all triggered by one API call with zero human intervention.
 
 ### Dry-Run Mode
 
@@ -285,7 +294,7 @@ All three are Circle Agent Wallets with independent spending policies. Mainnet t
 
 | Module | Purpose |
 |--------|---------|
-| `circle/executor.py` | Gated payment executor - policy eval, token issuance, Circle CLI, receipt signing |
+| `circle/executor.py` | Gated payment executor - policy eval, dynamic STEP_UP pricing, token issuance, Circle CLI, receipt signing |
 | `circle/risk_scorer.py` | BlockIntel heuristic risk scorer (blockintel-heuristic-v2) - live OFAC/SDN screening, structural prompt-injection detection, behavioral anomaly folding, deterministic signals |
 | `circle/sanctions.py` | OFAC SDN screening - hand-verified static seed + live SDN-feed sync (`refresh()`); receipts attest the feed source, publish date, and content digest |
 | `circle/behavioral.py` | Per-agent behavioral layer - robust z-score (median/MAD) amount outliers, velocity bursts, novel counterparty; honest statistics (not ML), GCS-persisted history |
@@ -345,6 +354,7 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
 | Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
 | Proof explorer | [Verify any receipt: decision trace, validator request, settlement binding](https://verigate-dashboard-1031148889398.us-central1.run.app/proof/sha256) - paste a receipt hash to inspect the full causal chain |
+| Autonomous STEP_UP | `POST /api/run/autonomous-single` - one API call, full STEP_UP cycle, no UI button, proves agent-driven autonomy |
 | Control attestation | [Carrier API prototype](https://verigate-dashboard-1031148889398.us-central1.run.app/v1/carrier/insureds/demo/control-attestation) - public demo attestation; production carrier auth, tenant authorization, and consent grants documented but not yet deployed |
 | Demo command | `make demo` |
 | Tests | 116 passing (policy, risk scorer, adversarial injection, explainability, sanctions parser/streaming/feed, behavioral anomaly + bootstrap, receipts, merkle, isolation) - CI-enforced with ruff + mypy |
