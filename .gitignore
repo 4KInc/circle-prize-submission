@@ -16,3 +16,4 @@ out/
 *.key
 sk_live*
 .circle-cli/
+PRIZE_PLAN.md
