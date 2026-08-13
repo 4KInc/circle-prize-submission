@@ -110,62 +110,63 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
 <!-- VIEW: Overview -->
 <div class="view on" id="v-overview">
-  <!-- Compact Hero — no background image, just text -->
-  <div class="flex flex-col items-center text-center max-w-3xl mx-auto mb-12 pt-4">
-    <div class="inline-flex items-center gap-2 bg-surface-container/60 backdrop-blur-xl px-4 py-1.5 rounded-full border border-primary-fixed/20 mb-6">
-      <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
-      <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">Autonomous on Base Mainnet</span>
+  <!-- Hero with background image -->
+  <div class="relative -mx-8 -mt-28 mb-10" style="min-height:70vh">
+    <div class="hero-bg">
+      <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1920&q=80" alt="" />
     </div>
-    <h1 class="text-3xl md:text-5xl font-display font-extrabold tracking-tight mb-4 text-on-surface leading-tight">Your agent's security guard. <span class="hero-gradient-text">Paid in USDC.</span></h1>
-    <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">Three-state screening. Gemini-powered evidence. Signed receipts. Two payment surfaces. Zero humans.</p>
-    <div class="flex gap-3 mb-5">
-      <button class="btn-primary h-10 px-5 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('livedemo')">Watch Live Demo <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
-      <button class="btn-secondary h-10 px-5 rounded-xl font-display text-sm flex items-center gap-2" onclick="go('wallets')">View Treasury</button>
-    </div>
-    <div class="flex flex-wrap gap-1.5 justify-center">
-      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Agent Wallets</span>
-      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Gateway</span>
-      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">CLI</span>
-      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">x402</span>
-      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Skills</span>
-      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Gemini 2.5</span>
+    <div class="relative z-10 max-w-3xl mx-auto text-center flex flex-col items-center justify-center" style="min-height:70vh;padding-top:100px">
+      <div class="inline-flex items-center gap-2 bg-surface-container/60 backdrop-blur-xl px-4 py-1.5 rounded-full border border-primary-fixed/20 mb-6">
+        <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
+        <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">Autonomous on Base Mainnet</span>
+      </div>
+      <h1 class="text-3xl md:text-5xl font-display font-extrabold tracking-tight mb-4 text-on-surface leading-tight">Your agent's security guard. <span class="hero-gradient-text">Paid in USDC.</span></h1>
+      <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">Three-state screening. Gemini-powered evidence. Signed receipts. Two payment surfaces. Zero humans.</p>
+      <div class="flex gap-3 mb-5">
+        <button class="btn-primary h-10 px-5 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('livedemo')">Watch Live Demo <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
+        <button class="btn-secondary h-10 px-5 rounded-xl font-display text-sm flex items-center gap-2" onclick="go('wallets')">View Treasury</button>
+      </div>
+      <div class="flex flex-wrap gap-1.5 justify-center">
+        <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container/80 backdrop-blur border border-white/5">Agent Wallets</span>
+        <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container/80 backdrop-blur border border-white/5">Gateway</span>
+        <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container/80 backdrop-blur border border-white/5">CLI</span>
+        <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container/80 backdrop-blur border border-white/5">x402</span>
+        <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container/80 backdrop-blur border border-white/5">Skills</span>
+        <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container/80 backdrop-blur border border-white/5">Gemini 2.5</span>
+      </div>
     </div>
   </div>
 
-  <!-- Stats Bar — single glassmorphism row -->
-  <div class="rounded-2xl p-5 mb-10 flex flex-wrap items-center justify-between gap-4 border border-primary-fixed/10 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.4) 0%, rgba(20,22,28,0.7) 100%)">
-    <div class="flex items-center gap-6 flex-wrap">
-      <div class="flex flex-col">
+  <!-- Stats Bar — evenly spaced metrics -->
+  <div class="rounded-2xl px-6 py-5 mb-10 border border-primary-fixed/10 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.4) 0%, rgba(20,22,28,0.7) 100%)">
+    <div class="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
+      <div class="flex flex-col items-center">
         <span class="font-mono text-2xl font-bold text-on-surface" id="sched-runs">0</span>
-        <span class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Screened</span>
+        <span class="font-mono text-[9px] text-on-surface-variant/40 uppercase mt-1">Screened</span>
       </div>
-      <div class="w-px h-8 bg-white/5 hidden md:block"></div>
-      <div class="flex flex-col">
+      <div class="flex flex-col items-center">
         <span class="font-mono text-2xl font-bold text-primary-fixed" id="sched-approved">0</span>
-        <span class="font-mono text-[9px] text-primary-fixed/40 uppercase">Approved</span>
+        <span class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Approved</span>
       </div>
-      <div class="w-px h-8 bg-white/5 hidden md:block"></div>
-      <div class="flex flex-col">
+      <div class="flex flex-col items-center">
         <span class="font-mono text-2xl font-bold text-[#ffaf00]" id="sched-stepup">0</span>
-        <span class="font-mono text-[9px] text-[#ffaf00]/40 uppercase">STEP_UP</span>
+        <span class="font-mono text-[9px] text-[#ffaf00]/40 uppercase mt-1">STEP_UP</span>
       </div>
-      <div class="w-px h-8 bg-white/5 hidden md:block"></div>
-      <div class="flex flex-col">
+      <div class="flex flex-col items-center">
         <span class="font-mono text-2xl font-bold text-error" id="sched-denied">0</span>
-        <span class="font-mono text-[9px] text-error/40 uppercase">Blocked</span>
+        <span class="font-mono text-[9px] text-error/40 uppercase mt-1">Blocked</span>
       </div>
-      <div class="w-px h-8 bg-white/5 hidden md:block"></div>
-      <div class="flex flex-col">
+      <div class="flex flex-col items-center">
         <span class="font-mono text-2xl font-bold text-primary-fixed" id="sched-protected">$0</span>
-        <span class="font-mono text-[9px] text-primary-fixed/40 uppercase">Protected</span>
+        <span class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Protected</span>
       </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <div class="flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span>
-        <span class="font-mono text-[10px] text-primary-fixed" id="sched-uptime">--</span>
+      <div class="flex flex-col items-center justify-center">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span>
+          <span class="font-mono text-sm text-primary-fixed font-bold" id="sched-uptime">--</span>
+        </div>
+        <span class="font-mono text-[9px] text-on-surface-variant/30 uppercase mt-1">Uptime</span>
       </div>
-      <span class="font-mono text-[9px] text-on-surface-variant/30">autonomous</span>
     </div>
     <div class="hidden" id="sched-since"></div>
     <div class="hidden" id="sched-last"></div>
