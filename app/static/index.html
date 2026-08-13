@@ -520,6 +520,18 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <div class="font-mono text-[10px] text-on-surface-variant/40 mt-2" id="ld-vg-signals"></div>
       </div>
 
+      <!-- Gemini Reasoning (shown during STEP_UP) -->
+      <div class="rounded-lg p-3 mb-3 border border-white/[.04] transition-all duration-500" id="ld-vg-gemini" style="background:rgba(255,255,255,0.02);display:none">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1 flex items-center gap-1">
+          <span style="color:#4285f4">Gemini</span> Evidence Analysis
+        </div>
+        <div class="font-mono text-[10px] text-on-surface-variant/60 leading-relaxed" id="ld-vg-gemini-text">Analyzing...</div>
+        <div class="flex items-center gap-2 mt-2" id="ld-vg-gemini-meta" style="display:none">
+          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded" id="ld-vg-gemini-action" style="background:rgba(255,75,75,0.15);color:#ffb4ab">—</span>
+          <span class="font-mono text-[9px] text-on-surface-variant/40" id="ld-vg-gemini-conf">—</span>
+        </div>
+      </div>
+
       <!-- Breaker -->
       <div class="rounded-lg p-3 mb-3 border border-white/[.04] transition-all duration-500" id="ld-vg-breaker" style="background:rgba(255,255,255,0.02)">
         <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Circuit Breaker</div>
@@ -2451,6 +2463,9 @@ function ldReset(){
   document.getElementById('ld-vg-replays').textContent='';
   document.getElementById('ld-vg-rev-checks').textContent='—';
   document.getElementById('ld-vg-rev-pulls').textContent='—';
+  document.getElementById('ld-vg-gemini').style.display='none';
+  document.getElementById('ld-vg-gemini-text').textContent='Analyzing...';
+  document.getElementById('ld-vg-gemini-meta').style.display='none';
   document.getElementById('ld-ca-events').textContent='Listening...';
   document.getElementById('ld-ca-pull').textContent='—';
   document.getElementById('ld-ca-assessment').textContent='—';
@@ -2566,6 +2581,25 @@ function handleLDStep(d){
     document.getElementById('ld-ent-enforcement').innerHTML='Decision: <span class="text-error font-bold">DENY</span>';
     document.getElementById('ld-vg-rev-checks').textContent='$0.05';
     ldTimeline('DENY — score '+d.score+' ('+d.band+'). OFAC SDN match + '+d.signals.length+' signals','#ffb4ab');
+
+    // Show Gemini reasoning if available
+    const gr=d.gemini_reasoning||{};
+    if(gr.reasoning){
+      const gemEl=document.getElementById('ld-vg-gemini');
+      gemEl.style.display='';
+      gemEl.style.borderColor='rgba(66,133,244,0.3)';
+      gemEl.style.background='rgba(66,133,244,0.05)';
+      document.getElementById('ld-vg-gemini-text').textContent=gr.reasoning.substring(0,200)+(gr.reasoning.length>200?'...':'');
+      const metaEl=document.getElementById('ld-vg-gemini-meta');
+      metaEl.style.display='flex';
+      const actionColors={DENY:'#ffb4ab',CONFIRM:'#b8f600',INSUFFICIENT:'#ffaf00'};
+      const actionEl=document.getElementById('ld-vg-gemini-action');
+      actionEl.textContent=gr.action||'—';
+      actionEl.style.color=actionColors[gr.action]||'#ffb4ab';
+      actionEl.style.background=(actionColors[gr.action]||'#ffb4ab')+'20';
+      document.getElementById('ld-vg-gemini-conf').textContent='confidence: '+(gr.confidence||0).toFixed(2);
+      ldTimeline('Gemini: '+gr.reasoning.substring(0,100)+'...','#4285f4');
+    }
   }
 
   if(step===3){

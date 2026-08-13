@@ -310,97 +310,55 @@ AI agents discover and use Verigate through MCP (Model Context Protocol). 6 tool
 
 Resources: `verigate://status`, `verigate://pricing`, `verigate://circle-skill`
 
-## Circle vs Verigate: What Each Does
+---
 
-Circle's Agent Wallets already have spending limits, allowlists, and rate limits. So why does Verigate exist?
+<details>
+<summary><strong>Full Technical Details</strong> (architecture, wallets, tests, proof items)</summary>
+
+## Circle vs Verigate: What Each Does
 
 **Circle is the wallet and the rules. Verigate is the intelligence and the proof.**
 
 | | Circle Agent Wallet | Verigate |
 |---|---|---|
-| **Question answered** | "Is this payment within the rules?" | "Has this payment been screened against policy, sanctions, and injection/anomaly signals?" |
+| **Question answered** | "Is this payment within the rules?" | "Has this payment been screened against policy, sanctions, and signals?" |
 | **Decision type** | Configured allow/block rules | Three-state: APPROVE, STEP_UP, or DENY |
-| **Can commission evidence?** | No | Yes. Treasury autonomously pays a validator when uncertain. |
-| **Contextual risk evaluation?** | Enforces configured limits | OFAC screening, injection detection, behavioral anomaly, service-amount mismatch |
-| **Produces proof?** | No audit trail of why | Yes. Signed receipt for every decision. |
-| **Serves insurers?** | No | Yes. Carrier evidence bundle API + GCS proof bundles. |
-
-Circle wallet policies enforce configured allow/block rules; Verigate adds an application-layer STEP_UP workflow and contextual risk evaluation. It can commission external evidence under a bounded mandate before returning a final decision.
+| **Can commission evidence?** | No | Yes — Treasury autonomously pays a validator when uncertain |
+| **Produces proof?** | No audit trail of why | Yes — signed receipt for every decision |
+| **Gemini integration?** | No | Yes — Gemini reasons about evidence in the STEP_UP loop |
 
 ## Why Circle Is Central (Not Bolted On)
 
-This submitted product is deliberately Circle-native: removing Circle would break its wallet controls, USDC settlement, Gateway micropayments, x402 service payments, and programmatic wallet operations.
-
-| Without Circle... | What breaks |
-|---|---|
-| No Agent Wallets | Verigate can't hold money or enforce spending limits |
-| No USDC | Agents can't pay per-request (traditional payment rails are poorly suited to high-frequency, programmatic micropayments) |
-| No Gateway Nanopayments | $0.05 fee can't be settled gas-free at scale |
-| No Spending Policies | Verigate's autonomous evidence purchase has no guardrails |
-| No x402 | The validator can't be paid as an on-demand service |
-| No Circle CLI | No programmatic wallet management |
-
-Circle isn't a payment method added to a security product. **Circle is the economic infrastructure that makes an autonomous security agent possible.**
+Removing Circle would break wallet controls, USDC settlement, Gateway micropayments, x402 service payments, and programmatic wallet operations. **Circle is the economic infrastructure that makes an autonomous security agent possible.**
 
 ## The Three Wallets
 
-| Wallet | Who | What it does | Mainnet | Testnet |
-|--------|-----|-------------|---------|---------|
-| **Customer Agent** | AI agent that needs a payment checked | Pays Verigate $0.05 per check | `0x5c34...431a2` | `0x008e...16acc` |
-| **Verigate Treasury** | The security guard | Earns from customers. Spends on evidence. | `0x0c74...5eec44d` | `0x0c74...5eec44d` |
-| **Evidence Validator** | Separate validator service | Gets paid $0.02 on STEP_UP | `0xbe14...ba558` | `0xbe14...ba558` |
+| Wallet | Role | Mainnet |
+|--------|------|---------|
+| **Customer Agent** | Pays $0.05 per check | [`0x5c34...431a2`](https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2) |
+| **Verigate Treasury** | Earns from customers, spends on evidence | [`0x0c74...44d`](https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d) |
+| **Evidence Validator** | Gets paid on STEP_UP, uses Gemini to reason | [`0xbe14...a558`](https://basescan.org/address/0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558) |
 
-Money flow: `Customer ($0.05) → Verigate Treasury → Validator ($0.02)`
-
-All three are Circle Agent Wallets with independent spending policies. Mainnet transactions verified on [Basescan](https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d).
+Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle Agent Wallets on Base mainnet.
 
 ## Architecture
 
-### Components
-
 | Module | Purpose |
 |--------|---------|
-| `circle/executor.py` | Gated payment executor - policy eval, dynamic STEP_UP pricing, token issuance, Circle CLI, receipt signing |
-| `circle/risk_scorer.py` | BlockIntel heuristic risk scorer (blockintel-heuristic-v2) - live OFAC/SDN screening, structural prompt-injection detection, behavioral anomaly folding, deterministic signals |
-| `circle/sanctions.py` | OFAC SDN screening - hand-verified static seed + live SDN-feed sync (`refresh()`); receipts attest the feed source, publish date, and content digest |
-| `circle/behavioral.py` | Per-agent behavioral layer - robust z-score (median/MAD) amount outliers, velocity bursts, novel counterparty; honest statistics (not ML), GCS-persisted history |
-| `circle/gateway.py` | Circle Gateway nanopayments client - settle, verify, balances via facilitator API |
-| `circle/x401.py` | x401 credential issuance + verification - binds agent identity into receipt chain |
-| `circle/isolator.py` | Forensic recorder - signed incident evidence + findings |
-| `circle/reputation.py` | ERC-8004 reputation writer - publishes isolation events to on-chain registry |
-| `circle/verifier.py` | Offline verifier - Ed25519 sigs, hash chain, Merkle proofs, settlement cross-reference |
-| `circle/auditor.py` | Gemini compliance report (EU AI Act + NIST AI RMF) + PDF export |
-| `circle/enforcement.py` | Enforcement loop - replay detection, circuit breaker, session management (A1-A4) |
-| `circle/evidence_rails.py` | Evidence rails - events, consent grants, paid proof-pull, feedback channel, audit (B2-B7) |
-| `circle/cli.py` | Circle CLI Python wrapper + settlement binding |
-| `reference/mock_carrier.py` | Reference mock carrier agent - demo only, labeled replaceable (B6) |
-| `verigate/` | Python SDK - `Gate` and `Intent` API |
-| `verigate/mcp_server.py` | MCP server - 6 tools + 3 resources for agent-to-agent discovery |
-| `app/server.py` | Live dashboard - FastAPI + SSE streaming + GCS proof bundle storage |
-| `app/x402.py` | x402-paywalled endpoints - security check + market data via Circle Gateway |
-| `app/validator.py` | Evidence Validator - separate x402-paywalled verification service |
-| `app/storage.py` | GCS persistence - proof bundles stored on Google Cloud Storage |
-| `plugins/verigate/` | Circle Skills plugin - SKILL.md + MCP config for agent integration |
-| `engine/` | Git submodule - [agent-authorization-gateway](https://github.com/4KInc/agent-authorization-gateway) (Apache-2.0) |
+| `circle/executor.py` | Three-state decision engine, dynamic STEP_UP pricing, Circle CLI, receipt signing |
+| `circle/risk_scorer.py` | BlockIntel heuristic risk scorer — OFAC/SDN, injection detection, behavioral anomaly |
+| `circle/validator_gemini.py` | Gemini evidence reasoning for the validator (advisory, fail-closed fallback) |
+| `circle/agents.py` | Six-agent governance system (Coordinator, Gateway, Auditor, Investigator, Recommender, Isolator) |
+| `circle/sanctions.py` | Live OFAC SDN screening — static seed + streaming sync |
+| `circle/behavioral.py` | Per-agent behavioral layer — robust z-score, velocity, novel counterparty |
+| `circle/enforcement.py` | Replay detection, circuit breaker, session management |
+| `circle/evidence_rails.py` | Carrier evidence rails — events, consent, paid proof-pull, feedback |
+| `app/validator.py` | Evidence Validator — Gemini-powered, x402-paywalled, independently signed |
+| `verigate/` | Python SDK (`pip install verigate`) + MCP server (6 tools + 3 resources) |
 
-### Key Properties
+**Key properties:** Zero LLM in authorization trust path. Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 137 tests).
 
-- **Zero LLM in the authorization trust path** - policy evaluation is deterministic Python
-- **Three-state decisions** - APPROVE / STEP_UP / DENY (STEP_UP triggers autonomous evidence purchase)
-- **Ed25519 (EdDSA) only** - no HS256 anywhere
-- **Receipt chain** - hash-linked, Ed25519 signed, Merkle-anchored
-- **Settlement binding** - tx hash embedded in receipt body
-- **ERC-8004 reputation** - isolation events published to on-chain registry
-- **Validator can DENY** - evidence purchase has real consequences (not always confirmed)
-- **GCS persistence** - proof bundles, sanctions cache, and behavioral history survive Cloud Run cold starts
-- **Live OFAC SDN sync** - background daemon refreshes the sanctions set via a streaming parser (handles the real ~28MB feed); every decision attests which feed version it screened against
-- **Behavioral baseline** - per-agent transaction history drives amount/velocity/novelty anomaly signals (honest statistics, deterministic); baseline is reconstructed from stored proof bundles on cold start
-- **Explainable verdicts** - every score is attributed to named categories (`contributions`) with a one-line `rationale` naming the threshold rule that fired - no black box
-- **CI-enforced rigor** - GitHub Actions gates the security-critical core on ruff (lint), mypy (types), and the full pytest suite on every push
-
-### Stack
-
-Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC-8004 / Circle Agent Stack / Circle Gateway Nanopayments / Circle CLI / Gemini 2.5 Flash / Base L2 / Google Cloud Run / Google Cloud Storage
+**Stack:** Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC-8004 / Circle Agent Stack / Gemini 2.5 Flash / Base L2 / Cloud Run / GCS
 
 ## Proof Items
 
@@ -410,99 +368,71 @@ Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC
 | Live dashboard | [verigate.cloud](https://verigate.cloud) |
 | **Mainnet STEP_UP tx** | [Treasury → Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) |
 | **Mainnet fee tx** | [Customer → Treasury $0.05](https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58) |
-| Customer Agent wallet (testnet) | [`0x008ed...16acc`](https://sepolia.basescan.org/address/0x008ed50be2cd35f6333a37542a76a227e3b16acc) |
-| Customer Agent wallet (mainnet) | [`0x5c34e...431a2`](https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2) |
-| Verigate Treasury wallet | [`0x0c744...44d`](https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d) |
-| Evidence Validator wallet | [`0xbe14...a558`](https://basescan.org/address/0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558) |
 | ERC-8004 contract | [`0xf5FE...5AA`](https://sepolia.basescan.org/address/0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA) on Base Sepolia |
-| x402 endpoint | [`/x402/security-check`](https://verigate.cloud/x402/health) - returns 402 with Gateway payment requirements |
+| x402 endpoint | [`/x402/security-check`](https://verigate.cloud/x402/health) |
 | OpenAPI spec | [`/static/openapi.json`](https://verigate.cloud/static/openapi.json) |
-| Gateway status | [`/api/gateway`](https://verigate.cloud/api/gateway) - Circle Gateway facilitator connectivity |
-| GCS proof bundles | `gs://verigate-proof-bundles/` |
 | PyPI | [`pip install verigate`](https://pypi.org/project/verigate/) |
-| MCP Server | `pip install verigate[mcp]` then `verigate-mcp` |
-| Circle Skills | `plugins/verigate/skills/check-payment-safety/SKILL.md` |
-| Proof explorer | [Verify any receipt: decision trace, validator request, settlement binding](https://verigate.cloud/proof/sha256) - paste a receipt hash to inspect the full causal chain |
-| Autonomous STEP_UP | `POST /api/run/autonomous-single` - one API call, full STEP_UP cycle, no UI button, proves agent-driven autonomy |
-| Carrier loop demo | `POST /api/run/carrier-loop` - full enforcement + carrier evidence loop, human-free |
-| Carrier consent | `POST /api/carrier/consent` - consent grant management |
-| Paid proof pull | `POST /api/carrier/pull` - x402-paid evidence pull ($0.25) |
-| Carrier feedback | `POST /api/carrier/feedback` - signed feedback channel |
-| Decision events | `GET /api/carrier/events` - emitted DENY/breaker events |
-| Audit + revenue | `GET /api/carrier/audit` - pull/delivery audit log + two-surface revenue metrics |
-| Control attestation | [Carrier API prototype](https://verigate.cloud/v1/carrier/insureds/demo/control-attestation) |
-| Demo command | `make demo` |
-| Tests | 137 passing (policy, risk scorer, adversarial injection, explainability, sanctions, behavioral, enforcement, evidence rails) - CI-enforced with ruff + mypy |
-
-## Pre-Existing Work Disclosure
-
-The `engine/` directory is a git submodule referencing [agent-authorization-gateway](https://github.com/4KInc/agent-authorization-gateway), an Apache-2.0 licensed framework that predates this hackathon. It provides foundational primitives (receipt signing, policy engine, Merkle trees, canonical JSON).
-
-Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built for this hackathon. The Circle integration layer - three-state decision engine, BlockIntel risk scorer, live OFAC SDN screening, behavioral anomaly layer, Gateway nanopayments, x402 endpoints, MCP server, Circle Skills, GCS proof bundles, and the live dashboard - is entirely new work.
-
-## Limitations & Honest Assessment
-
-| Feature | Status | What It Proves |
-|---|---|---|
-| **Three-state engine** | Real - APPROVE/STEP_UP/DENY with autonomous evidence purchase | Core innovation, fully functional |
-| **Mainnet transactions** | Real - STEP_UP flow on Base mainnet ([tx](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732)) | Not just testnet |
-| **Receipt chain** | Real - Ed25519 signed, hash-chained, Merkle-anchored | Tamper-evident audit trail |
-| **Risk scorer** | Real - deterministic, tested (42 risk tests), same input = same score | Server-side, not fake |
-| **Explainable verdicts** | Real - per-category `contributions` + one-line `rationale` in every response and receipt | Auditable, not a black box |
-| **OFAC SDN screening** | Real - hand-verified seed + live SDN-feed streaming sync, exact-match, feed version attested in receipt | Not a hardcoded demo list |
-| **Behavioral layer** | Real - robust-z/velocity/novelty over persisted per-agent history, bootstrapped from stored bundles; honest statistics, not ML | Deterministic, no fabricated "ML" |
-| **Enforcement loop** | Real - replay detection, circuit breaker, session isolation, 8 tests | No re-scoring or re-charging on replays |
-| **Carrier evidence rails** | Real - events, consent grants, paid pull ($0.25), signed feedback, 13 tests | Two payment surfaces, carrier-pays model |
-| **CI pipeline** | Real - GitHub Actions: ruff + mypy + 137-test pytest on every push | Rigor is enforced, not just claimed |
-| **Gateway nanopayments** | Real - facilitator API integration (settle, verify, balances) | Circle's newest product |
-| **x402 endpoint** | Real - returns 402 with payment requirements, Gateway-compatible | Standard protocol |
-| **GCS proof bundles** | Real - persists across cold starts, carrier-retrievable | Production infrastructure |
-| **ERC-8004 reputation** | Real - deployed contract on Base Sepolia | [Contract on Basescan](https://sepolia.basescan.org/address/0xf5FE7BF0163328BA0011Fa49Caf3707434E145AA) |
-| **Evidence Validator** | Demo - same operator, own wallet, not organizationally independent | Architecture ready for independent validators |
-| **Revenue** | $0 arms-length revenue (disclosed honestly) | In active evaluation with 5 carriers |
-
-## Customer Validation
-
-Pre-production pipeline. $0 arms-length revenue (disclosed honestly). No production customers.
-
-| Carrier | Stage | Next Milestone |
-|---------|-------|----------------|
-| **Risk Collective** (Lloyd's syndicate) | Vendor panel candidacy | Shadow-mode trial with anonymized data |
-| **Relm Insurance** | Shadow-mode pilot agreed | Escalation to global head of claims |
-| **Proof Insurance** | Carrier intro commitment | GTM partnership scope |
-| **Breach Insurance** | CEO-level engagement | Technical integration spec |
-| **Native** (Lloyd's broker) | Technical docs requested | CTO review of evidence bundle format |
+| Autonomous STEP_UP | `POST /api/run/autonomous-single` — full cycle, no UI |
+| Carrier loop | `POST /api/run/carrier-loop` — enforcement + carrier evidence loop |
 
 ## Tests
 
-```bash
-make test
-```
-
-137 tests across 11 test files:
+137 tests across 11 test files. CI-enforced with ruff + mypy + pytest on every push.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
-| `test_circle_golden_path` | 25 | Policy, digests, replay, receipts, Merkle, isolation, per-tenant keys |
-| `test_risk_scorer` | 17 | Decision thresholds, score bounding, signal detection, serialization |
+| `test_circle_golden_path` | 25 | Policy, digests, replay, receipts, Merkle, isolation |
+| `test_risk_scorer` | 17 | Decision thresholds, score bounding, signal detection |
 | `test_risk_scorer_adversarial` | 18 | Injection evasion, obfuscation, encoding attacks |
 | `test_risk_explainability` | 7 | Contributions, rationale text, sanctions feed attestation |
-| `test_sanctions` | 14 | OFAC SDN static seed, live feed parsing, streaming, exact-match |
-| `test_behavioral` | 21 | Amount outliers, velocity bursts, novel counterparty, cold-start, persistence |
-| `test_fail_closed` | 5 | Scorer crash→error, sanctioned→DENY, no dry-run in auth path |
-| `test_validator_decorrelation` | 4 | Validator/scorer disagreement, independent thresholds |
-| `test_deterministic_floor` | 5 | Deterministic controls hold when injection heuristic misses |
-| `test_enforcement` | 8 | Replay detection, no re-charge, circuit breaker, session isolation, reset |
-| `test_evidence_rails` | 13 | Events, consent grants, feedback channel, mock carrier loop, audit logging |
+| `test_sanctions` | 14 | OFAC SDN static seed, live feed parsing, exact-match |
+| `test_behavioral` | 21 | Amount outliers, velocity bursts, novel counterparty |
+| `test_fail_closed` | 5 | Scorer crash→error, sanctioned→DENY |
+| `test_validator_decorrelation` | 4 | Validator/scorer disagreement |
+| `test_deterministic_floor` | 5 | Deterministic controls hold when heuristics miss |
+| `test_enforcement` | 8 | Replay detection, circuit breaker, session isolation |
+| `test_evidence_rails` | 13 | Events, consent, feedback, carrier loop, audit |
+
+## Limitations & Honest Assessment
+
+| Feature | Status |
+|---|---|
+| **Three-state engine** | Real — APPROVE/STEP_UP/DENY with autonomous evidence purchase |
+| **Gemini in STEP_UP** | Real — Gemini reasons about evidence; validator signs with own key |
+| **Mainnet transactions** | Real — 3 txs on Base mainnet ([Basescan](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732)) |
+| **Receipt chain** | Real — Ed25519 signed, hash-chained, Merkle-anchored |
+| **Risk scorer** | Real — deterministic, 42 risk tests, same input = same score |
+| **OFAC SDN screening** | Real — live feed sync, exact-match, feed version attested |
+| **Behavioral layer** | Real — robust-z/velocity/novelty, honest statistics, not ML |
+| **Evidence Validator** | Demo — same operator, own wallet, architecturally separable |
+| **Revenue** | $0 arms-length (disclosed honestly) |
+
+## Customer Validation
+
+Pre-production pipeline. $0 arms-length revenue (disclosed honestly).
+
+| Carrier | Stage |
+|---------|-------|
+| **Risk Collective** (Lloyd's syndicate) | Vendor panel candidacy |
+| **Relm Insurance** | Shadow-mode pilot agreed |
+| **Proof Insurance** | Carrier intro commitment |
+| **Breach Insurance** | CEO-level engagement |
+| **Native** (Lloyd's broker) | Technical docs requested |
+
+## Pre-Existing Work Disclosure
+
+The `engine/` directory is a git submodule referencing [agent-authorization-gateway](https://github.com/4KInc/agent-authorization-gateway) (Apache-2.0), predating this hackathon. Everything in `circle/`, `verigate/`, `app/`, `plugins/`, and `tests/` was built for this hackathon.
 
 ## Documentation
 
 | Doc | Purpose |
 |-----|---------|
-| [`SECURITY.md`](SECURITY.md) | Key custody, fail-closed guarantees, sanctions screening, injection scoping |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Settlement boundary, authorization path, Gemini usage, rail-agnostic moat |
-| [`ECONOMICS.md`](ECONOMICS.md) | Unit economics, break-even STEP_UP rate, infrastructure costs, tier model |
-| [`CARRIER_API.md`](CARRIER_API.md) | Insurance evidence rail, consent model, stubbed endpoints, attestation format |
+| [`SECURITY.md`](SECURITY.md) | Key custody, fail-closed guarantees, sanctions screening |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Settlement boundary, authorization path, Gemini usage |
+| [`ECONOMICS.md`](ECONOMICS.md) | Unit economics, break-even STEP_UP rate, tier model |
+| [`CARRIER_API.md`](CARRIER_API.md) | Insurance evidence rail, consent model, attestation format |
+
+</details>
 
 ## The One Sentence
 

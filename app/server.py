@@ -1820,11 +1820,63 @@ async def _carrier_loop_sse():
     )
     emitter.emit(event)
 
+    # Run governance agents for Gemini-powered analysis
+    gemini_intel = {}
+    try:
+        from circle.agents import GovernanceSystem
+        gov = GovernanceSystem(tenant="carrier-loop-stream")
+        denial_receipt = {
+            "receipt_hash": f"sha256:{__import__('hashlib').sha256(f'{malicious_intent["payee"]}{malicious_intent["amount"]}'.encode()).hexdigest()}",
+            "body": {"decision": "deny", "reasons": risk.signals},
+        }
+        pipeline = gov.run_post_denial_pipeline(
+            denial_receipt=denial_receipt,
+            denial_reasons=risk.signals,
+            intent_context=malicious_intent,
+            policy_hash=risk.model_version,
+        )
+        inc = pipeline["incident"]["body"]
+        prop = pipeline["proposal"]["body"]
+        gemini_intel = {
+            "severity": inc.get("severity"),
+            "summary": inc.get("narrative", {}).get("summary", ""),
+            "root_cause": inc.get("narrative", {}).get("root_cause_hypothesis", ""),
+            "recommendations": [p.get("change_type") for p in prop.get("proposals", [])],
+        }
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Also call the Gemini evidence validator for contextual reasoning
+    gemini_reasoning = {}
+    try:
+        from circle.validator_gemini import assess_evidence
+        assessment = assess_evidence({
+            "payee": malicious_intent["payee"],
+            "amount": float(malicious_intent["amount"]),
+            "service": malicious_intent.get("service", "unknown"),
+            "reason": malicious_intent.get("reason", ""),
+            "risk_score": risk.score,
+            "scorer_signals": risk.signals,
+            "step_up_reason": "ELEVATED_RISK",
+        })
+        if assessment.gemini_available:
+            gemini_reasoning = {
+                "reasoning": assessment.reasoning,
+                "risk_level": assessment.risk_level,
+                "confidence": assessment.confidence,
+                "action": assessment.recommended_action,
+                "red_flags": assessment.red_flags,
+            }
+    except Exception:  # noqa: BLE001
+        pass
+
     yield _evt({
         "step": 2, "action": "verigate_denies",
         "score": risk.score, "band": risk.band, "decision": risk.decision,
         "confidence": risk.confidence, "signals": risk.signals,
         "rationale": risk.rationale,
+        "governance": gemini_intel,
+        "gemini_reasoning": gemini_reasoning,
     })
     await asyncio.sleep(1.5)
 
