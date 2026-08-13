@@ -207,53 +207,6 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       </div>
     </div>
 
-    <!-- What Verigate Adds -->
-    <div class="mb-10">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <!-- Circle's job -->
-        <div class="group relative rounded-2xl p-[1px] overflow-hidden" style="background:linear-gradient(135deg, rgba(0,214,50,0.25) 0%, rgba(0,214,50,0.05) 50%, rgba(255,255,255,0.05) 100%)">
-          <div class="rounded-2xl p-6 h-full relative overflow-hidden" style="background:linear-gradient(135deg, rgba(18,20,25,0.97) 0%, rgba(24,26,32,0.97) 100%);backdrop-filter:blur(20px)">
-            <div class="absolute top-0 right-0 w-32 h-32 opacity-[0.03]">
-              <img src="/static/circle-logo.png" alt="Circle" class="w-full h-full object-contain opacity-30"/>
-            </div>
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(0,214,50,0.1);border:1px solid rgba(0,214,50,0.2)">
-                <img src="/static/circle-logo.png" width="18" height="18" alt="Circle"/>
-              </div>
-              <span class="font-display text-base font-bold text-on-surface">Circle handles the wallet</span>
-            </div>
-            <p class="text-sm text-on-surface-variant/80 leading-relaxed mb-4">Spending limits, allowlists, rate limits. Binary: payment is allowed or blocked.</p>
-            <div class="flex flex-wrap gap-2">
-              <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-1 rounded-full border border-white/[.06]">Programmable Wallets</span>
-              <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-1 rounded-full border border-white/[.06]">Gas Abstraction</span>
-              <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-1 rounded-full border border-white/[.06]">USDC Rails</span>
-            </div>
-          </div>
-        </div>
-        <!-- Verigate's job -->
-        <div class="group relative rounded-2xl p-[1px] overflow-hidden" style="background:linear-gradient(135deg, rgba(184,246,0,0.4) 0%, rgba(184,246,0,0.1) 50%, rgba(255,255,255,0.05) 100%)">
-          <div class="rounded-2xl p-6 h-full relative overflow-hidden" style="background:linear-gradient(135deg, rgba(18,20,25,0.95) 0%, rgba(24,26,32,0.95) 100%);backdrop-filter:blur(20px)">
-            <div class="absolute top-0 right-0 w-40 h-40 opacity-[0.04]">
-              <svg viewBox="0 0 128 128" fill="none"><path d="M64 12L12 40v48l52 28 52-28V40L64 12z" stroke="#b8f600" stroke-width="3"/><path d="M64 36L36 52v32l28 16 28-16V52L64 36z" stroke="#b8f600" stroke-width="2"/><circle cx="64" cy="64" r="8" fill="#b8f600" opacity="0.3"/></svg>
-            </div>
-            <div class="absolute -bottom-8 -left-8 w-32 h-32 rounded-full opacity-[0.06]" style="background:radial-gradient(circle,#b8f600,transparent 70%)"></div>
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(184,246,0,0.1);border:1px solid rgba(184,246,0,0.25)">
-                <img src="/static/verigate-logo.png" width="18" height="18" alt="Verigate"/>
-              </div>
-              <span class="font-display text-base font-bold text-primary-fixed">Verigate adds intelligence</span>
-            </div>
-            <p class="text-sm text-on-surface-variant/80 leading-relaxed mb-4">Risk scoring, contextual analysis, autonomous evidence purchase when uncertain, and a signed receipt proving every decision.</p>
-            <div class="flex flex-wrap gap-2">
-              <span class="font-mono text-[10px] text-primary-fixed/60 px-2 py-1 rounded-full border border-primary-fixed/15">STEP_UP Engine</span>
-              <span class="font-mono text-[10px] text-primary-fixed/60 px-2 py-1 rounded-full border border-primary-fixed/15">BlockIntel Risk</span>
-              <span class="font-mono text-[10px] text-primary-fixed/60 px-2 py-1 rounded-full border border-primary-fixed/15">Signed Receipts</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- How It Works: 4 steps -->
     <div class="mb-10">
       <div class="flex items-center gap-3 mb-6">
@@ -471,36 +424,6 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       </div>
     </div>
 
-    <!-- Speed -->
-    <div class="mb-6 rounded-2xl p-6 border border-white/[.06] relative overflow-hidden" style="background:linear-gradient(135deg, rgba(30,32,36,0.7) 0%, rgba(24,26,30,0.9) 100%);backdrop-filter:blur(16px)">
-      <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-5 text-center">Settlement speed comparison</div>
-      <div class="grid grid-cols-3 gap-6">
-        <!-- Card rails -->
-        <div class="text-center">
-          <div class="relative mx-auto w-full max-w-[140px] mb-3">
-            <div class="h-2 rounded-full bg-white/[.04] overflow-hidden"><div class="h-full rounded-full bg-on-surface-variant/10" style="width:100%"></div></div>
-          </div>
-          <div class="font-display text-xl font-black text-on-surface-variant/25 line-through decoration-on-surface-variant/15">2-5 days</div>
-          <div class="font-mono text-[10px] text-on-surface-variant/30 uppercase tracking-wider mt-1">Card rails</div>
-        </div>
-        <!-- On-chain -->
-        <div class="text-center">
-          <div class="relative mx-auto w-full max-w-[140px] mb-3">
-            <div class="h-2 rounded-full bg-white/[.04] overflow-hidden"><div class="h-full rounded-full bg-on-surface-variant/20" style="width:60%"></div></div>
-          </div>
-          <div class="font-display text-xl font-black text-on-surface-variant/40 line-through decoration-on-surface-variant/20">~60s</div>
-          <div class="font-mono text-[10px] text-on-surface-variant/30 uppercase tracking-wider mt-1">On-chain</div>
-        </div>
-        <!-- Circle Gateway -->
-        <div class="text-center">
-          <div class="relative mx-auto w-full max-w-[140px] mb-3">
-            <div class="h-2 rounded-full bg-white/[.04] overflow-hidden"><div class="h-full rounded-full" style="width:8%;background:linear-gradient(90deg,#a1d800,#b8f600);box-shadow:0 0 12px rgba(184,246,0,0.4)"></div></div>
-          </div>
-          <div class="font-display text-xl font-black text-primary-fixed" style="text-shadow:0 0 24px rgba(184,246,0,0.3)">~5s</div>
-          <div class="font-mono text-[10px] text-primary-fixed/50 uppercase tracking-wider mt-1">Circle Gateway</div>
-        </div>
-      </div>
-    </div>
     <!-- Mainnet Proof -->
     <div class="mb-8">
       <div class="flex items-center gap-3 mb-5">
@@ -533,39 +456,6 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
             <span class="text-[10px] text-secondary flex items-center gap-1">Basescan <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></span>
           </div>
         </a>
-      </div>
-    </div>
-    <!-- Integration -->
-    <div class="mb-6">
-      <div class="flex items-center gap-3 mb-5">
-        <h2 class="font-display text-lg font-bold text-on-surface">Integrate in 30 seconds</h2>
-        <div class="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent"></div>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="rounded-2xl p-5 border border-white/[.06] overflow-hidden" style="background:rgba(12,14,18,0.9)">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="font-mono text-[10px] text-primary-fixed/60 uppercase tracking-wider">MCP Server (Gemini / Claude / GPT / Any AI Agent)</span>
-          </div>
-          <pre class="font-mono text-[11px] text-on-surface/80 leading-relaxed overflow-x-auto"><code>{
-  "mcpServers": {
-    "verigate": {
-      "command": "python",
-      "args": ["-m", "verigate.mcp_server"]
-    }
-  }
-}</code></pre>
-          <div class="mt-3 font-mono text-[10px] text-on-surface-variant/40">Works with any MCP-compatible agent</div>
-        </div>
-        <div class="rounded-2xl p-5 border border-white/[.06] overflow-hidden" style="background:rgba(12,14,18,0.9)">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="font-mono text-[10px] text-primary-fixed/60 uppercase tracking-wider">x402 Payment (Circle CLI)</span>
-          </div>
-          <pre class="font-mono text-[11px] text-on-surface/80 leading-relaxed overflow-x-auto"><code>circle services pay \
-  https://verigate-dashboard-...run.app/x402/security-check \
-  --address 0xYOUR_WALLET \
-  --chain BASE-SEPOLIA</code></pre>
-          <div class="mt-3 font-mono text-[10px] text-on-surface-variant/40">$0.05 USDC &middot; Circle Gateway nanopayment &middot; gas-free</div>
-        </div>
       </div>
     </div>
   </div>
