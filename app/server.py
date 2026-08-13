@@ -1444,6 +1444,15 @@ async def evidence_audit():
     }
 
 
+_carrier_loop_state: dict = {"steps": [], "running": False, "completed_at": None}
+
+
+@app.get("/api/carrier-loop/latest")
+async def get_carrier_loop_latest():
+    """Returns the latest carrier loop results for the Live Demo UI to poll."""
+    return _carrier_loop_state
+
+
 @app.post("/api/run/carrier-loop")
 async def run_carrier_loop():
     """P2 demo: Full enforcement + carrier loop, human-free.
@@ -1467,6 +1476,11 @@ async def run_carrier_loop():
     consent = get_consent_registry()
     feedback_channel = get_feedback_channel()
     audit = get_audit_log()
+
+    # Reset state for UI polling
+    _carrier_loop_state["steps"] = []
+    _carrier_loop_state["running"] = True
+    _carrier_loop_state["completed_at"] = None
 
     # Set up reference carrier with consent grant
     carrier = MockCarrierAgent(
@@ -1627,6 +1641,28 @@ async def run_carrier_loop():
 
     # Reset demo session
     enforcement.reset_session("carrier-loop-demo")
+
+    # Store for UI polling — build UI-friendly step sequence
+    _carrier_loop_state["steps"] = [
+        {"step": 1, "action": "enterprise_submits", "intent": malicious_intent},
+        {"step": 2, "action": "verigate_denies", "score": risk.score, "band": risk.band,
+         "decision": risk.decision, "confidence": risk.confidence,
+         "signals": risk.signals, "rationale": risk.rationale},
+        {"step": 3, "action": "replay_burst", "replays": results["steps"][1].get("replay_attempts", [])
+         if len(results["steps"]) > 1 else []},
+        {"step": 4, "action": "breaker_tripped", "status": breaker_state["status"],
+         "denial_count": breaker_state["denial_count"]},
+        {"step": 5, "action": "event_emitted", "event_id": event.event_id,
+         "severity": "critical", "carrier_id": carrier.carrier_id},
+        {"step": 6, "action": "carrier_pulls", "fee": CARRIER_PULL_FEE_USDC,
+         "carrier_id": carrier.carrier_id, "bundle_verified": True},
+        {"step": 7, "action": "feedback_delivered", "carrier_id": carrier.carrier_id,
+         "assessment": feedback_channel.delivered[-1].get("assessment", {}) if feedback_channel.delivered else {},
+         "verified": True},
+        {"step": 8, "action": "complete", "summary": results["summary"]},
+    ]
+    _carrier_loop_state["running"] = False
+    _carrier_loop_state["completed_at"] = datetime.now(timezone.utc).isoformat()
 
     return results
 

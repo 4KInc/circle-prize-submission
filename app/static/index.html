@@ -1303,8 +1303,9 @@ function go(view){
   const match=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.toLowerCase().includes(key));
   if(match)match.classList.add('active');
   document.querySelector('main').style.paddingTop='';
-  // Auto-start carrier loop when Live Demo tab is shown
-  if(view==='livedemo')setTimeout(runCarrierLoop,300);
+  // Start/stop polling when Live Demo tab is shown/hidden
+  if(view==='livedemo')setTimeout(startLDPolling,300);
+  else stopLDPolling();
 }
 
 function lock(v){document.getElementById('btn-run').disabled=v;document.getElementById('btn-rogue').disabled=v;if(v){document.getElementById('ptag-wrap').style.display='flex';document.getElementById('ptag').textContent='NETWORK ACTIVE';document.getElementById('demo-stats').style.display='grid';document.getElementById('strip').classList.remove('flex');document.getElementById('strip').classList.add('hidden');document.querySelector('main').style.paddingTop=''}}
@@ -2498,26 +2499,45 @@ function ldTimeline(text,color){
   tl.scrollTop=tl.scrollHeight;
 }
 
-function runCarrierLoop(){
-  if(ldRunning)return;
-  ldRunning=true;
+let ldLastCompleted=null;
+let ldPollInterval=null;
+
+function startLDPolling(){
+  if(ldPollInterval)return;
   ldReset();
-
   const status=document.getElementById('ld-status');
-  status.innerHTML='<span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span><span class="font-mono text-[10px] text-primary-fixed">Executing autonomous loop...</span>';
+  status.innerHTML='<span class="w-2 h-2 rounded-full bg-on-surface-variant/30 animate-pulse"></span><span class="font-mono text-[10px] text-on-surface-variant/40">Waiting for terminal trigger...</span>';
+  ldTimeline('Run <span class="text-primary-fixed">curl -X POST https://verigate.cloud/api/run/carrier-loop</span> in your terminal','rgba(255,255,255,0.2)');
 
-  const es=new EventSource('/api/run/carrier-loop-stream');
+  ldPollInterval=setInterval(async()=>{
+    try{
+      const resp=await fetch('/api/carrier-loop/latest');
+      const data=await resp.json();
+      if(data.completed_at && data.completed_at!==ldLastCompleted && data.steps && data.steps.length>0){
+        ldLastCompleted=data.completed_at;
+        clearInterval(ldPollInterval);
+        ldPollInterval=null;
+        animateLDSteps(data.steps);
+      }else if(data.running){
+        const status=document.getElementById('ld-status');
+        status.innerHTML='<span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span><span class="font-mono text-[10px] text-primary-fixed">Loop executing...</span>';
+      }
+    }catch(e){}
+  },1000);
+}
 
-  es.onmessage=function(e){
-    const d=JSON.parse(e.data);
-    handleLDStep(d);
-  };
+function stopLDPolling(){
+  if(ldPollInterval){clearInterval(ldPollInterval);ldPollInterval=null;}
+}
 
-  es.onerror=function(){
-    es.close();
-    ldRunning=false;
-    status.innerHTML='<span class="w-2 h-2 rounded-full bg-primary-fixed"></span><span class="font-mono text-[10px] text-on-surface-variant/40">Complete</span>';
-  };
+async function animateLDSteps(steps){
+  ldReset();
+  const status=document.getElementById('ld-status');
+  status.innerHTML='<span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span><span class="font-mono text-[10px] text-primary-fixed">Replaying autonomous loop...</span>';
+  for(const step of steps){
+    handleLDStep(step);
+    await new Promise(r=>setTimeout(r,1500));
+  }
 }
 
 
