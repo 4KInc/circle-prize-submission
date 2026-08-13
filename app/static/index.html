@@ -110,354 +110,122 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
 <!-- VIEW: Overview -->
 <div class="view on" id="v-overview">
-  <!-- Hero -->
-  <div class="relative -mx-8 -mt-28 mb-8" style="min-height:85vh">
-    <div class="hero-bg">
-      <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1920&q=80" alt="" />
-    </div>
-    <div class="relative z-10 max-w-3xl mx-auto text-center flex flex-col items-center justify-center" style="min-height:85vh;padding-top:120px">
-    <div class="inline-flex items-center gap-2 bg-surface-container/60 backdrop-blur-xl px-4 py-1.5 rounded-full border border-primary-fixed/20 mb-8">
+  <!-- Compact Hero — no background image, just text -->
+  <div class="flex flex-col items-center text-center max-w-3xl mx-auto mb-12 pt-4">
+    <div class="inline-flex items-center gap-2 bg-surface-container/60 backdrop-blur-xl px-4 py-1.5 rounded-full border border-primary-fixed/20 mb-6">
       <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
-      <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">Built on Circle Agent Stack</span>
+      <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">Autonomous on Base Mainnet</span>
     </div>
-    <h1 class="text-4xl md:text-5xl font-display font-extrabold tracking-tight mb-6 text-on-surface leading-tight">Your agent's security guard. <span class="hero-gradient-text">Paid in USDC.</span></h1>
-    <p class="text-on-surface text-base leading-relaxed mb-2 max-w-2xl mx-auto">AI agents pay Verigate to check their payments. Uncertain risk? Verigate buys a second opinion. Every decision gets a signed receipt.</p>
-    <p class="text-on-surface-variant/60 text-sm leading-relaxed mb-3 max-w-2xl mx-auto flex items-center justify-center gap-2 flex-wrap">Built on <img src="/static/circle-logo.png" width="16" height="16" alt="Circle" class="inline"/> <span class="text-on-surface-variant">Circle Agent Stack</span></p>
-    <div class="flex flex-wrap gap-2 justify-center mb-8">
-      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5 flex items-center gap-1"><img src="/static/circle-logo.png" width="10" height="10" alt="Circle" class="inline"/>Agent Wallets</span>
-      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Gateway Nanopayments</span>
-      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">STEP_UP</span>
-      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Signed Receipts</span>
-      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Carrier Evidence</span>
-      <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Base Mainnet</span>
+    <h1 class="text-3xl md:text-5xl font-display font-extrabold tracking-tight mb-4 text-on-surface leading-tight">Your agent's security guard. <span class="hero-gradient-text">Paid in USDC.</span></h1>
+    <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">Three-state screening. Gemini-powered evidence. Signed receipts. Two payment surfaces. Zero humans.</p>
+    <div class="flex gap-3 mb-5">
+      <button class="btn-primary h-10 px-5 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('livedemo')">Watch Live Demo <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
+      <button class="btn-secondary h-10 px-5 rounded-xl font-display text-sm flex items-center gap-2" onclick="go('wallets')">View Treasury</button>
     </div>
-    <div class="flex gap-3 justify-center mb-16">
-      <button class="btn-primary h-11 px-6 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('livedemo')">Watch Live Demo <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
-      <button class="btn-secondary h-11 px-6 rounded-xl font-display text-sm flex items-center gap-2" onclick="go('wallets')">Security Treasury</button>
-    </div>
+    <div class="flex flex-wrap gap-1.5 justify-center">
+      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Agent Wallets</span>
+      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Gateway</span>
+      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">CLI</span>
+      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">x402</span>
+      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Skills</span>
+      <span class="font-mono text-[10px] text-on-surface-variant/50 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Gemini 2.5</span>
     </div>
   </div>
 
-    <!-- Autonomous Operations - Operator Dashboard -->
-    <div class="mb-8 rounded-2xl border border-primary-fixed/15 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.6) 0%, rgba(20,22,28,0.8) 100%)">
-      <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-[0.04]" style="background:radial-gradient(circle,#b8f600,transparent 70%)"></div>
-      <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-primary-fixed/10">
-        <div class="flex items-center gap-3">
-          <span class="w-2.5 h-2.5 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
-          <div>
-            <div class="font-display text-base font-bold text-primary-fixed">Autonomous Operations</div>
-            <div class="font-mono text-[10px] text-on-surface-variant/50" id="sched-since">Background scheduler active</div>
-          </div>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary-fixed/20" style="background:rgba(184,246,0,0.05)">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-pulse"></span>
-            <span class="font-mono text-[10px] text-primary-fixed">No human intervention</span>
-          </div>
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10" style="background:rgba(255,255,255,0.03)">
-            <span class="font-mono text-[10px] text-on-surface-variant/50">BASE MAINNET</span>
-          </div>
-        </div>
+  <!-- Stats Bar — single glassmorphism row -->
+  <div class="rounded-2xl p-5 mb-10 flex flex-wrap items-center justify-between gap-4 border border-primary-fixed/10 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.4) 0%, rgba(20,22,28,0.7) 100%)">
+    <div class="flex items-center gap-6 flex-wrap">
+      <div class="flex flex-col">
+        <span class="font-mono text-2xl font-bold text-on-surface" id="sched-runs">0</span>
+        <span class="font-mono text-[9px] text-on-surface-variant/40 uppercase">Screened</span>
       </div>
-      <!-- Metrics Grid -->
-      <div class="grid grid-cols-3 md:grid-cols-6 gap-px" style="background:rgba(255,255,255,0.03)">
-        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
-          <div class="font-mono text-2xl font-bold text-on-surface" id="sched-runs">0</div>
-          <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mt-1">Payments Screened</div>
-        </div>
-        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
-          <div class="font-mono text-2xl font-bold text-primary-fixed" id="sched-approved">0</div>
-          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Approved</div>
-        </div>
-        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
-          <div class="font-mono text-2xl font-bold text-[#ffaf00]" id="sched-stepup">0</div>
-          <div class="font-mono text-[9px] text-[#ffaf00]/40 uppercase mt-1">STEP_UP Evidence</div>
-        </div>
-        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
-          <div class="font-mono text-2xl font-bold text-error" id="sched-denied">0</div>
-          <div class="font-mono text-[9px] text-error/40 uppercase mt-1">Blocked</div>
-        </div>
-        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
-          <div class="font-mono text-2xl font-bold text-primary-fixed" id="sched-protected">$0</div>
-          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase mt-1">Protected from Loss</div>
-        </div>
-        <div class="p-4 text-center" style="background:rgba(20,22,28,0.9)">
-          <div class="font-mono text-xs text-on-surface-variant/60" id="sched-last">Awaiting first check</div>
-          <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mt-1">Last Check</div>
-        </div>
+      <div class="w-px h-8 bg-white/5 hidden md:block"></div>
+      <div class="flex flex-col">
+        <span class="font-mono text-2xl font-bold text-primary-fixed" id="sched-approved">0</span>
+        <span class="font-mono text-[9px] text-primary-fixed/40 uppercase">Approved</span>
       </div>
-      <!-- Uptime bar -->
-      <div class="px-6 py-3 border-t border-primary-fixed/10 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2">
-            <span class="font-mono text-[10px] text-on-surface-variant/40">Uptime</span>
-            <span class="font-mono text-[10px] text-primary-fixed font-bold" id="sched-uptime">--</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="font-mono text-[10px] text-on-surface-variant/40">Interval</span>
-            <span class="font-mono text-[10px] text-on-surface-variant/60">30 min</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="font-mono text-[10px] text-on-surface-variant/40">Evidence Spend</span>
-            <span class="font-mono text-[10px] text-[#ffaf00]" id="sched-evidence-spend">$0.00</span>
-          </div>
-        </div>
-        <div class="font-mono text-[10px] text-on-surface-variant/30">verigate.cloud &middot; Cloud Run</div>
+      <div class="w-px h-8 bg-white/5 hidden md:block"></div>
+      <div class="flex flex-col">
+        <span class="font-mono text-2xl font-bold text-[#ffaf00]" id="sched-stepup">0</span>
+        <span class="font-mono text-[9px] text-[#ffaf00]/40 uppercase">STEP_UP</span>
+      </div>
+      <div class="w-px h-8 bg-white/5 hidden md:block"></div>
+      <div class="flex flex-col">
+        <span class="font-mono text-2xl font-bold text-error" id="sched-denied">0</span>
+        <span class="font-mono text-[9px] text-error/40 uppercase">Blocked</span>
+      </div>
+      <div class="w-px h-8 bg-white/5 hidden md:block"></div>
+      <div class="flex flex-col">
+        <span class="font-mono text-2xl font-bold text-primary-fixed" id="sched-protected">$0</span>
+        <span class="font-mono text-[9px] text-primary-fixed/40 uppercase">Protected</span>
       </div>
     </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span>
+        <span class="font-mono text-[10px] text-primary-fixed" id="sched-uptime">--</span>
+      </div>
+      <span class="font-mono text-[9px] text-on-surface-variant/30">autonomous</span>
+    </div>
+    <div class="hidden" id="sched-since"></div>
+    <div class="hidden" id="sched-last"></div>
+    <div class="hidden" id="sched-evidence-spend"></div>
+  </div>
 
-    <!-- How It Works: 4 steps -->
-    <div class="mb-10">
-      <div class="flex items-center gap-3 mb-6">
-        <h2 class="font-display text-lg font-bold text-on-surface">How it works</h2>
-        <div class="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent"></div>
-      </div>
-      <div class="relative">
-        <!-- Connecting line (desktop only) -->
-        <div class="hidden md:block absolute top-[22px] left-[12.5%] right-[12.5%] h-px" style="background:linear-gradient(90deg, rgba(184,246,0,0.15), rgba(184,246,0,0.15) 30%, rgba(255,175,0,0.3) 50%, rgba(255,175,0,0.3) 70%, rgba(184,246,0,0.15))"></div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <!-- Step 1 -->
-          <div class="relative group">
-            <div class="rounded-2xl p-5 border border-white/[.06] relative overflow-hidden transition-all duration-300" style="background:linear-gradient(180deg, rgba(30,32,36,0.8) 0%, rgba(24,26,30,0.9) 100%);backdrop-filter:blur(16px)">
-              <div class="font-mono text-[10px] text-primary-fixed/40 uppercase tracking-wider mb-2">Step 01</div>
-              <div class="font-display text-sm font-bold text-on-surface mb-1.5">Agent pays $0.05</div>
-              <div class="text-xs text-on-surface-variant/60 leading-relaxed">"Check this payment for me"</div>
-            </div>
-          </div>
-          <!-- Step 2 -->
-          <div class="relative group">
-            <div class="rounded-2xl p-5 border border-white/[.06] relative overflow-hidden transition-all duration-300" style="background:linear-gradient(180deg, rgba(30,32,36,0.8) 0%, rgba(24,26,30,0.9) 100%);backdrop-filter:blur(16px)">
-              <div class="font-mono text-[10px] text-primary-fixed/40 uppercase tracking-wider mb-2">Step 02</div>
-              <div class="font-display text-sm font-bold text-on-surface mb-1.5">Risk scored</div>
-              <div class="text-xs text-on-surface-variant/60 leading-relaxed">Safe? Approve. Dangerous? Deny. Uncertain?</div>
-            </div>
-          </div>
-          <!-- Step 3 — highlighted STEP_UP -->
-          <div class="relative group">
-            <div class="rounded-2xl p-[1px] overflow-hidden" style="background:linear-gradient(135deg, rgba(255,175,0,0.5) 0%, rgba(255,175,0,0.1) 100%)">
-              <div class="rounded-2xl p-5 relative overflow-hidden" style="background:linear-gradient(180deg, rgba(40,32,16,0.9) 0%, rgba(24,26,30,0.95) 100%);backdrop-filter:blur(16px)">
-                <div class="absolute -bottom-6 -right-6 w-24 h-24 rounded-full opacity-[0.08]" style="background:radial-gradient(circle,#ffaf00,transparent 70%)"></div>
-                <div class="font-mono text-[10px] text-[#ffaf00]/60 uppercase tracking-wider mb-2">Step 03 &middot; STEP_UP</div>
-                <div class="font-display text-sm font-bold text-[#ffaf00] mb-1.5">Buy a second opinion</div>
-                <div class="text-xs text-on-surface-variant/70 leading-relaxed">Pays validator $0.02 to verify. No human involved.</div>
-              </div>
-            </div>
-          </div>
-          <!-- Step 4 -->
-          <div class="relative group">
-            <div class="rounded-2xl p-5 border border-white/[.06] relative overflow-hidden transition-all duration-300" style="background:linear-gradient(180deg, rgba(30,32,36,0.8) 0%, rgba(24,26,30,0.9) 100%);backdrop-filter:blur(16px)">
-              <div class="font-mono text-[10px] text-primary-fixed/40 uppercase tracking-wider mb-2">Step 04</div>
-              <div class="font-display text-sm font-bold text-on-surface mb-1.5">Signed receipt</div>
-              <div class="text-xs text-on-surface-variant/60 leading-relaxed">Proof of what was checked, what was decided, and why.</div>
-            </div>
-          </div>
+  <!-- How It Works — compact 4-step flow -->
+  <div class="mb-10">
+    <div class="relative">
+      <div class="hidden md:block absolute top-[22px] left-[12.5%] right-[12.5%] h-px" style="background:linear-gradient(90deg, rgba(184,246,0,0.15), rgba(184,246,0,0.15) 30%, rgba(255,175,0,0.3) 50%, rgba(255,175,0,0.3) 70%, rgba(184,246,0,0.15))"></div>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="rounded-xl p-4 border border-white/[.06]" style="background:rgba(30,32,36,0.7)">
+          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase tracking-wider mb-1">01</div>
+          <div class="font-display text-sm font-bold text-on-surface">Agent pays $0.05</div>
+        </div>
+        <div class="rounded-xl p-4 border border-white/[.06]" style="background:rgba(30,32,36,0.7)">
+          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase tracking-wider mb-1">02</div>
+          <div class="font-display text-sm font-bold text-on-surface">Risk scored</div>
+        </div>
+        <div class="rounded-xl p-4 border border-[#ffaf00]/20" style="background:rgba(40,32,16,0.7)">
+          <div class="font-mono text-[9px] text-[#ffaf00]/60 uppercase tracking-wider mb-1">03 STEP_UP</div>
+          <div class="font-display text-sm font-bold text-[#ffaf00]">Buy evidence</div>
+          <div class="text-[10px] text-on-surface-variant/50 mt-0.5">Gemini reasons. Validator signs.</div>
+        </div>
+        <div class="rounded-xl p-4 border border-white/[.06]" style="background:rgba(30,32,36,0.7)">
+          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase tracking-wider mb-1">04</div>
+          <div class="font-display text-sm font-bold text-on-surface">Signed receipt</div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Three Wallets -->
-    <div class="mb-10">
-      <div class="flex items-center gap-3 mb-6">
-        <h2 class="font-display text-lg font-bold text-on-surface">Three wallets. Three actors.</h2>
-        <div class="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent"></div>
-      </div>
-      <!-- Money flow diagram -->
-      <div class="hidden md:flex items-center justify-center gap-2 mb-6 py-3 px-4 rounded-xl border border-white/[.04]" style="background:rgba(255,255,255,0.015)">
-        <span class="font-mono text-xs text-secondary">Customer Agent</span>
-        <span class="font-mono text-[10px] text-primary-fixed/60 flex items-center gap-1">— $0.05 →</span>
-        <span class="font-mono text-xs text-primary-fixed font-bold">Verigate Treasury</span>
-        <span class="font-mono text-[10px] text-[#ffaf00]/60 flex items-center gap-1">— $0.02 →</span>
-        <span class="font-mono text-xs text-tertiary-fixed-dim">Evidence Validator</span>
-        <span class="ml-3 font-mono text-[9px] text-on-surface-variant/30">(only on STEP_UP)</span>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-        <!-- Customer Agent -->
-        <div class="rounded-2xl p-5 border border-white/[.06] relative" style="background:linear-gradient(180deg, rgba(30,32,36,0.7) 0%, rgba(24,26,30,0.9) 100%);backdrop-filter:blur(16px)">
-          <div class="mb-3">
-            <div class="font-display text-sm font-bold text-on-surface">Customer Agent</div>
-            <div class="font-mono text-[10px] text-on-surface-variant/40">SENDER</div>
-          </div>
-          <div class="text-xs text-on-surface-variant/70 leading-relaxed mb-3">Pays $0.05 per security check</div>
-          <div class="flex items-center gap-1.5">
-            <div class="w-1.5 h-1.5 rounded-full bg-secondary/50"></div>
-            <span class="font-mono text-[10px] text-secondary/50">$0.05 USDC per request</span>
-          </div>
-          <!-- Arrow out -->
-          <div class="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full items-center justify-center" style="background:#1e2024;border:1px solid rgba(184,246,0,0.2)">
-            <span class="material-symbols-outlined text-primary-fixed/50" style="font-size:12px">arrow_forward</span>
-          </div>
-        </div>
-        <!-- Verigate Treasury — elevated -->
-        <div class="rounded-2xl p-[1px] overflow-visible md:-mt-2 md:mb-[-8px] relative" style="background:linear-gradient(135deg, rgba(184,246,0,0.35) 0%, rgba(184,246,0,0.08) 60%, rgba(255,255,255,0.04) 100%)">
-          <div class="rounded-2xl p-5 relative overflow-hidden" style="background:linear-gradient(180deg, rgba(24,28,16,0.9) 0%, rgba(20,22,28,0.95) 100%);backdrop-filter:blur(20px)">
-            <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-40 h-40 rounded-full opacity-[0.05]" style="background:radial-gradient(circle,#b8f600,transparent 70%)"></div>
-            <div class="mb-3">
-              <div class="font-display text-sm font-bold text-primary-fixed">Verigate Treasury</div>
-              <div class="font-mono text-[10px] text-primary-fixed/40">ORCHESTRATOR</div>
-            </div>
-            <div class="text-xs text-on-surface-variant/70 leading-relaxed mb-3">Earns from customers. Spends on evidence. $0.02/incident cap.</div>
-            <div class="flex items-center gap-3">
-              <div class="flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-primary-fixed/40" style="font-size:10px;font-variation-settings:'FILL' 1">south_west</span>
-                <span class="font-mono text-[10px] text-primary-fixed/50">earns</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[#ffaf00]/40" style="font-size:10px;font-variation-settings:'FILL' 1">north_east</span>
-                <span class="font-mono text-[10px] text-[#ffaf00]/50">spends</span>
-              </div>
-            </div>
-          </div>
-          <!-- Arrow out (on outer wrapper so not clipped) -->
-          <div class="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full items-center justify-center" style="background:#1e2024;border:1px solid rgba(255,175,0,0.25)">
-            <span class="material-symbols-outlined text-[#ffaf00]/50" style="font-size:12px">arrow_forward</span>
-          </div>
-        </div>
-        <!-- Evidence Validator -->
-        <div class="rounded-2xl p-5 border border-white/[.06] relative" style="background:linear-gradient(180deg, rgba(30,32,36,0.7) 0%, rgba(24,26,30,0.9) 100%);backdrop-filter:blur(16px)">
-          <div class="mb-3">
-            <div class="font-display text-sm font-bold text-on-surface">Evidence Validator</div>
-            <div class="font-mono text-[10px] text-on-surface-variant/40">ON DEMAND</div>
-          </div>
-          <div class="text-xs text-on-surface-variant/70 leading-relaxed mb-3">Paid $0.02 only when Verigate needs a second opinion</div>
-          <div class="flex items-center gap-1.5">
-            <div class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim/50"></div>
-            <span class="font-mono text-[10px] text-tertiary-fixed-dim/50">$0.02 USDC on STEP_UP</span>
-          </div>
-        </div>
-      </div>
+  <!-- Money Flow — two compact lines -->
+  <div class="mb-8 rounded-xl p-4 border border-white/[.04]" style="background:rgba(255,255,255,0.015)">
+    <div class="flex items-center justify-center gap-2 mb-2 flex-wrap">
+      <span class="font-mono text-xs text-secondary">Enterprise</span>
+      <span class="font-mono text-[10px] text-primary-fixed/50">— $0.05 →</span>
+      <span class="font-mono text-xs text-primary-fixed font-bold">Treasury</span>
+      <span class="font-mono text-[10px] text-[#ffaf00]/50">— $0.02 →</span>
+      <span class="font-mono text-xs text-tertiary-fixed-dim">Validator</span>
+      <span class="font-mono text-[9px] text-on-surface-variant/25 ml-2">(STEP_UP only)</span>
     </div>
+    <div class="flex items-center justify-center gap-2 flex-wrap">
+      <span class="font-mono text-xs text-tertiary-fixed-dim">Carrier</span>
+      <span class="font-mono text-[10px] text-secondary/50">— $0.25 →</span>
+      <span class="font-mono text-xs text-primary-fixed font-bold">Treasury</span>
+      <span class="font-mono text-[9px] text-on-surface-variant/25 ml-2">(evidence pull)</span>
+    </div>
+  </div>
 
-    <!-- Enforcement Loop -->
-    <div class="mb-10">
-      <div class="flex items-center gap-3 mb-6">
-        <h2 class="font-display text-lg font-bold text-on-surface">Enforcement loop</h2>
-        <div class="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent"></div>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="rounded-2xl p-5 border border-white/[.06]" style="background:linear-gradient(180deg, rgba(30,32,36,0.8) 0%, rgba(24,26,30,0.9) 100%)">
-          <div class="font-mono text-[10px] text-error/60 uppercase tracking-wider mb-2">A1 &middot; Replay</div>
-          <div class="font-display text-sm font-bold text-on-surface mb-1.5">Decision memory</div>
-          <div class="text-xs text-on-surface-variant/60 leading-relaxed">Repeat of a denied intent short-circuits to the prior DENY. Scorer not re-invoked.</div>
-        </div>
-        <div class="rounded-2xl p-5 border border-white/[.06]" style="background:linear-gradient(180deg, rgba(30,32,36,0.8) 0%, rgba(24,26,30,0.9) 100%)">
-          <div class="font-mono text-[10px] text-error/60 uppercase tracking-wider mb-2">A2 &middot; No re-charge</div>
-          <div class="font-display text-sm font-bold text-on-surface mb-1.5">Replays are free</div>
-          <div class="text-xs text-on-surface-variant/60 leading-relaxed">No evidence purchase, no STEP_UP. Full fee only for novel intents.</div>
-        </div>
-        <div class="rounded-2xl p-[1px] overflow-hidden" style="background:linear-gradient(135deg, rgba(255,75,75,0.5) 0%, rgba(255,75,75,0.1) 100%)">
-          <div class="rounded-2xl p-5" style="background:linear-gradient(180deg, rgba(40,20,20,0.9) 0%, rgba(24,26,30,0.95) 100%)">
-            <div class="font-mono text-[10px] text-error/80 uppercase tracking-wider mb-2">A3 &middot; Breaker</div>
-            <div class="font-display text-sm font-bold text-error mb-1.5">Circuit breaker</div>
-            <div class="text-xs text-on-surface-variant/70 leading-relaxed">After K denials: throttle, then suspend. Deterministic, synchronous.</div>
-          </div>
-        </div>
-        <div class="rounded-2xl p-5 border border-white/[.06]" style="background:linear-gradient(180deg, rgba(30,32,36,0.8) 0%, rgba(24,26,30,0.9) 100%)">
-          <div class="font-mono text-[10px] text-error/60 uppercase tracking-wider mb-2">A4 &middot; Sync</div>
-          <div class="font-display text-sm font-bold text-on-surface mb-1.5">In-path state</div>
-          <div class="text-xs text-on-surface-variant/60 leading-relaxed">Enforcement flag in every response. Agent stops hammering, same call.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Three-Party Agent Economy -->
-    <div class="mb-10">
-      <div class="flex items-center gap-3 mb-6">
-        <h2 class="font-display text-lg font-bold text-on-surface">Three-party agent economy</h2>
-        <div class="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent"></div>
-        <span class="font-mono text-[10px] text-primary-fixed/50 uppercase tracking-wider">Two products &middot; Two payers</span>
-      </div>
-      <!-- Money flow -->
-      <div class="flex items-center justify-center gap-2 mb-6 py-4 px-6 rounded-xl border border-white/[.04]" style="background:rgba(255,255,255,0.015)">
-        <div class="text-center">
-          <span class="font-mono text-xs text-secondary font-bold">Enterprise Agent</span>
-          <div class="font-mono text-[9px] text-on-surface-variant/30 mt-0.5">pays for decisions</div>
-        </div>
-        <span class="font-mono text-[10px] text-primary-fixed/60 flex items-center gap-1 mx-3">— $0.05 →</span>
-        <div class="text-center">
-          <span class="font-mono text-xs text-primary-fixed font-bold">Verigate</span>
-          <div class="font-mono text-[9px] text-on-surface-variant/30 mt-0.5">neutral middle</div>
-        </div>
-        <span class="font-mono text-[10px] text-secondary/60 flex items-center gap-1 mx-3">← $0.25 —</span>
-        <div class="text-center">
-          <span class="font-mono text-xs text-tertiary-fixed-dim font-bold">Carrier Agent</span>
-          <div class="font-mono text-[9px] text-on-surface-variant/30 mt-0.5">pays for evidence</div>
-        </div>
-      </div>
-      <!-- Two products -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="rounded-2xl p-5 border border-primary-fixed/15" style="background:linear-gradient(135deg, rgba(24,28,16,0.5) 0%, rgba(20,22,28,0.8) 100%)">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(184,246,0,0.1);border:1px solid rgba(184,246,0,0.2)">
-              <span class="font-mono text-sm text-primary-fixed font-bold">1</span>
-            </div>
-            <div>
-              <div class="font-display text-sm font-bold text-primary-fixed">Screening</div>
-              <div class="font-mono text-[10px] text-on-surface-variant/40">Enterprise agent pays</div>
-            </div>
-          </div>
-          <div class="text-xs text-on-surface-variant/70 leading-relaxed mb-3">Per-check fee for the decision. High-frequency, volume-driven. Drives adoption and produces the evidence.</div>
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-lg font-bold text-primary-fixed">$0.05</span>
-            <span class="font-mono text-[10px] text-on-surface-variant/40">per check</span>
-          </div>
-        </div>
-        <div class="rounded-2xl p-5 border border-secondary/15" style="background:linear-gradient(135deg, rgba(16,20,36,0.5) 0%, rgba(20,22,28,0.8) 100%)">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(184,195,255,0.1);border:1px solid rgba(184,195,255,0.2)">
-              <span class="font-mono text-sm text-secondary font-bold">2</span>
-            </div>
-            <div>
-              <div class="font-display text-sm font-bold text-secondary">Evidence</div>
-              <div class="font-mono text-[10px] text-on-surface-variant/40">Carrier agent pays</div>
-            </div>
-          </div>
-          <div class="text-xs text-on-surface-variant/70 leading-relaxed mb-3">Signed proof bundle access. The auditable artifact an underwriter uses. The margin business.</div>
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-lg font-bold text-secondary">$0.25</span>
-            <span class="font-mono text-[10px] text-on-surface-variant/40">per pull &middot; 5&times; check fee</span>
-          </div>
-        </div>
-      </div>
-      <div class="mt-3 text-center">
-        <span class="font-mono text-[10px] text-on-surface-variant/30">Both settle in USDC on Base mainnet via Circle Agent Wallets</span>
-      </div>
-    </div>
-
-    <!-- Mainnet Proof -->
-    <div class="mb-8">
-      <div class="flex items-center gap-3 mb-5">
-        <h2 class="font-display text-lg font-bold text-on-surface">Mainnet proof</h2>
-        <div class="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent"></div>
-        <span class="font-mono text-[10px] text-primary-fixed/50 uppercase tracking-wider">Base L2 &middot; Real USDC</span>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <a href="https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58" target="_blank" class="rounded-xl p-4 border border-white/[.06] hover:border-primary-fixed/20 transition-colors no-underline" style="background:rgba(30,32,36,0.7)">
-          <div class="font-mono text-[10px] text-primary-fixed/50 uppercase tracking-wider mb-2">Security Check Fee</div>
-          <div class="font-display text-sm font-bold text-on-surface mb-1">Customer → Treasury</div>
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-xs text-primary-fixed">$0.05 USDC</span>
-            <span class="text-[10px] text-secondary flex items-center gap-1">Basescan <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></span>
-          </div>
-        </a>
-        <a href="https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732" target="_blank" class="rounded-xl p-4 border border-[#ffaf00]/20 hover:border-[#ffaf00]/40 transition-colors no-underline" style="background:rgba(40,32,16,0.5)">
-          <div class="font-mono text-[10px] text-[#ffaf00]/60 uppercase tracking-wider mb-2">STEP_UP Evidence Purchase</div>
-          <div class="font-display text-sm font-bold text-[#ffaf00] mb-1">Treasury → Validator</div>
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-xs text-[#ffaf00]">$0.02 USDC</span>
-            <span class="text-[10px] text-secondary flex items-center gap-1">Basescan <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></span>
-          </div>
-        </a>
-        <a href="https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d" target="_blank" class="rounded-xl p-4 border border-white/[.06] hover:border-primary-fixed/20 transition-colors no-underline" style="background:rgba(30,32,36,0.7)">
-          <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider mb-2">Verigate Treasury</div>
-          <div class="font-display text-sm font-bold text-on-surface mb-1">0x0c74...44d</div>
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-xs text-on-surface-variant/60">All txs on-chain</span>
-            <span class="text-[10px] text-secondary flex items-center gap-1">Basescan <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></span>
-          </div>
-        </a>
-      </div>
-    </div>
+  <!-- Mainnet Proof — compact inline -->
+  <div class="flex flex-wrap items-center justify-center gap-4 mb-8">
+    <a href="https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58" target="_blank" class="font-mono text-[11px] text-primary-fixed/70 hover:text-primary-fixed transition-colors flex items-center gap-1 no-underline">Fee: $0.05 <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></a>
+    <span class="text-on-surface-variant/20">|</span>
+    <a href="https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732" target="_blank" class="font-mono text-[11px] text-[#ffaf00]/70 hover:text-[#ffaf00] transition-colors flex items-center gap-1 no-underline">STEP_UP: $0.02 <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></a>
+    <span class="text-on-surface-variant/20">|</span>
+    <a href="https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d" target="_blank" class="font-mono text-[11px] text-on-surface-variant/50 hover:text-on-surface transition-colors flex items-center gap-1 no-underline">Treasury <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></a>
+    <span class="text-on-surface-variant/20">|</span>
+    <span class="font-mono text-[10px] text-on-surface-variant/30">Base Mainnet &middot; Real USDC</span>
+  </div>
   </div>
 </div>
 
