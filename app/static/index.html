@@ -83,7 +83,6 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <div class="hidden md:flex items-center gap-5 text-sm" id="nav">
     <button class="nav-link active" onclick="go('overview')">Overview</button>
     <button class="nav-link" onclick="go('livedemo')" style="color:#b8f600;font-weight:600">Live Demo</button>
-    <button class="nav-link" onclick="go('tryit')">Try It</button>
     <button class="nav-link" onclick="go('wallets')">Security Treasury</button>
     <button class="nav-link" onclick="go('agents')">Agent Network</button>
     <button class="nav-link" onclick="go('receipts')">Receipts</button>
@@ -133,7 +132,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <span class="font-mono text-[11px] text-on-surface-variant/60 px-2 py-0.5 rounded-full bg-surface-container border border-white/5">Base Mainnet</span>
     </div>
     <div class="flex gap-3 justify-center mb-16">
-      <button class="btn-primary h-11 px-6 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('tryit')">Try a Security Check <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
+      <button class="btn-primary h-11 px-6 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('livedemo')">Watch Live Demo <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
       <button class="btn-secondary h-11 px-6 rounded-xl font-display text-sm flex items-center gap-2" onclick="go('wallets')">Security Treasury</button>
     </div>
     </div>
@@ -617,8 +616,10 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   </div>
 </div>
 
-<!-- VIEW: Try It — Interactive Security Check -->
-<div class="view" id="v-tryit">
+<!-- VIEW: Try It (removed — Live Demo replaces it) -->
+<!-- The interactive form was removed to avoid the "human checkout" disqualification risk.
+     Judges can use the terminal: curl -X POST https://verigate.cloud/api/check -->
+<div class="view" id="v-tryit" style="display:none">
   <div class="mb-6">
     <h2 class="font-display text-2xl md:text-4xl font-bold text-on-surface mb-2">Try a Security Check</h2>
     <p class="text-on-surface-variant text-sm">Submit a payment intent and see Verigate's three-state decision engine in action. Real risk scoring, real receipts.</p>
