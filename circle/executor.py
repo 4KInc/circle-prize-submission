@@ -335,7 +335,11 @@ class PaymentExecutor:
                         "receipt_hash": self._receipt_chain._prev_hash or "",
                         "payee": intent.payee,
                         "amount": intent.amount,
-                    }, headers={"payment-signature": "treasury-funded"}, timeout=10)
+                        "service": intent.service,
+                        "reason": intent.reason,
+                        "risk_score": str(risk.score),
+                        "signals": ",".join(risk.signals),
+                    }, headers={"payment-signature": "treasury-funded"}, timeout=30)
                     if vresp.status_code == 200:
                         vdata = vresp.json()
                         validator_verdict = vdata.get("verdict", {}).get("result", "VERIFIED")

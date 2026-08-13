@@ -132,6 +132,10 @@ async def validate_evidence(request: Request):
     # If the payee or amount was passed, the validator forms its OWN opinion.
     req_payee = request.query_params.get("payee", "")
     req_amount = request.query_params.get("amount", "0")
+    req_service = request.query_params.get("service", "unknown")
+    req_reason = request.query_params.get("reason", "")
+    req_risk_score = request.query_params.get("risk_score", "0")
+    req_signals = request.query_params.get("signals", "")
     independent_deny = False
     deny_reason = ""
     if req_payee:
@@ -142,6 +146,50 @@ async def validate_evidence(request: Request):
             "pass": not independent_deny,
             "detail": deny_reason if independent_deny else "payee passes independent OFAC + format screening; amount within tolerance",
         })
+
+    # ── Gemini evidence reasoning ──────────────────────────────────────
+    # Gemini is ADVISORY INPUT — the validator applies its own threshold
+    # and signs the result. Gemini helps reason about context that
+    # deterministic checks cannot evaluate.
+    gemini_assessment = None
+    if req_payee:
+        try:
+            from circle.validator_gemini import assess_evidence
+            gemini_assessment = assess_evidence({
+                "payee": req_payee,
+                "amount": float(req_amount) if req_amount else 0,
+                "service": req_service,
+                "reason": req_reason,
+                "risk_score": int(req_risk_score) if req_risk_score else 0,
+                "scorer_signals": req_signals.split(",") if req_signals else [],
+                "step_up_reason": "ELEVATED_RISK_UNCERTAIN_CONFIDENCE",
+            })
+            # Validator applies its OWN threshold to Gemini's assessment
+            gemini_action = gemini_assessment.recommended_action
+            if gemini_action == "DENY" and not independent_deny:
+                independent_deny = True
+                deny_reason = f"Gemini evidence analysis: {gemini_assessment.reasoning[:200]}"
+            elif gemini_action == "INSUFFICIENT" and gemini_assessment.confidence < 0.5:
+                checks.append({
+                    "name": "gemini_confidence",
+                    "description": "Gemini confidence below validator threshold (0.5)",
+                    "pass": False,
+                    "detail": f"Gemini confidence {gemini_assessment.confidence:.2f} < 0.5 threshold",
+                })
+            checks.append({
+                "name": "gemini_evidence_analysis",
+                "description": "Gemini-powered contextual evidence reasoning (advisory)",
+                "pass": gemini_action in ("CONFIRM", "INSUFFICIENT"),
+                "detail": gemini_assessment.reasoning[:300] if gemini_assessment.reasoning else "no reasoning",
+            })
+        except Exception as e:
+            logger.warning("Gemini assessment skipped: %s", e)
+            checks.append({
+                "name": "gemini_evidence_analysis",
+                "description": "Gemini-powered contextual evidence reasoning (advisory)",
+                "pass": True,  # fail-open on Gemini unavailability — deterministic checks still apply
+                "detail": f"Gemini unavailable: {e}. Deterministic checks applied.",
+            })
 
     if independent_deny:
         final_verdict = "DENY"
@@ -162,6 +210,16 @@ async def validate_evidence(request: Request):
         "validator_wallet": VALIDATOR_WALLET,
         "price_paid": VALIDATOR_PRICE_USDC,
     }
+    if gemini_assessment:
+        verdict["gemini_reasoning"] = {
+            "risk_level": gemini_assessment.risk_level,
+            "confidence": gemini_assessment.confidence,
+            "reasoning": gemini_assessment.reasoning,
+            "recommended_action": gemini_assessment.recommended_action,
+            "signals": gemini_assessment.primary_signals,
+            "red_flags": gemini_assessment.red_flags,
+            "gemini_available": gemini_assessment.gemini_available,
+        }
 
     signature = _sign_verdict(verdict)
 
@@ -170,7 +228,8 @@ async def validate_evidence(request: Request):
         "signature": signature,
         "validator_public_key": _validator_public_key_jwk(),
         "disclosure": "Demonstration validator operated by the Verigate team. "
-                      "External validator operators can implement the same interface.",
+                      "Gemini provides advisory evidence reasoning; the validator "
+                      "applies its own thresholds and signs the final verdict.",
     }
 
 
@@ -321,5 +380,8 @@ async def validator_info():
             "temporal_ordering — receipts contain timestamps",
             "independent_risk — re-derived OFAC SDN screening, address "
             "validation, and declared amount ceiling (not copied from Verigate)",
+            "gemini_evidence_analysis — Gemini-powered contextual reasoning "
+            "(advisory input to validator, not trusted directly; validator "
+            "applies its own thresholds and signs the final verdict)",
         ],
     }
