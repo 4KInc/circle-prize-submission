@@ -35,7 +35,7 @@ dashboard = [
     "reportlab>=4.0.0",
     "google-genai>=1.0.0",
 ]
-dev = ["pytest>=8.0.0"]
+dev = ["pytest>=8.0.0", "hypothesis>=6.0.0"]
 all = [
     "google-genai>=1.0.0",
     "fastapi>=0.115.0",

@@ -1513,6 +1513,42 @@ async def evidence_audit():
     }
 
 
+@app.post("/api/synthesize-policy")
+async def synthesize_policy_endpoint(request: Request):
+    """Gemini-powered policy synthesis — translate natural language to Circle spending policy.
+
+    An agent describes what it wants to do:
+      "I need to buy market data from Bloomberg and Reuters, max $5/day per vendor"
+
+    Gemini translates this to a structured Circle-compatible spending policy.
+    Hard gates in Python constrain the output. If confidence < 0.7, requires human review.
+    """
+    from circle.policy_synthesis import synthesize_policy
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    description = body.get("description", "")
+    existing_policy = body.get("existing_policy")
+
+    if not description:
+        return JSONResponse(
+            {"error": "description is required — describe what the agent needs to do"},
+            status_code=400,
+        )
+
+    policy = synthesize_policy(description, existing_policy)
+    return {
+        "policy": policy.to_dict(),
+        "circle_policy": policy.to_circle_policy(),
+        "description": description,
+        "note": "Gemini synthesizes. Python constrains. Circle enforces." if policy.gemini_available
+                else "Gemini unavailable — conservative defaults applied.",
+    }
+
+
 _carrier_loop_state: dict = {"steps": [], "running": False, "completed_at": None}
 
 
