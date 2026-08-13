@@ -82,6 +82,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   </div>
   <div class="hidden md:flex items-center gap-5 text-sm" id="nav">
     <button class="nav-link active" onclick="go('overview')">Overview</button>
+    <button class="nav-link" onclick="go('livedemo')" style="color:#b8f600;font-weight:600">Live Demo</button>
     <button class="nav-link" onclick="go('tryit')">Try It</button>
     <button class="nav-link" onclick="go('wallets')">Security Treasury</button>
     <button class="nav-link" onclick="go('agents')">Agent Network</button>
@@ -456,6 +457,165 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
             <span class="text-[10px] text-secondary flex items-center gap-1">Basescan <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></span>
           </div>
         </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW: Live Demo — Three-Agent Loop Visualization -->
+<div class="view" id="v-livedemo">
+  <div class="mb-6">
+    <h2 class="font-display text-2xl md:text-3xl font-bold text-on-surface mb-2">Autonomous Agent Loop</h2>
+    <p class="text-on-surface-variant text-sm">Three agents. Two payments. Zero humans. Watch the full enforcement + carrier evidence loop execute in real time.</p>
+  </div>
+
+  <!-- Three Agent Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 relative">
+    <!-- Enterprise Agent -->
+    <div class="rounded-2xl p-5 border border-secondary/20 transition-all duration-500" id="ld-enterprise" style="background:linear-gradient(180deg, rgba(16,20,36,0.8) 0%, rgba(20,22,28,0.95) 100%)">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="w-2.5 h-2.5 rounded-full bg-on-surface-variant/30 transition-colors duration-500" id="ld-ent-dot"></span>
+        <span class="font-display text-sm font-bold text-secondary">Enterprise Agent</span>
+      </div>
+      <div class="font-mono text-[9px] text-on-surface-variant/30 mb-4">wallet: 0x5c34...431a2</div>
+
+      <!-- Payment Intent -->
+      <div class="rounded-lg p-3 mb-3 border border-white/[.04] transition-all duration-500" id="ld-ent-intent" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Payment Intent</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-payee">Waiting...</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-amount"></div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-reason"></div>
+      </div>
+
+      <!-- Enforcement State -->
+      <div class="rounded-lg p-3 mb-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Enforcement</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-enforcement">—</div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="rounded-lg p-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Carrier Feedback</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-feedback">—</div>
+      </div>
+    </div>
+
+    <!-- Verigate -->
+    <div class="rounded-2xl p-5 border border-primary-fixed/20 transition-all duration-500" id="ld-verigate" style="background:linear-gradient(180deg, rgba(24,28,16,0.8) 0%, rgba(20,22,28,0.95) 100%)">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="w-2.5 h-2.5 rounded-full bg-on-surface-variant/30 transition-colors duration-500" id="ld-vg-dot"></span>
+        <span class="font-display text-sm font-bold text-primary-fixed">Verigate</span>
+      </div>
+      <div class="font-mono text-[9px] text-on-surface-variant/30 mb-4">treasury: 0x0c74...44d</div>
+
+      <!-- Risk Score -->
+      <div class="rounded-lg p-3 mb-3 border border-white/[.04] transition-all duration-500" id="ld-vg-risk" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Risk Assessment</div>
+        <div class="flex items-center gap-3">
+          <span class="font-mono text-2xl font-bold text-on-surface-variant/30" id="ld-vg-score">—</span>
+          <div>
+            <div class="font-mono text-xs font-bold" id="ld-vg-decision" style="color:rgba(255,255,255,0.3)">—</div>
+            <div class="font-mono text-[10px] text-on-surface-variant/40" id="ld-vg-band"></div>
+          </div>
+        </div>
+        <div class="font-mono text-[10px] text-on-surface-variant/40 mt-2" id="ld-vg-signals"></div>
+      </div>
+
+      <!-- Breaker -->
+      <div class="rounded-lg p-3 mb-3 border border-white/[.04] transition-all duration-500" id="ld-vg-breaker" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Circuit Breaker</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-vg-breaker-status">—</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-vg-replays"></div>
+      </div>
+
+      <!-- Revenue -->
+      <div class="rounded-lg p-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Revenue</div>
+        <div class="flex justify-between">
+          <span class="font-mono text-[11px] text-on-surface-variant/50">Checks:</span>
+          <span class="font-mono text-[11px] text-primary-fixed" id="ld-vg-rev-checks">—</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="font-mono text-[11px] text-on-surface-variant/50">Pulls:</span>
+          <span class="font-mono text-[11px] text-secondary" id="ld-vg-rev-pulls">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carrier Agent -->
+    <div class="rounded-2xl p-5 border border-tertiary-fixed-dim/20 transition-all duration-500" id="ld-carrier" style="background:linear-gradient(180deg, rgba(28,16,36,0.8) 0%, rgba(20,22,28,0.95) 100%)">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="w-2.5 h-2.5 rounded-full bg-on-surface-variant/30 transition-colors duration-500" id="ld-ca-dot"></span>
+        <span class="font-display text-sm font-bold text-tertiary-fixed-dim">Carrier Agent</span>
+      </div>
+      <div class="font-mono text-[9px] text-on-surface-variant/30 mb-4">id: reference-carrier-demo</div>
+
+      <!-- Events -->
+      <div class="rounded-lg p-3 mb-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Decision Events</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ca-events">Listening...</div>
+      </div>
+
+      <!-- Evidence Pull -->
+      <div class="rounded-lg p-3 mb-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Evidence Pull</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ca-pull">—</div>
+      </div>
+
+      <!-- Assessment -->
+      <div class="rounded-lg p-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Assessment</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ca-assessment">—</div>
+        <div class="font-mono text-[9px] text-on-surface-variant/30 mt-1" id="ld-ca-stub"></div>
+      </div>
+    </div>
+
+    <!-- Flow arrows (desktop) -->
+    <div class="hidden md:block absolute top-1/2 left-[33.3%] -translate-x-1/2 -translate-y-1/2 z-10" id="ld-arrow-e2v" style="opacity:0;transition:opacity 0.5s">
+      <div class="flex flex-col items-center gap-0.5">
+        <span class="font-mono text-[9px] text-primary-fixed/60" id="ld-arrow-e2v-label">$0.05</span>
+        <span class="text-primary-fixed/40">→</span>
+      </div>
+    </div>
+    <div class="hidden md:block absolute top-1/2 right-[33.3%] translate-x-1/2 -translate-y-1/2 z-10" id="ld-arrow-c2v" style="opacity:0;transition:opacity 0.5s">
+      <div class="flex flex-col items-center gap-0.5">
+        <span class="font-mono text-[9px] text-secondary/60" id="ld-arrow-c2v-label">$0.25</span>
+        <span class="text-secondary/40">←</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="rounded-2xl p-5 border border-white/[.06] mb-4" style="background:rgba(20,22,28,0.9)">
+    <div class="flex items-center justify-between mb-4">
+      <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider">Step-by-step timeline</div>
+      <button class="btn-primary h-9 px-5 rounded-xl font-display text-xs font-bold flex items-center gap-2" id="ld-run-btn" onclick="runCarrierLoop()">
+        <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">play_arrow</span>
+        Run Carrier Loop
+      </button>
+    </div>
+    <div id="ld-timeline" class="space-y-2 max-h-[300px] overflow-y-auto">
+      <div class="flex items-start gap-3 opacity-40">
+        <span class="w-2 h-2 rounded-full bg-on-surface-variant/20 mt-1.5 shrink-0"></span>
+        <span class="font-mono text-xs text-on-surface-variant/40">Press "Run Carrier Loop" to start the autonomous three-agent demo</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary bar (hidden until complete) -->
+  <div class="rounded-2xl p-5 border border-primary-fixed/20 transition-all duration-500" id="ld-summary" style="background:linear-gradient(135deg, rgba(24,28,16,0.6) 0%, rgba(20,22,28,0.8) 100%);display:none">
+    <div class="flex flex-wrap items-center justify-center gap-6">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-primary-fixed"></span>
+        <span class="font-mono text-sm text-primary-fixed font-bold">Full loop complete</span>
+      </div>
+      <div class="font-mono text-xs text-on-surface-variant/50">No human intervention</div>
+      <div class="flex items-center gap-4">
+        <span class="font-mono text-xs text-primary-fixed">$0.05 <span class="text-on-surface-variant/40">check</span></span>
+        <span class="font-mono text-xs text-on-surface-variant/30">+</span>
+        <span class="font-mono text-xs text-secondary">$0.25 <span class="text-on-surface-variant/40">pull</span></span>
+        <span class="font-mono text-xs text-on-surface-variant/30">=</span>
+        <span class="font-mono text-xs text-on-surface font-bold">$0.30 <span class="text-on-surface-variant/40">total</span></span>
       </div>
     </div>
   </div>
@@ -1142,7 +1302,7 @@ function go(view){
   const el=document.getElementById('v-'+view);
   if(el)el.classList.add('on');
   document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
-  const viewMap={demo:'live',tryit:'try',evidence:'evidence',wallets:'security',agents:'agent',receipts:'receipt',compliance:'compliance',overview:'overview'};
+  const viewMap={demo:'live',livedemo:'livedemo',tryit:'try',evidence:'evidence',wallets:'security',agents:'agent',receipts:'receipt',compliance:'compliance',overview:'overview'};
   const key=viewMap[view]||view;
   const match=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.toLowerCase().includes(key));
   if(match)match.classList.add('active');
@@ -2275,6 +2435,197 @@ async function loadSchedulerStatus(){
   }catch(e){console.warn('Scheduler status unavailable:',e)}
 }
 setInterval(loadSchedulerStatus,30000);
+
+// ─── Live Demo: Carrier Loop Visualization ─────────────────────────
+let ldRunning=false;
+
+function ldReset(){
+  // Reset all fields
+  ['ld-ent-payee','ld-ent-amount','ld-ent-reason'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.textContent='';
+  });
+  document.getElementById('ld-ent-enforcement').textContent='—';
+  document.getElementById('ld-ent-feedback').textContent='—';
+  document.getElementById('ld-vg-score').textContent='—';
+  document.getElementById('ld-vg-decision').textContent='—';
+  document.getElementById('ld-vg-decision').style.color='rgba(255,255,255,0.3)';
+  document.getElementById('ld-vg-band').textContent='';
+  document.getElementById('ld-vg-signals').textContent='';
+  document.getElementById('ld-vg-breaker-status').textContent='—';
+  document.getElementById('ld-vg-replays').textContent='';
+  document.getElementById('ld-vg-rev-checks').textContent='—';
+  document.getElementById('ld-vg-rev-pulls').textContent='—';
+  document.getElementById('ld-ca-events').textContent='Listening...';
+  document.getElementById('ld-ca-pull').textContent='—';
+  document.getElementById('ld-ca-assessment').textContent='—';
+  document.getElementById('ld-ca-stub').textContent='';
+  // Reset dots
+  ['ld-ent-dot','ld-vg-dot','ld-ca-dot'].forEach(id=>{
+    document.getElementById(id).className='w-2.5 h-2.5 rounded-full bg-on-surface-variant/30 transition-colors duration-500';
+  });
+  // Reset card borders
+  document.getElementById('ld-enterprise').style.borderColor='';
+  document.getElementById('ld-enterprise').style.boxShadow='';
+  document.getElementById('ld-verigate').style.borderColor='';
+  document.getElementById('ld-verigate').style.boxShadow='';
+  document.getElementById('ld-carrier').style.borderColor='';
+  document.getElementById('ld-carrier').style.boxShadow='';
+  // Reset arrows
+  document.getElementById('ld-arrow-e2v').style.opacity='0';
+  document.getElementById('ld-arrow-c2v').style.opacity='0';
+  // Reset summary
+  document.getElementById('ld-summary').style.display='none';
+  // Reset timeline
+  document.getElementById('ld-timeline').innerHTML='';
+}
+
+function ldActivate(cardId,color){
+  const card=document.getElementById(cardId);
+  card.style.borderColor=color;
+  card.style.boxShadow='0 0 25px '+color+'33';
+  const dotId=cardId==='ld-enterprise'?'ld-ent-dot':cardId==='ld-verigate'?'ld-vg-dot':'ld-ca-dot';
+  document.getElementById(dotId).style.background=color;
+}
+
+function ldDeactivate(cardId){
+  const card=document.getElementById(cardId);
+  card.style.borderColor='';
+  card.style.boxShadow='';
+}
+
+function ldTimeline(text,color){
+  const tl=document.getElementById('ld-timeline');
+  const dotColor=color||'#b8f600';
+  tl.innerHTML+='<div class="flex items-start gap-3 ri"><span class="w-2 h-2 rounded-full mt-1.5 shrink-0" style="background:'+dotColor+'"></span><span class="font-mono text-xs text-on-surface/80">'+text+'</span></div>';
+  tl.scrollTop=tl.scrollHeight;
+}
+
+function runCarrierLoop(){
+  if(ldRunning)return;
+  ldRunning=true;
+  ldReset();
+
+  const btn=document.getElementById('ld-run-btn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px;animation:spin .8s linear infinite">progress_activity</span> Running...';
+
+  const es=new EventSource('/api/run/carrier-loop-stream');
+
+  es.onmessage=function(e){
+    const d=JSON.parse(e.data);
+    handleLDStep(d);
+  };
+
+  es.onerror=function(){
+    es.close();
+    ldRunning=false;
+    btn.disabled=false;
+    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:\'FILL\' 1">replay</span> Run Again';
+  };
+}
+
+function handleLDStep(d){
+  const step=d.step;
+
+  if(step===1){
+    // Enterprise submits
+    ldActivate('ld-enterprise','#b8c3ff');
+    document.getElementById('ld-ent-payee').innerHTML='Payee: <span class="text-error">'+d.intent.payee.slice(0,10)+'...</span>';
+    document.getElementById('ld-ent-amount').innerHTML='Amount: <span class="text-on-surface font-bold">$'+d.intent.amount+'</span>';
+    document.getElementById('ld-ent-reason').innerHTML='<span class="text-error/60 text-[10px]">'+d.intent.reason+'</span>';
+    document.getElementById('ld-arrow-e2v').style.opacity='1';
+    document.getElementById('ld-arrow-e2v-label').textContent='$0.05';
+    ldTimeline('Enterprise agent submits payment: $'+d.intent.amount+' to sanctioned address','#b8c3ff');
+  }
+
+  if(step===2){
+    // Verigate DENYs
+    ldDeactivate('ld-enterprise');
+    ldActivate('ld-verigate','#ffb4ab');
+    document.getElementById('ld-vg-score').textContent=d.score;
+    document.getElementById('ld-vg-score').style.color='#ffb4ab';
+    document.getElementById('ld-vg-decision').textContent=d.decision;
+    document.getElementById('ld-vg-decision').style.color='#ffb4ab';
+    document.getElementById('ld-vg-band').textContent=d.band;
+    document.getElementById('ld-vg-signals').textContent=d.signals.join(', ');
+    document.getElementById('ld-ent-enforcement').innerHTML='Decision: <span class="text-error font-bold">DENY</span>';
+    document.getElementById('ld-vg-rev-checks').textContent='$0.05';
+    ldTimeline('DENY — score '+d.score+' ('+d.band+'). OFAC SDN match + '+d.signals.length+' signals','#ffb4ab');
+  }
+
+  if(step===3){
+    // Replay burst
+    ldActivate('ld-enterprise','#ffb4ab');
+    const reps=d.replays;
+    let repText='Replays: ';
+    reps.forEach((r,i)=>{
+      repText+='<span class="text-error">'+(i+1)+'</span> ';
+    });
+    document.getElementById('ld-vg-replays').innerHTML=repText;
+    document.getElementById('ld-vg-breaker-status').innerHTML='Breaker: <span class="text-[#ffaf00] font-bold">'+reps[reps.length-1].breaker_status.replace('session_','')+'</span>';
+    document.getElementById('ld-ent-enforcement').innerHTML='Status: <span class="text-error font-bold">SUSPENDED</span>';
+    ldTimeline('Enterprise replays 6x — all detected, no re-scoring, no re-charge','#ffaf00');
+  }
+
+  if(step===4){
+    // Breaker tripped
+    ldActivate('ld-verigate','#ffb4ab');
+    document.getElementById('ld-vg-breaker-status').innerHTML='Breaker: <span class="text-error font-bold">TRIPPED</span> ('+d.denial_count+' denials)';
+    const breakerEl=document.getElementById('ld-vg-breaker');
+    breakerEl.style.borderColor='rgba(255,75,75,0.3)';
+    breakerEl.style.background='rgba(60,20,20,0.5)';
+    ldTimeline('Circuit breaker tripped — session '+d.status,'#ffb4ab');
+  }
+
+  if(step===5){
+    // Event emitted, carrier wakes
+    ldDeactivate('ld-verigate');
+    ldActivate('ld-carrier','#dcb8ff');
+    document.getElementById('ld-ca-events').innerHTML='<span class="text-error">DENIAL</span> event received (critical)';
+    document.getElementById('ld-arrow-e2v-label').textContent='EVENT';
+    ldTimeline('Decision event emitted → Carrier agent receives DENIAL alert','#dcb8ff');
+  }
+
+  if(step===6){
+    // Carrier pays and pulls
+    document.getElementById('ld-arrow-c2v').style.opacity='1';
+    document.getElementById('ld-arrow-c2v-label').textContent='$0.25';
+    document.getElementById('ld-ca-pull').innerHTML='Bundle pulled <span class="text-primary-fixed">✓</span> Verified <span class="text-primary-fixed">✓</span>';
+    document.getElementById('ld-vg-rev-pulls').textContent='$0.25';
+    ldActivate('ld-verigate','#b8f600');
+    ldTimeline('Carrier pays $0.25 USDC → pulls signed evidence bundle → verified','#dcb8ff');
+  }
+
+  if(step===7){
+    // Feedback delivered
+    ldDeactivate('ld-carrier');
+    ldActivate('ld-enterprise','#b8c3ff');
+    const assess=d.assessment||{};
+    document.getElementById('ld-ca-assessment').innerHTML='Action: <span class="text-tertiary-fixed-dim font-bold">'+(assess.action||'flag_for_review')+'</span>';
+    document.getElementById('ld-ca-stub').textContent='Reference mock — not real underwriting';
+    document.getElementById('ld-ent-feedback').innerHTML='From: <span class="text-tertiary-fixed-dim">'+d.carrier_id+'</span><br>Verified: <span class="text-primary-fixed">✓</span> Signature valid';
+    ldTimeline('Carrier signs assessment → Verigate verifies signature → relayed to enterprise','#b8c3ff');
+  }
+
+  if(step===8){
+    // Complete
+    ldDeactivate('ld-enterprise');
+    ldDeactivate('ld-verigate');
+    ldDeactivate('ld-carrier');
+    // All dots green
+    ['ld-ent-dot','ld-vg-dot','ld-ca-dot'].forEach(id=>{
+      document.getElementById(id).style.background='#b8f600';
+    });
+    document.getElementById('ld-summary').style.display='';
+    ldTimeline('Loop complete — two payment surfaces, zero human intervention','#b8f600');
+
+    // Reset button
+    const btn=document.getElementById('ld-run-btn');
+    btn.disabled=false;
+    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:\'FILL\' 1">replay</span> Run Again';
+    ldRunning=false;
+  }
+}
 </script>
 </body>
 </html>

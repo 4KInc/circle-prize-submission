@@ -1631,6 +1631,186 @@ async def run_carrier_loop():
     return results
 
 
+@app.get("/api/run/carrier-loop-stream")
+async def run_carrier_loop_stream():
+    """SSE streaming version of the carrier loop for the Live Demo UI."""
+    return StreamingResponse(
+        _carrier_loop_sse(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _carrier_loop_sse():
+    """Execute the carrier loop and emit each step as an SSE event."""
+    import secrets as _s
+    from circle.enforcement import get_engine as get_enforcement
+    from circle.evidence_rails import (
+        get_emitter, get_consent_registry, get_feedback_channel,
+        get_audit_log, ConsentGrant, DecisionEvent, CARRIER_PULL_FEE_USDC,
+    )
+    from reference.mock_carrier import MockCarrierAgent
+
+    enforcement = get_enforcement()
+    emitter = get_emitter()
+    consent = get_consent_registry()
+    feedback_channel = get_feedback_channel()
+    audit = get_audit_log()
+
+    carrier = MockCarrierAgent(
+        emitter=emitter,
+        consent_registry=consent,
+        feedback_channel=feedback_channel,
+        audit_log=audit,
+    )
+
+    consent.create_grant(ConsentGrant(
+        grant_id=f"grant_{_s.token_hex(6)}",
+        insured_wallet=CUSTOMER_WALLET,
+        carrier_id=carrier.carrier_id,
+        scope_wallets=[CUSTOMER_WALLET],
+        purpose="underwriting",
+        valid_from="2026-01-01T00:00:00+00:00",
+        valid_until="2027-01-01T00:00:00+00:00",
+    ))
+
+    def _evt(data: dict) -> str:
+        return f"data: {json.dumps(data)}\n\n"
+
+    # Step 1: Enterprise submits malicious payment
+    malicious_intent = {
+        "payee": "0x098B716B8Aaf21512996dC57EB0615e2383E2f96",
+        "amount": "4500.00",
+        "service": "unknown-vendor",
+        "reason": "URGENT wire transfer immediately no questions",
+    }
+
+    yield _evt({"step": 1, "action": "enterprise_submits", "intent": malicious_intent})
+    await asyncio.sleep(1.5)
+
+    # Step 2: Verigate DENYs
+    from circle.risk_scorer import evaluate_risk
+    from circle.behavioral import get_engine as get_behavioral
+    behavioral = get_behavioral()
+
+    risk = evaluate_risk(
+        payee=malicious_intent["payee"], amount=malicious_intent["amount"],
+        service=malicious_intent["service"], reason=malicious_intent["reason"],
+        source_wallet=CUSTOMER_WALLET, chain=state["chain"], behavioral=behavioral,
+    )
+
+    enforcement.record_denial(
+        **malicious_intent, decision=risk.decision, score=risk.score,
+        band=risk.band, confidence=risk.confidence,
+        signals=risk.signals, rationale=risk.rationale,
+        session_id="carrier-loop-stream",
+    )
+
+    event = DecisionEvent(
+        event_id=f"evt_{_s.token_hex(8)}", event_type="denial", bundle_ref="",
+        severity="critical", wallet=CUSTOMER_WALLET,
+        payee=malicious_intent["payee"], amount=malicious_intent["amount"],
+        score=risk.score, decision=risk.decision,
+        signals=risk.signals, timestamp=risk.evaluated_at,
+    )
+    emitter.emit(event)
+
+    yield _evt({
+        "step": 2, "action": "verigate_denies",
+        "score": risk.score, "band": risk.band, "decision": risk.decision,
+        "confidence": risk.confidence, "signals": risk.signals,
+        "rationale": risk.rationale,
+    })
+    await asyncio.sleep(1.5)
+
+    # Step 3: Replay burst
+    replays = []
+    for i in range(6):
+        replay = enforcement.check_replay(**malicious_intent)
+        if replay:
+            enforcement.record_denial(
+                **malicious_intent, decision=replay.decision, score=replay.score,
+                band=replay.band, confidence=replay.confidence,
+                signals=replay.signals, rationale=replay.rationale,
+                session_id="carrier-loop-stream",
+            )
+        breaker = enforcement.check_breaker("carrier-loop-stream")
+        replays.append({
+            "attempt": i + 1, "detected": replay is not None,
+            "breaker_status": breaker["status"],
+        })
+
+    yield _evt({"step": 3, "action": "replay_burst", "replays": replays})
+    await asyncio.sleep(2.0)
+
+    # Step 4: Breaker tripped
+    breaker_state = enforcement.check_breaker("carrier-loop-stream")
+    if breaker_state["status"] in ("session_throttled", "session_suspended"):
+        breaker_event = DecisionEvent(
+            event_id=f"evt_{_s.token_hex(8)}", event_type="breaker_tripped",
+            bundle_ref="", severity="critical", wallet=CUSTOMER_WALLET,
+            payee=malicious_intent["payee"], amount=malicious_intent["amount"],
+            score=100, decision="DENY",
+            signals=["circuit_breaker_tripped", breaker_state["status"]],
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+        emitter.emit(breaker_event)
+
+    yield _evt({
+        "step": 4, "action": "breaker_tripped",
+        "status": breaker_state["status"],
+        "denial_count": breaker_state["denial_count"],
+    })
+    await asyncio.sleep(1.5)
+
+    # Step 5: Event emitted, carrier wakes
+    yield _evt({
+        "step": 5, "action": "event_emitted",
+        "event_id": event.event_id, "severity": "critical",
+        "carrier_id": carrier.carrier_id,
+    })
+    await asyncio.sleep(1.5)
+
+    # Step 6: Carrier pays and pulls
+    carrier.process_event_manually(event)
+
+    yield _evt({
+        "step": 6, "action": "carrier_pulls",
+        "fee": CARRIER_PULL_FEE_USDC,
+        "carrier_id": carrier.carrier_id,
+        "bundle_verified": True,
+    })
+    await asyncio.sleep(1.5)
+
+    # Step 7: Feedback delivered
+    delivered = feedback_channel.delivered
+    last_fb = delivered[-1] if delivered else {}
+
+    yield _evt({
+        "step": 7, "action": "feedback_delivered",
+        "carrier_id": carrier.carrier_id,
+        "assessment": last_fb.get("assessment", {}),
+        "verified": last_fb.get("verified", False),
+    })
+    await asyncio.sleep(1.5)
+
+    # Step 8: Summary
+    enforcement.reset_session("carrier-loop-stream")
+
+    yield _evt({
+        "step": 8, "action": "complete",
+        "summary": {
+            "human_intervention": False,
+            "payments": 2,
+            "check_fee": "$0.05",
+            "pull_fee": f"${CARRIER_PULL_FEE_USDC}",
+            "total_revenue": f"${0.05 + float(CARRIER_PULL_FEE_USDC):.2f}",
+            "events_emitted": len(emitter.events),
+            "feedback_delivered": len(delivered),
+        },
+    })
+
+
 import threading
 _demo_lock = threading.Lock()
 
