@@ -589,16 +589,12 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <div class="rounded-2xl p-5 border border-white/[.06] mb-4" style="background:rgba(20,22,28,0.9)">
     <div class="flex items-center justify-between mb-4">
       <div class="font-mono text-[10px] text-on-surface-variant/40 uppercase tracking-wider">Step-by-step timeline</div>
-      <button class="btn-primary h-9 px-5 rounded-xl font-display text-xs font-bold flex items-center gap-2" id="ld-run-btn" onclick="runCarrierLoop()">
-        <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">play_arrow</span>
-        Run Carrier Loop
-      </button>
+      <div class="flex items-center gap-2" id="ld-status">
+        <span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span>
+        <span class="font-mono text-[10px] text-primary-fixed">Executing autonomous loop...</span>
+      </div>
     </div>
     <div id="ld-timeline" class="space-y-2 max-h-[300px] overflow-y-auto">
-      <div class="flex items-start gap-3 opacity-40">
-        <span class="w-2 h-2 rounded-full bg-on-surface-variant/20 mt-1.5 shrink-0"></span>
-        <span class="font-mono text-xs text-on-surface-variant/40">Press "Run Carrier Loop" to start the autonomous three-agent demo</span>
-      </div>
     </div>
   </div>
 
@@ -1307,6 +1303,8 @@ function go(view){
   const match=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.toLowerCase().includes(key));
   if(match)match.classList.add('active');
   document.querySelector('main').style.paddingTop='';
+  // Auto-start carrier loop when Live Demo tab is shown
+  if(view==='livedemo')setTimeout(runCarrierLoop,300);
 }
 
 function lock(v){document.getElementById('btn-run').disabled=v;document.getElementById('btn-rogue').disabled=v;if(v){document.getElementById('ptag-wrap').style.display='flex';document.getElementById('ptag').textContent='NETWORK ACTIVE';document.getElementById('demo-stats').style.display='grid';document.getElementById('strip').classList.remove('flex');document.getElementById('strip').classList.add('hidden');document.querySelector('main').style.paddingTop=''}}
@@ -2505,9 +2503,8 @@ function runCarrierLoop(){
   ldRunning=true;
   ldReset();
 
-  const btn=document.getElementById('ld-run-btn');
-  btn.disabled=true;
-  btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px;animation:spin .8s linear infinite">progress_activity</span> Running...';
+  const status=document.getElementById('ld-status');
+  status.innerHTML='<span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span><span class="font-mono text-[10px] text-primary-fixed">Executing autonomous loop...</span>';
 
   const es=new EventSource('/api/run/carrier-loop-stream');
 
@@ -2519,10 +2516,11 @@ function runCarrierLoop(){
   es.onerror=function(){
     es.close();
     ldRunning=false;
-    btn.disabled=false;
-    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:\'FILL\' 1">replay</span> Run Again';
+    status.innerHTML='<span class="w-2 h-2 rounded-full bg-primary-fixed"></span><span class="font-mono text-[10px] text-on-surface-variant/40">Complete</span>';
   };
 }
+
+
 
 function handleLDStep(d){
   const step=d.step;
@@ -2619,10 +2617,8 @@ function handleLDStep(d){
     document.getElementById('ld-summary').style.display='';
     ldTimeline('Loop complete — two payment surfaces, zero human intervention','#b8f600');
 
-    // Reset button
-    const btn=document.getElementById('ld-run-btn');
-    btn.disabled=false;
-    btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:\'FILL\' 1">replay</span> Run Again';
+    const status=document.getElementById('ld-status');
+    status.innerHTML='<span class="w-2 h-2 rounded-full bg-primary-fixed"></span><span class="font-mono text-[10px] text-primary-fixed">Complete</span>';
     ldRunning=false;
   }
 }
