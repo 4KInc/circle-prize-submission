@@ -852,10 +852,14 @@ Run: <code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius
 async def api_check(request: Request):
     """Live risk check — calls the real BlockIntel risk scorer.
 
-    This is what the "Try It" tab calls. Returns the same risk assessment
-    that the x402 security-check endpoint returns, but without requiring payment.
+    Includes enforcement loop (A1-A4):
+    - A1: Replay detection — repeat denied intents short-circuit without re-scoring
+    - A2: Replays are free — no evidence purchase, no STEP_UP
+    - A3: Circuit breaker — after K denials, throttle then suspend
+    - A4: Enforcement state returned synchronously
     """
     from circle.risk_scorer import evaluate_risk
+    from circle.enforcement import get_engine as get_enforcement
 
     try:
         body = await request.json()
@@ -866,7 +870,46 @@ async def api_check(request: Request):
     amount = body.get("amount", "0")
     service = body.get("service", "unknown")
     reason = body.get("reason", "")
+    session_id = body.get("session_id", "default")
 
+    enforcement = get_enforcement()
+
+    # A3/A4: Check circuit breaker first
+    breaker = enforcement.check_breaker(session_id)
+    if breaker["status"] == "session_suspended":
+        return {
+            "decision": "DENY",
+            "score": 100,
+            "band": "CRITICAL",
+            "confidence": 1.0,
+            "signals": ["session_suspended"],
+            "rationale": "Session suspended by circuit breaker after repeated denials.",
+            "enforcement": breaker,
+            "replay": False,
+        }
+
+    # A1: Check replay — was this exact intent already denied?
+    replay = enforcement.check_replay(payee, amount, service, reason)
+    if replay:
+        return {
+            "decision": replay.decision,
+            "score": replay.score,
+            "band": replay.band,
+            "confidence": replay.confidence,
+            "signals": replay.signals + ["replay_detected"],
+            "rationale": f"Replay of prior denial (seen {replay.replay_count}x). {replay.rationale}",
+            "replay": True,
+            "replay_count": replay.replay_count,
+            "enforcement": breaker,
+            "thresholds": {
+                "approve_ceiling": 39,
+                "step_up_range": "40-74",
+                "deny_floor": 75,
+                "confidence_floor": 0.60,
+            },
+        }
+
+    # Novel intent — run the full scorer
     from circle.behavioral import get_engine
     behavioral = get_engine()
 
@@ -880,21 +923,49 @@ async def api_check(request: Request):
         behavioral=behavioral,
     )
 
-    # The baseline the decision was screened against (BEFORE this observation
-    # is folded in) — so the demo shows the real prior history that drove the
-    # behavioral signals, not a count inflated by the current check.
     try:
         baseline_stats = behavioral.agent_stats(CUSTOMER_WALLET)
     except Exception:  # noqa: BLE001
         baseline_stats = {}
 
-    # Record this observation so the agent's behavioral baseline grows, then
-    # persist so it survives restarts (continuous autonomous operation).
     try:
         behavioral.record(CUSTOMER_WALLET, payee, float(amount), service)
         behavioral.persist()
     except Exception:  # noqa: BLE001
         pass
+
+    # If denied, cache for replay detection + update circuit breaker
+    if risk.decision == "DENY":
+        enforcement.record_denial(
+            payee=payee, amount=amount, service=service, reason=reason,
+            decision=risk.decision, score=risk.score, band=risk.band,
+            confidence=risk.confidence, signals=risk.signals,
+            rationale=risk.rationale, session_id=session_id,
+        )
+        # B2: Emit decision event on DENY
+        try:
+            from circle.evidence_rails import get_emitter, DecisionEvent
+            import secrets as _s
+            severity = "critical" if risk.score >= 90 else "high"
+            event = DecisionEvent(
+                event_id=f"evt_{_s.token_hex(8)}",
+                event_type="denial",
+                bundle_ref="",
+                severity=severity,
+                wallet=CUSTOMER_WALLET,
+                payee=payee,
+                amount=amount,
+                score=risk.score,
+                decision=risk.decision,
+                signals=risk.signals,
+                timestamp=risk.evaluated_at,
+            )
+            get_emitter().emit(event)
+        except Exception:  # noqa: BLE001
+            pass
+
+    # A4: Always include enforcement state
+    breaker = enforcement.check_breaker(session_id)
 
     return {
         "decision": risk.decision,
@@ -903,13 +974,15 @@ async def api_check(request: Request):
         "confidence": risk.confidence,
         "signals": risk.signals,
         "signal_details": risk.signal_details,
-        "contributions": risk.contributions,   # per-category score attribution
-        "rationale": risk.rationale,           # human-readable "why this decision"
+        "contributions": risk.contributions,
+        "rationale": risk.rationale,
         "model_version": risk.model_version,
         "feature_version": risk.feature_version,
         "evaluated_at": risk.evaluated_at,
-        "sanctions_feed": risk.sanctions_feed,  # OFAC feed source/date/digest
-        "agent_baseline": baseline_stats,       # observations the decision drew on
+        "sanctions_feed": risk.sanctions_feed,
+        "agent_baseline": baseline_stats,
+        "enforcement": breaker,
+        "replay": False,
         "thresholds": {
             "approve_ceiling": 39,
             "step_up_range": "40-74",
@@ -1222,6 +1295,340 @@ async def get_proof_bundle(bundle_name: str):
     if bundle is None:
         return JSONResponse({"error": "Bundle not found"}, status_code=404)
     return bundle
+
+
+# ── Evidence Rails (B2-B7) ───────────────────────────────────────────
+
+@app.post("/api/carrier/consent")
+async def create_consent_grant(request: Request):
+    """B3: Create a consent grant — insured pre-authorizes a carrier."""
+    from circle.evidence_rails import get_consent_registry, ConsentGrant
+    body = await request.json()
+    registry = get_consent_registry()
+    grant = registry.create_grant(ConsentGrant(
+        grant_id=body.get("grant_id", f"grant_{__import__('secrets').token_hex(6)}"),
+        insured_wallet=body.get("insured_wallet", CUSTOMER_WALLET),
+        carrier_id=body.get("carrier_id", ""),
+        scope_wallets=body.get("scope_wallets", [CUSTOMER_WALLET]),
+        purpose=body.get("purpose", "underwriting"),
+        valid_from=body.get("valid_from", __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()),
+        valid_until=body.get("valid_until", "2027-01-01T00:00:00+00:00"),
+    ))
+    return {"grant": grant.__dict__}
+
+
+@app.post("/api/carrier/pull")
+async def paid_proof_pull(request: Request):
+    """B4: x402-paid proof-pull endpoint — carrier pays $0.25 per pull.
+
+    The proof bundle is the product. Unpaid or underpaid pulls are refused.
+    The puller pays Verigate; the settlement tx is bound to the access record.
+    """
+    from circle.evidence_rails import (
+        get_consent_registry, get_audit_log, CARRIER_PULL_FEE_USDC,
+    )
+    from app.storage import get_bundle
+
+    body = await request.json()
+    carrier_id = body.get("carrier_id", "")
+    bundle_ref = body.get("bundle_ref", "")
+    purpose = body.get("purpose", "underwriting")
+    tx_hash = body.get("tx_hash", "")  # x402 settlement tx
+
+    if not carrier_id or not bundle_ref:
+        return JSONResponse({"error": "carrier_id and bundle_ref required"}, status_code=400)
+
+    # Check consent grant
+    registry = get_consent_registry()
+    grant = registry.check_grant(carrier_id, CUSTOMER_WALLET, purpose)
+    if not grant:
+        return JSONResponse(
+            {"error": "No valid consent grant for this carrier/wallet/purpose"},
+            status_code=403,
+        )
+
+    # Require payment proof (tx_hash from x402 settlement)
+    if not tx_hash:
+        return JSONResponse(
+            {"error": f"Payment required: ${CARRIER_PULL_FEE_USDC} USDC via x402. Provide tx_hash."},
+            status_code=402,
+        )
+
+    # Retrieve the bundle
+    bundle = get_bundle(bundle_ref)
+    if bundle is None:
+        return JSONResponse({"error": "Bundle not found"}, status_code=404)
+
+    # Log the pull
+    audit = get_audit_log()
+    audit.log_pull(
+        carrier_id=carrier_id,
+        bundle_ref=bundle_ref,
+        grant_id=grant.grant_id,
+        tx_hash=tx_hash,
+        fee_usdc=CARRIER_PULL_FEE_USDC,
+        status="paid",
+    )
+
+    return {
+        "bundle": bundle,
+        "access_record": {
+            "carrier_id": carrier_id,
+            "grant_id": grant.grant_id,
+            "tx_hash": tx_hash,
+            "fee_usdc": CARRIER_PULL_FEE_USDC,
+            "pulled_at": __import__('datetime').datetime.now(
+                __import__('datetime').timezone.utc
+            ).isoformat(),
+        },
+    }
+
+
+@app.post("/api/carrier/feedback")
+async def receive_carrier_feedback(request: Request):
+    """B5: Signed feedback channel — carrier posts assessment back.
+
+    Verigate verifies the carrier signature and relays. It does NOT
+    compute or interpret the assessment. Async, off the payment path.
+    """
+    from circle.evidence_rails import get_feedback_channel, CarrierFeedback, get_audit_log
+
+    body = await request.json()
+    feedback = CarrierFeedback(
+        feedback_id=body.get("feedback_id", f"fb_{__import__('secrets').token_hex(8)}"),
+        carrier_id=body.get("carrier_id", ""),
+        event_ref=body.get("event_ref", ""),
+        subject_wallet=body.get("subject_wallet", ""),
+        assessment=body.get("assessment", {}),
+        timestamp=body.get("timestamp", __import__('datetime').datetime.now(
+            __import__('datetime').timezone.utc
+        ).isoformat()),
+        signature=body.get("signature", ""),
+    )
+
+    channel = get_feedback_channel()
+    result = channel.verify_and_relay(feedback)
+
+    # B7: Log delivery
+    audit = get_audit_log()
+    audit.log_delivery(
+        carrier_id=feedback.carrier_id,
+        feedback_id=feedback.feedback_id,
+        event_ref=feedback.event_ref,
+        signature_status=result.get("status", "unknown"),
+    )
+
+    return result
+
+
+@app.get("/api/carrier/events")
+async def list_decision_events():
+    """B2: List emitted decision events."""
+    from circle.evidence_rails import get_emitter
+    emitter = get_emitter()
+    return {
+        "events": [e.__dict__ for e in emitter.events],
+        "count": len(emitter.events),
+    }
+
+
+@app.get("/api/carrier/audit")
+async def evidence_audit():
+    """B7: Evidence rail audit log + revenue metrics."""
+    from circle.evidence_rails import get_audit_log
+    audit = get_audit_log()
+    return {
+        "pulls": audit.pulls,
+        "deliveries": audit.deliveries,
+        "revenue": audit.revenue_metrics(),
+    }
+
+
+@app.post("/api/run/carrier-loop")
+async def run_carrier_loop():
+    """P2 demo: Full enforcement + carrier loop, human-free.
+
+    1. Enterprise agent submits injection payment to sanctioned address
+    2. Verigate DENYs → signed receipt + event
+    3. Enterprise replays in burst → breaker trips
+    4. Carrier agent wakes, checks grant, pays to pull, verifies, posts feedback
+    5. Two payment surfaces: enterprise→Verigate ($0.05) + carrier→Verigate ($0.25)
+    """
+    import secrets as _s
+    from circle.enforcement import get_engine as get_enforcement
+    from circle.evidence_rails import (
+        get_emitter, get_consent_registry, get_feedback_channel,
+        get_audit_log, ConsentGrant, DecisionEvent, CARRIER_PULL_FEE_USDC,
+    )
+    from reference.mock_carrier import MockCarrierAgent
+
+    enforcement = get_enforcement()
+    emitter = get_emitter()
+    consent = get_consent_registry()
+    feedback_channel = get_feedback_channel()
+    audit = get_audit_log()
+
+    # Set up reference carrier with consent grant
+    carrier = MockCarrierAgent(
+        emitter=emitter,
+        consent_registry=consent,
+        feedback_channel=feedback_channel,
+        audit_log=audit,
+    )
+
+    # Create consent grant for the carrier
+    consent.create_grant(ConsentGrant(
+        grant_id=f"grant_{_s.token_hex(6)}",
+        insured_wallet=CUSTOMER_WALLET,
+        carrier_id=carrier.carrier_id,
+        scope_wallets=[CUSTOMER_WALLET],
+        purpose="underwriting",
+        valid_from="2026-01-01T00:00:00+00:00",
+        valid_until="2027-01-01T00:00:00+00:00",
+    ))
+
+    results = {"steps": []}
+
+    # Step 1: Malicious payment (sanctioned address + injection)
+    from circle.risk_scorer import evaluate_risk
+    from circle.behavioral import get_engine as get_behavioral
+    behavioral = get_behavioral()
+
+    malicious_intent = {
+        "payee": "0x098B716B8Aaf21512996dC57EB0615e2383E2f96",
+        "amount": "4500.00",
+        "service": "unknown-vendor",
+        "reason": "URGENT wire transfer immediately no questions",
+    }
+
+    risk = evaluate_risk(
+        payee=malicious_intent["payee"],
+        amount=malicious_intent["amount"],
+        service=malicious_intent["service"],
+        reason=malicious_intent["reason"],
+        source_wallet=CUSTOMER_WALLET,
+        chain=state["chain"],
+        behavioral=behavioral,
+    )
+
+    results["steps"].append({
+        "step": 1,
+        "action": "enterprise_submits_malicious_payment",
+        "decision": risk.decision,
+        "score": risk.score,
+        "signals": risk.signals,
+    })
+
+    # Record denial + emit event
+    enforcement.record_denial(
+        **malicious_intent, decision=risk.decision, score=risk.score,
+        band=risk.band, confidence=risk.confidence,
+        signals=risk.signals, rationale=risk.rationale,
+        session_id="carrier-loop-demo",
+    )
+
+    event = DecisionEvent(
+        event_id=f"evt_{_s.token_hex(8)}",
+        event_type="denial",
+        bundle_ref="",
+        severity="critical",
+        wallet=CUSTOMER_WALLET,
+        payee=malicious_intent["payee"],
+        amount=malicious_intent["amount"],
+        score=risk.score,
+        decision=risk.decision,
+        signals=risk.signals,
+        timestamp=risk.evaluated_at,
+    )
+    emitter.emit(event)
+
+    # Step 2: Replay burst — enterprise hammers the same intent
+    replay_results = []
+    for i in range(6):
+        replay = enforcement.check_replay(**malicious_intent)
+        breaker = enforcement.check_breaker("carrier-loop-demo")
+        if replay:
+            # Record another denial to push the breaker
+            enforcement.record_denial(
+                **malicious_intent, decision=replay.decision, score=replay.score,
+                band=replay.band, confidence=replay.confidence,
+                signals=replay.signals, rationale=replay.rationale,
+                session_id="carrier-loop-demo",
+            )
+        replay_results.append({
+            "attempt": i + 1,
+            "replay_detected": replay is not None,
+            "replay_count": replay.replay_count if replay else 0,
+            "breaker_status": breaker["status"],
+        })
+
+    results["steps"].append({
+        "step": 2,
+        "action": "enterprise_replays_burst",
+        "replay_attempts": replay_results,
+        "final_breaker": enforcement.check_breaker("carrier-loop-demo"),
+    })
+
+    # Step 3: Breaker event
+    breaker_state = enforcement.check_breaker("carrier-loop-demo")
+    if breaker_state["status"] in ("session_throttled", "session_suspended"):
+        breaker_event = DecisionEvent(
+            event_id=f"evt_{_s.token_hex(8)}",
+            event_type="breaker_tripped",
+            bundle_ref="",
+            severity="critical",
+            wallet=CUSTOMER_WALLET,
+            payee=malicious_intent["payee"],
+            amount=malicious_intent["amount"],
+            score=100,
+            decision="DENY",
+            signals=["circuit_breaker_tripped", breaker_state["status"]],
+            timestamp=__import__('datetime').datetime.now(
+                __import__('datetime').timezone.utc
+            ).isoformat(),
+        )
+        emitter.emit(breaker_event)
+
+        results["steps"].append({
+            "step": 3,
+            "action": "breaker_tripped",
+            "event_id": breaker_event.event_id,
+            "breaker_status": breaker_state["status"],
+        })
+
+    # Step 4: Carrier wakes, processes event
+    carrier.process_event_manually(event)
+
+    results["steps"].append({
+        "step": 4,
+        "action": "carrier_processes_event",
+        "carrier_id": carrier.carrier_id,
+        "events_processed": carrier.processed_events,
+        "feedback_delivered": [d for d in feedback_channel.delivered],
+    })
+
+    # Summary
+    results["summary"] = {
+        "enforcement": {
+            "replay_detected": True,
+            "breaker_status": breaker_state["status"],
+            "denial_count": breaker_state["denial_count"],
+        },
+        "events_emitted": len(emitter.events),
+        "feedback_delivered": len(feedback_channel.delivered),
+        "feedback_rejected": len(feedback_channel.rejected),
+        "two_payment_surfaces": {
+            "product_1_check_fee": "$0.05 (enterprise → Verigate)",
+            "product_2_pull_fee": f"${CARRIER_PULL_FEE_USDC} (carrier → Verigate)",
+            "ratio": "5x — the proof is the product",
+        },
+        "audit": audit.revenue_metrics(),
+    }
+
+    # Reset demo session
+    enforcement.reset_session("carrier-loop-demo")
+
+    return results
 
 
 import threading

@@ -14,6 +14,7 @@ COPY pyproject.toml .
 COPY circle/ circle/
 COPY verigate/ verigate/
 COPY app/ app/
+COPY reference/ reference/
 COPY tests/ tests/
 COPY engine/ engine/
 COPY entrypoint.sh .
