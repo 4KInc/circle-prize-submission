@@ -1133,6 +1133,64 @@ async def scheduler_status():
     return get_status()
 
 
+@app.get("/api/treasury/economics")
+async def treasury_economics():
+    """Treasury economics dashboard — shows Verigate as a real micro-business.
+
+    Income from screening fees, expenses for evidence purchases,
+    net margin, and per-check unit economics.
+    """
+    from app.scheduler import get_status
+    sched = get_status()
+
+    total_checks = sched.get("total_checks", 0) or state.get("total_checks", 0)
+    total_approved = sched.get("total_approved", 0)
+    total_denied = sched.get("total_denied", 0)
+    total_step_up = sched.get("total_step_up", 0)
+
+    # Income: $0.05 per check
+    income = total_checks * 0.05
+    # Expenses: dynamic fee per STEP_UP (avg ~$0.03)
+    avg_step_up_fee = 0.03
+    expenses = total_step_up * avg_step_up_fee
+    net = income - expenses
+    margin = (net / income * 100) if income > 0 else 0
+
+    return {
+        "treasury_wallet": TREASURY_WALLET,
+        "chain": state["chain"],
+        "income": {
+            "total_usdc": round(income, 2),
+            "source": "screening_fees",
+            "fee_per_check": 0.05,
+            "total_checks": total_checks,
+        },
+        "expenses": {
+            "total_usdc": round(expenses, 2),
+            "source": "evidence_purchases",
+            "avg_fee_per_step_up": avg_step_up_fee,
+            "total_step_ups": total_step_up,
+        },
+        "net_usdc": round(net, 2),
+        "margin_percent": round(margin, 1),
+        "decisions": {
+            "approved": total_approved,
+            "denied": total_denied,
+            "step_up": total_step_up,
+        },
+        "unit_economics": {
+            "revenue_per_check": 0.05,
+            "cost_per_step_up": avg_step_up_fee,
+            "step_up_rate": round(total_step_up / max(total_checks, 1) * 100, 1),
+            "effective_cost_per_check": round(expenses / max(total_checks, 1), 4),
+            "effective_margin_per_check": round(net / max(total_checks, 1), 4),
+        },
+        "note": "Income from enterprise screening fees ($0.05/check). "
+                "Expenses from STEP_UP evidence purchases (dynamic: $0.02-$5.00). "
+                "Carrier pull revenue ($0.25/pull) not included — separate surface.",
+    }
+
+
 @app.post("/api/run/autonomous-single")
 async def run_autonomous_single():
     """Execute one full autonomous STEP_UP cycle - no UI, no human button.

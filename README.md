@@ -268,15 +268,25 @@ circle services pay \
   --chain BASE-SEPOLIA
 ```
 
-## Python SDK
+## Agent Framework Integrations
 
-```bash
-pip install verigate
-```
+Verigate works with any agent framework — LangChain, CrewAI, OpenAI function calling, or the native SDK.
 
 ```python
-from verigate import Gate, Intent
+# LangChain
+from verigate.integrations import langchain_check_payment
+agent = initialize_agent(tools=[langchain_check_payment], ...)
 
+# CrewAI
+from verigate.integrations import crewai_check_payment
+agent = Agent(tools=[crewai_check_payment], ...)
+
+# OpenAI function calling
+from verigate.integrations import openai_tool_schema, handle_tool_call
+tools = [openai_tool_schema]
+
+# Native SDK
+from verigate import Gate, Intent
 gate = Gate("circle://agent-wallet", allowed_payees=["0xabc..."], max_amount=1.0)
 receipt = gate.authorize(Intent(payee="0xabc...", amount=0.01, service="market-data"))
 gate.verify()  # PASS - signatures, hash chain, merkle all verified
@@ -314,6 +324,31 @@ Resources: `verigate://status`, `verigate://pricing`, `verigate://circle-skill`
 
 <details>
 <summary><strong>Full Technical Details</strong> (architecture, wallets, tests, proof items)</summary>
+
+## Why Not Just Use...
+
+| Alternative | Why it fails for agent payments |
+|-------------|-------------------------------|
+| Circle native policies | Binary allow/block — no STEP_UP, no evidence purchase, no receipts |
+| Stripe Radar | Built for human checkout, not agent-to-agent; no three-state model |
+| Custom middleware | No receipt chain, no carrier API, no Gemini evidence reasoning |
+| On-chain monitoring (Sentinel) | Post-hoc alerts, no pre-payment screening, no STEP_UP |
+
+Verigate is the only system where an agent **spends money to reduce its own decision uncertainty** before acting.
+
+## Treasury Economics
+
+Live endpoint: [`/api/treasury/economics`](https://verigate.cloud/api/treasury/economics)
+
+The Treasury is a real economic entity with income (screening fees) and expenses (evidence purchases):
+
+| | Source | Unit price |
+|---|---|---|
+| **Income** | Enterprise screening fees | $0.05/check |
+| **Expenses** | STEP_UP evidence purchases | $0.02-$5.00 (dynamic) |
+| **Carrier revenue** | Proof bundle pulls | $0.25/pull (separate surface) |
+
+Break-even at ~200K checks/month. See [`ECONOMICS.md`](ECONOMICS.md).
 
 ## Circle vs Verigate: What Each Does
 
