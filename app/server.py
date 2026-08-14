@@ -1133,6 +1133,18 @@ async def scheduler_status():
     return get_status()
 
 
+@app.get("/api/operation-log")
+async def operation_log():
+    """Public operation log — mainnet transactions + off-chain activity.
+
+    Shows both the sustained off-chain risk evaluations (proves the engine
+    runs continuously) and the mainnet anchor transactions (proves all
+    payment surfaces work with real USDC).
+    """
+    from app.scheduler import get_operation_log
+    return get_operation_log()
+
+
 @app.get("/api/treasury/economics")
 async def treasury_economics():
     """Treasury economics dashboard — shows Verigate as a real micro-business.

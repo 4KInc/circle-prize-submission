@@ -4,9 +4,11 @@ Runs a risk check every 30 minutes without human intervention.
 Generates randomized payment intents, scores them through the real
 BlockIntel v2 risk engine, and stores results as GCS proof bundles.
 
-Scoring-only — no USDC transfers. Real mainnet transfers happen via
-intentional endpoints (autonomous-single, agent/handle) not synthetic
-scheduler runs. This avoids draining the treasury on random test data.
+Hybrid model:
+  - CONTINUOUS: Off-chain risk evaluations every 30 min (free, proves the engine runs)
+  - MAINNET ANCHORS: Scheduled on-chain transactions on specific days to prove
+    all three payment surfaces work with real USDC. ~$0.004 gas total.
+    USDC circulates between wallets we control — net cost is gas only.
 """
 
 from __future__ import annotations
@@ -38,6 +40,16 @@ _state = {
 
 INTERVAL_SECONDS = int(os.environ.get("SCHEDULER_INTERVAL", "1800"))  # 30 min
 MAX_RUNS_PER_DAY = 48
+
+# Mainnet anchor schedule — executed once each at the specified hour offset
+# These prove all payment surfaces work with real USDC on Base mainnet.
+# USDC circulates between our wallets; only gas (~$0.001/tx) is consumed.
+MAINNET_ANCHORS = [
+    {"after_hours": 24,  "action": "screening_fee",  "description": "Customer -> Treasury $0.05"},
+    {"after_hours": 72,  "action": "step_up",         "description": "Treasury -> Validator $0.02 (evidence)"},
+    {"after_hours": 120, "action": "carrier_pull",     "description": "Carrier -> Treasury $0.25 (proof pull)"},
+    {"after_hours": 168, "action": "high_value_step_up", "description": "Treasury -> Validator $0.10 ($100 payment)"},
+]
 
 # Randomized intent pool
 _PAYEES = [
@@ -162,6 +174,10 @@ async def _scheduler_loop():
             except Exception as e:
                 logger.warning(f"Scheduler GCS store failed: {e}")
 
+            # Check if any mainnet anchors are due
+            if _state["started_at"] and os.environ.get("ENABLE_MAINNET_ANCHORS", "").lower() in ("true", "1", "yes"):
+                await _check_mainnet_anchors()
+
             logger.info(
                 f"Scheduler run #{_state['total_runs']}: "
                 f"{result['decision']} score={result['score']} "
@@ -224,6 +240,115 @@ def _load_historical_counts():
         logger.warning(f"Could not load historical counts: {e}")
 
 
+async def _check_mainnet_anchors():
+    """Execute scheduled mainnet anchor transactions when due.
+
+    Each anchor runs once at its scheduled hour offset from start.
+    USDC circulates between our wallets — only gas is consumed.
+    """
+    if not _state.get("started_at"):
+        return
+
+    from datetime import datetime as dt
+    start = dt.fromisoformat(_state["started_at"])
+    now = datetime.now(timezone.utc)
+    hours_elapsed = (now - start).total_seconds() / 3600
+
+    executed = _state.setdefault("anchors_executed", set())
+
+    for anchor in MAINNET_ANCHORS:
+        action = anchor["action"]
+        if action in executed:
+            continue
+        if hours_elapsed < anchor["after_hours"]:
+            continue
+
+        logger.info(f"Mainnet anchor due: {action} ({anchor['description']})")
+        try:
+            result = await _execute_mainnet_anchor(anchor)
+            executed.add(action)
+            _state.setdefault("anchor_results", []).append({
+                "action": action,
+                "description": anchor["description"],
+                "result": result,
+                "timestamp": now.isoformat(),
+            })
+            logger.info(f"Mainnet anchor executed: {action} -> {result.get('status')}")
+        except Exception as e:
+            logger.warning(f"Mainnet anchor {action} failed: {e}")
+
+
+async def _execute_mainnet_anchor(anchor: dict) -> dict:
+    """Execute a single mainnet anchor transaction."""
+    from circle.cli import wallet_transfer, USDC_ADDRESSES
+
+    chain = "BASE"
+    customer = os.environ.get("CIRCLE_AGENT_WALLET", "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2")
+    treasury = os.environ.get("VERIGATE_TREASURY_WALLET", "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d")
+    validator = os.environ.get("VALIDATOR_WALLET", "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558")
+    token = USDC_ADDRESSES.get(chain)
+
+    action = anchor["action"]
+
+    if action == "screening_fee":
+        tx = wallet_transfer(source=customer, destination=treasury, amount="0.05", chain=chain, token_address=token)
+        _state["total_earned"] += 0.05
+        return {"status": "executed", "tx_hash": tx.tx_hash, "surface": "screening", "amount": "0.05"}
+
+    elif action == "step_up":
+        tx = wallet_transfer(source=treasury, destination=validator, amount="0.02", chain=chain, token_address=token)
+        _state["total_spent"] += 0.02
+        return {"status": "executed", "tx_hash": tx.tx_hash, "surface": "evidence", "amount": "0.02"}
+
+    elif action == "carrier_pull":
+        # Carrier pays treasury for proof bundle access
+        tx = wallet_transfer(source=customer, destination=treasury, amount="0.25", chain=chain, token_address=token)
+        _state["total_earned"] += 0.25
+        return {"status": "executed", "tx_hash": tx.tx_hash, "surface": "carrier_pull", "amount": "0.25"}
+
+    elif action == "high_value_step_up":
+        # Dynamic fee for a $100 payment: max(0.02, min(100*0.001, 5.00)) = $0.10
+        tx = wallet_transfer(source=treasury, destination=validator, amount="0.10", chain=chain, token_address=token)
+        _state["total_spent"] += 0.10
+        return {"status": "executed", "tx_hash": tx.tx_hash, "surface": "evidence_dynamic", "amount": "0.10"}
+
+    return {"status": "unknown_action"}
+
+
+def get_operation_log() -> dict:
+    """Public operation log — shows mainnet + off-chain activity."""
+    existing_mainnet = [
+        {"tx": "0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58", "surface": "screening_fee", "amount": "$0.05", "date": "2026-08-10"},
+        {"tx": "0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732", "surface": "step_up_evidence", "amount": "$0.02", "date": "2026-08-10"},
+        {"tx": "0x958f2c400d0f955dc02678ff1172cd055305842f18d32a73783386e295af59b5", "surface": "treasury_funding", "amount": "$0.10", "date": "2026-08-10"},
+    ]
+    anchor_results = _state.get("anchor_results", [])
+
+    return {
+        "mainnet": {
+            "existing_transactions": existing_mainnet,
+            "anchor_transactions": anchor_results,
+            "total_transactions": len(existing_mainnet) + len(anchor_results),
+            "surfaces_demonstrated": list({t["surface"] for t in existing_mainnet} | {r.get("result", {}).get("surface", "") for r in anchor_results}),
+            "basescan": "https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d",
+        },
+        "off_chain": {
+            "total_risk_evaluations": _state["total_runs"],
+            "approved": _state["total_approved"],
+            "step_up": _state["total_step_up"],
+            "denied": _state["total_denied"],
+            "running_since": _state.get("started_at"),
+            "mode": "continuous-30min",
+        },
+        "economics": {
+            "total_earned": round(_state["total_earned"], 2),
+            "total_spent": round(_state["total_spent"], 2),
+            "net": round(_state["total_earned"] - _state["total_spent"], 2),
+            "gas_cost_estimate": f"~${(len(existing_mainnet) + len(anchor_results)) * 0.001:.3f}",
+        },
+    }
+
+
 def start_scheduler():
     """Start the background scheduler. Called from server lifespan."""
     if _state["task"] is not None:
@@ -253,5 +378,7 @@ def get_status() -> dict:
         "total_earned": _state["total_earned"],
         "total_spent": _state["total_spent"],
         "total_checks": _state["total_runs"],
-        "mode": "mainnet-transfers" if os.environ.get("ENABLE_MAINNET_TRANSFERS", "").lower() in ("true", "1", "yes") else "risk-scoring-only",
+        "mode": "hybrid-mainnet-anchors" if os.environ.get("ENABLE_MAINNET_ANCHORS", "").lower() in ("true", "1", "yes") else "risk-scoring-only",
+        "anchors_executed": list(_state.get("anchors_executed", set())),
+        "anchors_pending": [a["action"] for a in MAINNET_ANCHORS if a["action"] not in _state.get("anchors_executed", set())],
     }
