@@ -1,6 +1,6 @@
 # Verigate - Circle Agentic Economy Prize Submission
 
-[![CI](https://github.com/4KInc/circle-prize-submission/actions/workflows/ci.yml/badge.svg)](https://github.com/4KInc/circle-prize-submission/actions/workflows/ci.yml)
+[![CI](https://github.com/4KInc/verigate/actions/workflows/ci.yml/badge.svg)](https://github.com/4KInc/verigate/actions/workflows/ci.yml)
 
 > Submission for the [$50K Circle Agentic Economy Prize](https://www.xprize.org/prizes/build-with-gemini) (Build with Gemini XPRIZE)
 
@@ -10,7 +10,7 @@
 |------|------|
 | **Live demo** | [verigate.cloud](https://verigate.cloud) → **Live Demo** tab — three-agent autonomous loop visualization |
 | **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) - autonomous evidence purchase, real USDC on Base |
-| **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) - 163 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
+| **Repo + tests** | [GitHub](https://github.com/4KInc/verigate) - 163 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
 | **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) - 4-step flow, 3 wallets, 5/5 Circle stack |
 
 ## Eligibility Confirmation
@@ -18,7 +18,7 @@
 | Requirement | Evidence |
 |-------------|----------|
 | Uses Circle Agent Stack | Agent Wallets, Gateway Nanopayments, CLI, x402, Skills (5/5) |
-| Public GitHub repo | [4KInc/circle-prize-submission](https://github.com/4KInc/circle-prize-submission) |
+| Public GitHub repo | [4KInc/verigate](https://github.com/4KInc/verigate) |
 | Real USDC transaction | [3 mainnet txs on Basescan](#mainnet-step_up-transaction-base-l2) |
 | Agent wallet addresses | [Customer](https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2), [Treasury](https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d), [Validator](https://basescan.org/address/0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558) |
 | Agent-driven, not human checkout | Background scheduler executes autonomously every 30 min; no human clicks approve/send |
@@ -417,7 +417,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 
 | Item | Value |
 |------|-------|
-| Public repo | [github.com/4KInc/circle-prize-submission](https://github.com/4KInc/circle-prize-submission) |
+| Public repo | [github.com/4KInc/verigate](https://github.com/4KInc/verigate) |
 | Live dashboard | [verigate.cloud](https://verigate.cloud) |
 | **Mainnet STEP_UP tx** | [Treasury → Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) |
 | **Mainnet fee tx** | [Customer → Treasury $0.05](https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58) |
