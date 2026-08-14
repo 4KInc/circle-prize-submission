@@ -76,18 +76,17 @@ def test_step_up_fee_upper_bound():
 # Every decision produces a receipt with a valid Ed25519 signature.
 
 def test_receipt_has_valid_signature():
-    """Receipts must include an Ed25519 signature.
+    """Receipts must include an Ed25519 signature."""
+    try:
+        from gateway.receipts import ReceiptChain
+    except ImportError:
+        pytest.skip("engine/ submodule not available (CI without submodules)")
 
-    Uses the receipt chain directly to avoid executor's risk scorer
-    which produces floats that the strict canonicalizer rejects.
-    """
-    from gateway.receipts import ReceiptChain
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
     key = Ed25519PrivateKey.generate()
     chain = ReceiptChain(tenant="invariant-test", private_key=key, kid="test-key")
 
-    # Sign a decision
     receipt = chain.sign_decision(
         request_digest="sha256:abc123",
         policy_version="sha256:policy1",
