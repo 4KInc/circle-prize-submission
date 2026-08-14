@@ -1607,6 +1607,87 @@ async def synthesize_policy_endpoint(request: Request):
     }
 
 
+@app.post("/api/agent/handle")
+async def agent_handle_intent(request: Request):
+    """Event-driven agent endpoint — receives a payment intent and decides.
+
+    Unlike the scheduler (cron-driven), this agent responds to events.
+    It makes autonomous decisions: screen, STEP_UP, select validator,
+    evaluate economic rationality, and run governance on DENY.
+    """
+    from circle.agent import get_agent
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    intent = {
+        "payee": body.get("payee", ""),
+        "amount": body.get("amount", "0"),
+        "service": body.get("service", ""),
+        "reason": body.get("reason", ""),
+    }
+
+    if not intent["payee"]:
+        return JSONResponse({"error": "payee is required"}, status_code=400)
+
+    agent = get_agent()
+    decision = await agent.handle_payment_intent(intent)
+    return decision.to_dict()
+
+
+@app.get("/api/agent/stats")
+async def agent_stats():
+    """Event-driven agent activity stats."""
+    from circle.agent import get_agent
+    return get_agent().get_stats()
+
+
+@app.get("/api/wallet-policies")
+async def wallet_policies():
+    """On-chain spending policies for all three Circle Agent Wallets.
+
+    These policies are enforced at the Circle wallet layer, independent
+    of Verigate's application-layer screening. Defense-in-depth.
+    """
+    from circle.on_chain_policy import get_all_policies
+    return {
+        "policies": [p.to_circle_format() for p in get_all_policies()],
+        "note": "Circle enforces these at the wallet layer. Verigate screens at the application layer. Both are independent.",
+    }
+
+
+@app.post("/api/negotiate-scope")
+async def negotiate_scope_endpoint(request: Request):
+    """Gemini-mediated evidence scope negotiation between enterprise and carrier.
+
+    Enterprise describes what evidence coverage it needs. Carrier describes
+    its constraints. Gemini proposes a scope that satisfies both.
+    """
+    from circle.negotiation import negotiate_evidence_scope
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    enterprise = body.get("enterprise_needs", "")
+    carrier = body.get("carrier_constraints", "")
+
+    if not enterprise or not carrier:
+        return JSONResponse(
+            {"error": "Both enterprise_needs and carrier_constraints are required"},
+            status_code=400,
+        )
+
+    result = negotiate_evidence_scope(enterprise, carrier)
+    return {
+        "negotiation": result.to_dict(),
+        "note": "Gemini mediates. Each agent reviews and signs. Scope enforced by consent grants.",
+    }
+
+
 _carrier_loop_state: dict = {"steps": [], "running": False, "completed_at": None}
 
 
