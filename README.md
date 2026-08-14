@@ -158,14 +158,24 @@ Both payments settle in USDC on Base mainnet via Circle Agent Wallets. See [`ECO
 
 The insured controls carrier access through consent grants (`POST /api/carrier/consent`). Carriers pay per pull (`POST /api/carrier/pull`, $0.25 x402). Feedback is delivered over a signed channel (`POST /api/carrier/feedback`). See [`CARRIER_API.md`](CARRIER_API.md).
 
-### Enforcement Loop
+### Enforcement Loop (Replay Hammering Prevention)
 
-The `/api/check` endpoint includes a full enforcement loop:
+What happens if an agent keeps sending the same denied request 1000 times?
 
-- **Replay detection (A1):** Repeat of an already-denied intent short-circuits to the prior DENY without re-running the scorer
-- **No re-charge (A2):** Replays are free — no evidence purchase, no STEP_UP
-- **Circuit breaker (A3):** After 5 denials in a window, throttle; after 10, suspend the session
-- **Synchronous state (A4):** Every response includes an `enforcement` field with the session's breaker status
+```
+Request #1:  Full scoring → DENY → cached (score 100, OFAC match)
+Request #2:  Replay detected → instant DENY, no re-scoring, no fee
+Request #6:  ⚠ SESSION_THROTTLED (5 denials in window)
+Request #11: ⛔ SESSION_SUSPENDED (10 denials — locked out)
+Request #12+: Immediate DENY — doesn't even check replay cache
+```
+
+Replays are **free but not unlimited** — you don't pay twice, but you can't hammer forever:
+
+- **A1 — Replay detection:** Same denied intent short-circuits to prior DENY without re-running the scorer. Zero useful information leaked.
+- **A2 — No re-charge:** Replays skip evidence purchase and STEP_UP. No fees, no treasury spend.
+- **A3 — Circuit breaker:** Replays count toward the breaker. 5 denials → throttle. 10 → session suspended. The attacker gets locked out.
+- **A4 — Synchronous state:** Every response includes the `enforcement` field so the agent can see its own breaker status and stop.
 
 ## Circle Agent Stack Coverage (5/5)
 
