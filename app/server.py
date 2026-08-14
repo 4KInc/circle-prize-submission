@@ -1044,6 +1044,29 @@ async def api_check(request: Request):
     }
     if governance_intel:
         result["governance"] = governance_intel
+
+    # Record decision in the event-driven agent for stats tracking.
+    # /api/check IS the agent — it screens, enforces, and decides.
+    try:
+        from circle.agent import get_agent, AgentDecision
+        agent = get_agent()
+        agent.decisions.append(AgentDecision(
+            intent={"payee": payee, "amount": amount, "service": service, "reason": reason},
+            decision=risk.decision,
+            score=risk.score,
+            band=risk.band,
+            confidence=risk.confidence,
+            signals=risk.signals,
+            rationale=risk.rationale,
+            step_up_executed=risk.decision == "STEP_UP",
+            evidence_fee=max(0.02, min(float(amount) * 0.001, 5.00)) if risk.decision == "STEP_UP" else 0,
+            evidence_worth_it=True if risk.decision != "STEP_UP" else (
+                max(0.02, min(float(amount) * 0.001, 5.00)) < float(amount) * (risk.score / 100) * 0.5
+            ),
+        ))
+    except Exception:  # noqa: BLE001
+        pass
+
     return result
 
 
