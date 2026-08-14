@@ -216,6 +216,31 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
 
+  <!-- Treasury P&L — one line -->
+  <div class="flex items-center justify-center gap-6 mb-6 flex-wrap">
+    <div class="flex items-center gap-1.5">
+      <span class="font-mono text-[10px] text-on-surface-variant/40">Earned</span>
+      <span class="font-mono text-sm text-primary-fixed font-bold" id="ov-earned">—</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span class="font-mono text-[10px] text-on-surface-variant/40">Evidence spend</span>
+      <span class="font-mono text-sm text-[#ffaf00]" id="ov-spent">—</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span class="font-mono text-[10px] text-on-surface-variant/40">Margin</span>
+      <span class="font-mono text-sm text-primary-fixed" id="ov-margin">—</span>
+    </div>
+  </div>
+
+  <!-- Gemini roles — compact pill row -->
+  <div class="flex items-center justify-center gap-2 mb-8 flex-wrap">
+    <span class="font-mono text-[9px] text-on-surface-variant/30 mr-1">Gemini 2.5</span>
+    <span class="font-mono text-[9px] px-2 py-0.5 rounded-full border border-[#4285f4]/20 text-[#4285f4]/70" style="background:rgba(66,133,244,0.05)">STEP_UP reasoning</span>
+    <span class="font-mono text-[9px] px-2 py-0.5 rounded-full border border-[#4285f4]/20 text-[#4285f4]/70" style="background:rgba(66,133,244,0.05)">Policy synthesis</span>
+    <span class="font-mono text-[9px] px-2 py-0.5 rounded-full border border-[#4285f4]/20 text-[#4285f4]/70" style="background:rgba(66,133,244,0.05)">Scope negotiation</span>
+    <span class="font-mono text-[9px] px-2 py-0.5 rounded-full border border-[#4285f4]/20 text-[#4285f4]/70" style="background:rgba(66,133,244,0.05)">Governance agents</span>
+  </div>
+
   <!-- Mainnet Proof — compact inline -->
   <div class="flex flex-wrap items-center justify-center gap-4 mb-8">
     <a href="https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58" target="_blank" class="font-mono text-[11px] text-primary-fixed/70 hover:text-primary-fixed transition-colors flex items-center gap-1 no-underline">Fee: $0.05 <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></a>
@@ -2188,6 +2213,15 @@ async function loadSchedulerStatus(){
     // Evidence spend: $0.02 per STEP_UP
     const evidenceSpend=((s.total_step_up||0)*0.02).toFixed(2);
     document.getElementById('sched-evidence-spend').textContent='$'+evidenceSpend;
+    // Treasury P&L
+    const earned=((s.total_runs||0)*0.05).toFixed(2);
+    const margin=earned>0?((earned-evidenceSpend)/earned*100).toFixed(1):'—';
+    const eEl=document.getElementById('ov-earned');
+    const sEl=document.getElementById('ov-spent');
+    const mEl=document.getElementById('ov-margin');
+    if(eEl)eEl.textContent='$'+earned;
+    if(sEl)sEl.textContent='$'+evidenceSpend;
+    if(mEl)mEl.textContent=margin+'%';
     // Protected = sum of denied amounts (estimate from denied count * avg rogue amount ~$50)
     const protectedAmt=(s.total_denied||0)*50;
     document.getElementById('sched-protected').textContent=protectedAmt>0?'$'+protectedAmt.toLocaleString():'$0';
