@@ -198,21 +198,57 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
 
-  <!-- Money Flow — two compact lines -->
-  <div class="mb-8 rounded-xl p-4 border border-white/[.04]" style="background:rgba(255,255,255,0.015)">
-    <div class="flex items-center justify-center gap-2 mb-2 flex-wrap">
-      <span class="font-mono text-xs text-secondary">Enterprise</span>
-      <span class="font-mono text-[10px] text-primary-fixed/50">— $0.05 →</span>
-      <span class="font-mono text-xs text-primary-fixed font-bold">Treasury</span>
-      <span class="font-mono text-[10px] text-[#ffaf00]/50">— $0.02 →</span>
-      <span class="font-mono text-xs text-tertiary-fixed-dim">Validator</span>
-      <span class="font-mono text-[9px] text-on-surface-variant/25 ml-2">(STEP_UP only)</span>
+  <!-- Money Flow — visual diagram -->
+  <div class="mb-8 rounded-xl p-6 border border-white/[.04]" style="background:rgba(255,255,255,0.015)">
+    <!-- Flow 1: Enterprise -> Treasury -> Validator -->
+    <div class="flex items-center justify-center gap-3 mb-4">
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center border border-secondary/30" style="background:rgba(184,195,255,0.08)">
+          <span class="material-symbols-outlined text-secondary" style="font-size:18px">smart_toy</span>
+        </div>
+        <span class="font-mono text-[9px] text-secondary">Enterprise</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <div class="w-16 md:w-24 h-px bg-gradient-to-r from-secondary/40 to-primary-fixed/40"></div>
+        <span class="font-mono text-[9px] text-primary-fixed/60 mt-0.5">$0.05</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center border border-primary-fixed/30" style="background:rgba(184,246,0,0.08)">
+          <span class="material-symbols-outlined text-primary-fixed" style="font-size:18px">account_balance</span>
+        </div>
+        <span class="font-mono text-[9px] text-primary-fixed font-bold">Treasury</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <div class="w-16 md:w-24 h-px bg-gradient-to-r from-primary-fixed/40 to-[#ffaf00]/40" style="border-top:1px dashed rgba(255,175,0,0.3)"></div>
+        <span class="font-mono text-[9px] text-[#ffaf00]/60 mt-0.5">$0.02</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center border border-[#ffaf00]/30" style="background:rgba(255,175,0,0.06)">
+          <span class="material-symbols-outlined text-[#ffaf00]" style="font-size:18px">verified_user</span>
+        </div>
+        <span class="font-mono text-[9px] text-[#ffaf00]">Validator</span>
+      </div>
+      <span class="font-mono text-[8px] text-on-surface-variant/20 ml-2 hidden md:block">STEP_UP only</span>
     </div>
-    <div class="flex items-center justify-center gap-2 flex-wrap">
-      <span class="font-mono text-xs text-tertiary-fixed-dim">Carrier</span>
-      <span class="font-mono text-[10px] text-secondary/50">— $0.25 →</span>
-      <span class="font-mono text-xs text-primary-fixed font-bold">Treasury</span>
-      <span class="font-mono text-[9px] text-on-surface-variant/25 ml-2">(evidence pull)</span>
+    <!-- Flow 2: Carrier -> Treasury -->
+    <div class="flex items-center justify-center gap-3">
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center border border-tertiary-fixed-dim/30" style="background:rgba(220,184,255,0.06)">
+          <span class="material-symbols-outlined text-tertiary-fixed-dim" style="font-size:18px">shield</span>
+        </div>
+        <span class="font-mono text-[9px] text-tertiary-fixed-dim">Carrier</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <div class="w-16 md:w-24 h-px bg-gradient-to-r from-tertiary-fixed-dim/40 to-primary-fixed/40"></div>
+        <span class="font-mono text-[9px] text-secondary/60 mt-0.5">$0.25</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center border border-primary-fixed/30" style="background:rgba(184,246,0,0.08)">
+          <span class="material-symbols-outlined text-primary-fixed" style="font-size:18px">account_balance</span>
+        </div>
+        <span class="font-mono text-[9px] text-primary-fixed font-bold">Treasury</span>
+      </div>
+      <span class="font-mono text-[8px] text-on-surface-variant/20 ml-2 hidden md:block">evidence pull</span>
     </div>
   </div>
 
