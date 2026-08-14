@@ -2355,13 +2355,29 @@ function ldTimeline(text,color){
 
 let ldLastCompleted=null;
 let ldPollInterval=null;
+let ldAnimatedOnLoad=false;
 
 function startLDPolling(){
   if(ldPollInterval)return;
   ldReset();
+  ldAnimatedOnLoad=false;
   const status=document.getElementById('ld-status');
   status.innerHTML='<span class="w-2 h-2 rounded-full bg-on-surface-variant/30 animate-pulse"></span><span class="font-mono text-[10px] text-on-surface-variant/40">Waiting for terminal trigger...</span>';
   ldTimeline('Run <span class="text-primary-fixed">curl -X POST https://verigate.cloud/api/run/carrier-loop</span> in your terminal','rgba(255,255,255,0.2)');
+
+  // Check immediately for existing results (from a prior terminal run)
+  (async()=>{
+    try{
+      const resp=await fetch('/api/carrier-loop/latest');
+      const data=await resp.json();
+      if(data.completed_at && data.steps && data.steps.length>0 && !ldAnimatedOnLoad){
+        ldAnimatedOnLoad=true;
+        ldLastCompleted=data.completed_at;
+        animateLDSteps(data.steps);
+        return; // Already have data, animate it
+      }
+    }catch(e){}
+  })();
 
   ldPollInterval=setInterval(async()=>{
     try{
