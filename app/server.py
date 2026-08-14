@@ -963,6 +963,24 @@ async def api_check(request: Request):
                 timestamp=risk.evaluated_at,
             )
             get_emitter().emit(event)
+
+            # Carrier agent self-wake: autonomously evaluates the DENY event
+            try:
+                from circle.carrier_agent import get_carrier_agent
+                import asyncio
+                carrier = get_carrier_agent()
+                asyncio.ensure_future(carrier.evaluate_event({
+                    "event_id": event.event_id,
+                    "event_type": event.event_type,
+                    "severity": severity,
+                    "wallet": CUSTOMER_WALLET,
+                    "payee": payee,
+                    "amount": amount,
+                    "score": risk.score,
+                    "signals": risk.signals,
+                }))
+            except Exception:  # noqa: BLE001
+                pass
         except Exception:  # noqa: BLE001
             pass
 
@@ -1654,6 +1672,24 @@ async def agent_stats():
     """Event-driven agent activity stats."""
     from circle.agent import get_agent
     return get_agent().get_stats()
+
+
+@app.get("/api/carrier-agent/stats")
+async def carrier_agent_stats():
+    """Autonomous carrier agent stats — shows self-wake decisions."""
+    from circle.carrier_agent import get_carrier_agent
+    return get_carrier_agent().get_stats()
+
+
+@app.get("/api/carrier-agent/investigations")
+async def carrier_agent_investigations():
+    """Carrier agent investigation history — each with Gemini reasoning."""
+    from circle.carrier_agent import get_carrier_agent
+    agent = get_carrier_agent()
+    return {
+        "investigations": [i.to_dict() for i in agent.investigations[-20:]],
+        "stats": agent.get_stats(),
+    }
 
 
 @app.get("/api/wallet-policies")

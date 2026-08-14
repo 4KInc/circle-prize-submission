@@ -210,12 +210,13 @@ class VerigateAgent:
             return {}
 
     def get_stats(self) -> dict:
-        """Return agent activity stats."""
+        """Return agent activity stats — shows reasoning, not just forwarding."""
         total = len(self.decisions)
         approved = sum(1 for d in self.decisions if d.decision == "APPROVE")
         step_up = sum(1 for d in self.decisions if d.step_up_executed)
         denied = sum(1 for d in self.decisions if d.decision == "DENY")
         total_fees = sum(d.evidence_fee for d in self.decisions if d.step_up_executed)
+        not_worth = sum(1 for d in self.decisions if not d.evidence_worth_it and d.evidence_fee > 0)
 
         return {
             "total_decisions": total,
@@ -223,9 +224,13 @@ class VerigateAgent:
             "step_up": step_up,
             "denied": denied,
             "total_evidence_fees": round(total_fees, 4),
-            "economic_decisions": sum(
-                1 for d in self.decisions if not d.evidence_worth_it
-            ),
+            "evidence_deemed_worth_cost": step_up,
+            "evidence_deemed_not_worth_cost": not_worth,
+            "avg_evidence_fee": round(total_fees / max(step_up, 1), 4),
+            "economic_rationality": {
+                "decisions_where_agent_chose_not_to_buy": not_worth,
+                "reason": "Evidence cost exceeded 50% of risk-adjusted expected loss",
+            },
         }
 
 
