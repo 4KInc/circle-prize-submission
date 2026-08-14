@@ -423,7 +423,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 
 ## Tests
 
-158 tests across 11 test files. CI-enforced with ruff + mypy + pytest on every push.
+158 tests across 14 test files. CI-enforced with ruff + mypy + pytest on every push.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
