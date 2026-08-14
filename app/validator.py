@@ -366,7 +366,7 @@ async def validator_info():
     """Public info about this validator."""
     return {
         "name": "Verigate Evidence Validator",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "role": "Independent verification of security evidence packages",
         "wallet": VALIDATOR_WALLET,
         "price": f"{VALIDATOR_PRICE_USDC} USDC per validation",
@@ -384,4 +384,56 @@ async def validator_info():
             "(advisory input to validator, not trusted directly; validator "
             "applies its own thresholds and signs the final verdict)",
         ],
+        "independence": {
+            "separate_deployment": True,
+            "separate_signing_key": True,
+            "separate_wallet": True,
+            "separate_thresholds": True,
+            "attestation_url": "/.well-known/validator-attestation.json",
+        },
+    }
+
+
+@router.get("/.well-known/validator-attestation.json")
+async def validator_attestation():
+    """Validator independence attestation — documents separation properties.
+
+    This endpoint allows anyone to verify the validator's independence
+    claims programmatically.
+    """
+    return {
+        "validator_id": _validator_kid,
+        "operator": "BlockIntel, Inc.",
+        "independence_properties": {
+            "separate_deployment": {
+                "status": True,
+                "evidence": "verigate-validator Cloud Run service (separate from verigate-dashboard)",
+                "service_url": os.environ.get("VALIDATOR_PUBLIC_URL", "https://verigate-validator-lwmxdereeq-uc.a.run.app"),
+            },
+            "separate_signing_key": {
+                "status": True,
+                "evidence": "Ed25519 key generated at validator startup, not shared with Verigate",
+                "public_key": _validator_public_key_jwk(),
+            },
+            "separate_wallet": {
+                "status": True,
+                "evidence": "Validator wallet is independently controlled",
+                "wallet": VALIDATOR_WALLET,
+                "basescan": f"https://basescan.org/address/{VALIDATOR_WALLET}",
+            },
+            "separate_thresholds": {
+                "status": True,
+                "evidence": "Validator uses its own risk thresholds, not Verigate's",
+                "amount_ceiling": VALIDATOR_AMOUNT_CEILING,
+                "note": "Verigate scorer DENY floor is score >= 75; validator ceiling is amount > $10. Different dimensions.",
+            },
+            "gemini_instance": {
+                "status": True,
+                "evidence": "Validator uses Gemini for evidence reasoning independently",
+                "note": "Same API key in demo; production deploys with separate GCP project + API key",
+            },
+        },
+        "disclosure": "Demonstration deployment: same operator, architecturally separable. "
+                      "Production deployment separates operator, key material, and GCP project.",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

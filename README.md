@@ -388,8 +388,12 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 | `circle/behavioral.py` | Per-agent behavioral layer — robust z-score, velocity, novel counterparty |
 | `circle/enforcement.py` | Replay detection, circuit breaker, session management |
 | `circle/evidence_rails.py` | Carrier evidence rails — events, consent, paid proof-pull, feedback |
+| `circle/agent.py` | Event-driven agent — reactive screening, economic rationality, validator selection |
+| `circle/negotiation.py` | Gemini-mediated evidence scope negotiation between agents |
+| `circle/on_chain_policy.py` | On-chain spending policies — defense-in-depth with Circle wallet layer |
+| `circle/policy_synthesis.py` | Gemini translates natural language to Circle spending policies |
 | `app/validator.py` | Evidence Validator — Gemini-powered, x402-paywalled, independently signed |
-| `verigate/` | Python SDK (`pip install verigate`) + MCP server (6 tools + 3 resources) |
+| `verigate/` | Python SDK + MCP server + LangChain/CrewAI/OpenAI integrations |
 
 **Key properties:** Zero LLM in authorization trust path. Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 158 tests).
 
@@ -407,8 +411,15 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 | x402 endpoint | [`/x402/security-check`](https://verigate.cloud/x402/health) |
 | OpenAPI spec | [`/static/openapi.json`](https://verigate.cloud/static/openapi.json) |
 | PyPI | [`pip install verigate`](https://pypi.org/project/verigate/) |
+| Event-driven agent | `POST /api/agent/handle` — reactive screening, economic rationality |
+| Agent stats | `GET /api/agent/stats` — autonomous decision history |
 | Autonomous STEP_UP | `POST /api/run/autonomous-single` — full cycle, no UI |
 | Carrier loop | `POST /api/run/carrier-loop` — enforcement + carrier evidence loop |
+| Policy synthesis | `POST /api/synthesize-policy` — Gemini translates natural language to Circle policy |
+| Scope negotiation | `POST /api/negotiate-scope` — Gemini mediates enterprise/carrier evidence scope |
+| Wallet policies | `GET /api/wallet-policies` — on-chain spending policies for all 3 wallets |
+| Treasury economics | `GET /api/treasury/economics` — income, expenses, margin, unit economics |
+| Validator attestation | [`/.well-known/validator-attestation.json`](https://verigate.cloud/x402/validator/.well-known/validator-attestation.json) |
 
 ## Tests
 
@@ -468,6 +479,7 @@ The `engine/` directory is a git submodule referencing [agent-authorization-gate
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Settlement boundary, authorization path, Gemini usage |
 | [`ECONOMICS.md`](ECONOMICS.md) | Unit economics, break-even STEP_UP rate, tier model |
 | [`CARRIER_API.md`](CARRIER_API.md) | Insurance evidence rail, consent model, attestation format |
+| [`SOC2_READINESS.md`](SOC2_READINESS.md) | SOC 2 Type I alignment, gap analysis, remediation plan |
 
 </details>
 
