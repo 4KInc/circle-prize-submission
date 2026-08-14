@@ -10,7 +10,7 @@
 |------|------|
 | **Live demo** | [verigate.cloud](https://verigate.cloud) → **Live Demo** tab — three-agent autonomous loop visualization |
 | **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) - autonomous evidence purchase, real USDC on Base |
-| **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) - 158 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
+| **Repo + tests** | [GitHub](https://github.com/4KInc/circle-prize-submission) - 163 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
 | **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) - 4-step flow, 3 wallets, 5/5 Circle stack |
 
 ## Eligibility Confirmation
@@ -195,7 +195,9 @@ Visit [verigate.cloud](https://verigate.cloud) and click **Live Demo**. This vis
 
 1. **Enterprise Agent** submits a payment intent
 2. **Verigate** scores risk (APPROVE / STEP_UP / DENY), enforces replay/circuit-breaker rules, earns $0.05
-3. **Carrier Agent** receives decision events, pays $0.25 to pull the signed evidence bundle, signs feedback
+3. **Carrier Agent** wakes autonomously on DENY events, uses Gemini to decide if the event is worth investigating ($0.25), checks consent, pulls evidence, signs feedback
+
+The carrier agent is **self-waking** — it subscribes to decision events and autonomously decides whether to investigate using Gemini. No human triggers the carrier. If Gemini says the event isn't worth $0.25 (e.g., low-value denial), the carrier skips it. If consent isn't granted, the carrier stops at the boundary. True agent-to-agent autonomy.
 
 The step-by-step timeline shows every phase — no human clicks trigger the flow. Two animated arrows between the cards show the two payment surfaces ($0.05 check + $0.25 pull).
 
@@ -258,6 +260,7 @@ Verigate receives signed verdict → final APPROVE/DENY
 **What Gemini does NOT do:** Make the authorization decision. The scorer's STEP_UP trigger is deterministic. The validator's final sign/deny applies a deterministic threshold to Gemini's structured output. If Gemini hallucinates, the worst case is a suboptimal validator call — the same risk you accept with any evidence source.
 
 **Gemini is also used in production for:**
+- **Carrier self-wake** - Carrier agent uses Gemini to decide if a DENY event is worth $0.25 to investigate (economic rationality for the carrier side)
 - **Governance agents** - Investigator (forensic analysis), Auditor (EU AI Act + NIST AI RMF compliance reports), Recommender (policy change proposals)
 - **Ops agent reasoning** - analyzes tasks, selects services, forms payment intents
 
@@ -398,14 +401,15 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 | `circle/behavioral.py` | Per-agent behavioral layer — robust z-score, velocity, novel counterparty |
 | `circle/enforcement.py` | Replay detection, circuit breaker, session management |
 | `circle/evidence_rails.py` | Carrier evidence rails — events, consent, paid proof-pull, feedback |
-| `circle/agent.py` | Event-driven agent — reactive screening, economic rationality, validator selection |
+| `circle/agent.py` | Event-driven Verigate agent — reactive screening, economic rationality, validator selection |
+| `circle/carrier_agent.py` | Autonomous carrier agent — self-wakes on DENY events, Gemini evaluates worth, consent-gated |
 | `circle/negotiation.py` | Gemini-mediated evidence scope negotiation between agents |
 | `circle/on_chain_policy.py` | On-chain spending policies — defense-in-depth with Circle wallet layer |
 | `circle/policy_synthesis.py` | Gemini translates natural language to Circle spending policies |
 | `app/validator.py` | Evidence Validator — Gemini-powered, x402-paywalled, independently signed |
 | `verigate/` | Python SDK + MCP server + LangChain/CrewAI/OpenAI integrations |
 
-**Key properties:** Zero LLM in authorization trust path. Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 158 tests).
+**Key properties:** Zero LLM in authorization trust path. Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 163 tests).
 
 **Stack:** Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC-8004 / Circle Agent Stack / Gemini 2.5 Flash / Base L2 / Cloud Run / GCS
 
@@ -433,7 +437,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 
 ## Tests
 
-158 tests across 14 test files. CI-enforced with ruff + mypy + pytest on every push.
+163 tests across 14 test files. CI-enforced with ruff + mypy + pytest on every push.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
@@ -450,6 +454,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 | `test_evidence_rails` | 13 | Events, consent, feedback, carrier loop, audit |
 | `test_properties` | 10 | Property-based (Hypothesis): score bounds, fee monotonicity, crash resistance |
 | `test_invariants` | 11 | Formal invariants: fail-closed, sanction-DENY, STEP_UP bounds, receipt integrity, no-recharge, determinism, validator independence, consent-required, Gemini fallback, policy gates |
+| `test_concurrency` | 5 | Concurrent risk evaluations, parallel denials, replay breaker under load, session independence |
 
 ## Limitations & Honest Assessment
 
