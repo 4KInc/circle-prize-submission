@@ -1898,12 +1898,37 @@ async def run_carrier_loop():
     # Reset demo session
     enforcement.reset_session("carrier-loop-demo")
 
+    # Run Gemini for the UI polling state
+    _gemini_reasoning = {}
+    try:
+        from circle.validator_gemini import assess_evidence
+        _assessment = assess_evidence({
+            "payee": malicious_intent["payee"],
+            "amount": float(malicious_intent["amount"]),
+            "service": malicious_intent.get("service", "unknown"),
+            "reason": malicious_intent.get("reason", ""),
+            "risk_score": risk.score,
+            "scorer_signals": risk.signals,
+            "step_up_reason": "DENIAL_ANALYSIS",
+        })
+        if _assessment.gemini_available:
+            _gemini_reasoning = {
+                "reasoning": _assessment.reasoning,
+                "risk_level": _assessment.risk_level,
+                "confidence": _assessment.confidence,
+                "action": _assessment.recommended_action,
+                "red_flags": _assessment.red_flags,
+            }
+    except Exception:  # noqa: BLE001
+        pass
+
     # Store for UI polling — build UI-friendly step sequence
     _carrier_loop_state["steps"] = [
         {"step": 1, "action": "enterprise_submits", "intent": malicious_intent},
         {"step": 2, "action": "verigate_denies", "score": risk.score, "band": risk.band,
          "decision": risk.decision, "confidence": risk.confidence,
-         "signals": risk.signals, "rationale": risk.rationale},
+         "signals": risk.signals, "rationale": risk.rationale,
+         "gemini_reasoning": _gemini_reasoning},
         {"step": 3, "action": "replay_burst", "replays": results["steps"][1].get("replay_attempts", [])
          if len(results["steps"]) > 1 else []},
         {"step": 4, "action": "breaker_tripped", "status": breaker_state["status"],

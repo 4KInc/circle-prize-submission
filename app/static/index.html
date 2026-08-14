@@ -414,14 +414,14 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       </div>
     </div>
 
-    <!-- Flow arrows (desktop) -->
-    <div class="hidden md:flex absolute top-1/2 -translate-y-1/2 z-20 flex-col items-center gap-0.5 pointer-events-none" id="ld-arrow-e2v" style="opacity:0;transition:opacity 0.5s;left:33.33%;transform:translate(-50%,-50%)">
-      <span class="font-mono text-[9px] text-primary-fixed/80 bg-background/80 px-1.5 py-0.5 rounded" id="ld-arrow-e2v-label">$0.05</span>
-      <span class="text-primary-fixed/60 text-lg">→</span>
+    <!-- Flow arrows (desktop) — positioned in the gap between cards -->
+    <div class="hidden md:flex absolute z-30 flex-col items-center gap-0.5 pointer-events-none" id="ld-arrow-e2v" style="opacity:0;transition:opacity 0.5s;left:33.33%;top:40%;transform:translate(-50%,-50%)">
+      <span class="font-mono text-[10px] text-primary-fixed bg-surface/90 px-2 py-1 rounded-md border border-primary-fixed/20 shadow-lg" id="ld-arrow-e2v-label">$0.05</span>
+      <span class="text-primary-fixed/70 text-base">→</span>
     </div>
-    <div class="hidden md:flex absolute top-1/2 -translate-y-1/2 z-20 flex-col items-center gap-0.5 pointer-events-none" id="ld-arrow-c2v" style="opacity:0;transition:opacity 0.5s;left:66.66%;transform:translate(-50%,-50%)">
-      <span class="font-mono text-[9px] text-secondary/80 bg-background/80 px-1.5 py-0.5 rounded" id="ld-arrow-c2v-label">$0.25</span>
-      <span class="text-secondary/60 text-lg">←</span>
+    <div class="hidden md:flex absolute z-30 flex-col items-center gap-0.5 pointer-events-none" id="ld-arrow-c2v" style="opacity:0;transition:opacity 0.5s;left:66.66%;top:40%;transform:translate(-50%,-50%)">
+      <span class="font-mono text-[10px] text-secondary bg-surface/90 px-2 py-1 rounded-md border border-secondary/20 shadow-lg" id="ld-arrow-c2v-label">$0.25</span>
+      <span class="text-secondary/70 text-base">←</span>
     </div>
   </div>
 
