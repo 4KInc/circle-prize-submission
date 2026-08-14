@@ -88,13 +88,31 @@ class EnforcementEngine:
 
     def check_replay(
         self, payee: str, amount: str, service: str, reason: str,
+        session_id: str = "default",
     ) -> DenialRecord | None:
-        """A1: Check if this intent was already denied within the replay window."""
+        """A1: Check if this intent was already denied within the replay window.
+
+        Replays are free (A2: no re-scoring, no re-charge) but they DO
+        count toward the circuit breaker. If an agent hammers the same
+        denied intent repeatedly, the session gets throttled then suspended.
+        """
         self._evict_stale()
         digest = _intent_digest(payee, amount, service, reason)
         record = self._denial_cache.get(digest)
         if record and time.time() - record.denied_at <= self.replay_window:
             record.replay_count += 1
+            # Replays count toward circuit breaker — repeated hammering is suspicious
+            session = self._get_session(session_id)
+            now = time.time()
+            if now - session.denial_window_start > self.breaker_window:
+                session.denial_count = 0
+                session.denial_window_start = now
+            session.denial_count += 1
+            session.last_denial_at = now
+            if session.denial_count >= self.breaker_suspend_after:
+                session.suspended = True
+            elif session.denial_count >= self.breaker_threshold:
+                session.throttled = True
             return record
         return None
 

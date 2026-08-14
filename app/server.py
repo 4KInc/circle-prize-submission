@@ -889,7 +889,7 @@ async def api_check(request: Request):
         }
 
     # A1: Check replay — was this exact intent already denied?
-    replay = enforcement.check_replay(payee, amount, service, reason)
+    replay = enforcement.check_replay(payee, amount, service, reason, session_id=session_id)
     if replay:
         return {
             "decision": replay.decision,
