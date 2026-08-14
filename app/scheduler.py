@@ -1,12 +1,12 @@
-"""Background scheduler for continuous autonomous operations.
+"""Background scheduler for continuous autonomous risk scoring.
 
 Runs a risk check every 30 minutes without human intervention.
 Generates randomized payment intents, scores them through the real
 BlockIntel v2 risk engine, and stores results as GCS proof bundles.
 
-On STEP_UP decisions, attempts real USDC transfers on mainnet
-(Treasury -> Validator) if the wallet has sufficient balance.
-Guarded by balance checks and daily transfer caps.
+Scoring-only — no USDC transfers. Real mainnet transfers happen via
+intentional endpoints (autonomous-single, agent/handle) not synthetic
+scheduler runs. This avoids draining the treasury on random test data.
 """
 
 from __future__ import annotations
@@ -106,67 +106,15 @@ async def _run_check():
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
-    # Update totals
+    # Update totals (scoring only — no USDC transfers in scheduler)
     if risk.decision == "APPROVE":
         _state["total_approved"] += 1
-        _state["total_earned"] += 0.05
     elif risk.decision == "STEP_UP":
         _state["total_step_up"] += 1
-        _state["total_earned"] += 0.05
-        # Attempt real USDC transfer on STEP_UP (Treasury -> Validator)
-        result["step_up"] = await _attempt_step_up_transfer(intent, risk)
     else:
         _state["total_denied"] += 1
 
     return result
-
-
-async def _attempt_step_up_transfer(intent: dict, risk) -> dict:
-    """Attempt a real mainnet USDC transfer for STEP_UP evidence purchase.
-
-    Guarded by:
-    - ENABLE_MAINNET_TRANSFERS env var (default: false)
-    - Daily transfer cap (max 10 per day)
-    - Minimum balance check ($0.20)
-    """
-    if not os.environ.get("ENABLE_MAINNET_TRANSFERS", "").lower() in ("true", "1", "yes"):
-        return {"status": "skipped", "reason": "ENABLE_MAINNET_TRANSFERS not set"}
-
-    if _state.get("daily_transfers", 0) >= 10:
-        return {"status": "skipped", "reason": "daily transfer cap reached (10)"}
-
-    try:
-        from circle.cli import wallet_transfer, USDC_ADDRESSES
-
-        chain = os.environ.get("CIRCLE_CHAIN", "BASE")
-        treasury = os.environ.get(
-            "VERIGATE_TREASURY_WALLET", "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d")
-        validator = os.environ.get(
-            "VALIDATOR_WALLET", "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558")
-
-        evidence_fee = max(0.02, min(float(intent["amount"]) * 0.001, 5.00))
-        evidence_fee_str = f"{evidence_fee:.2f}"
-
-        tx = wallet_transfer(
-            source=treasury, destination=validator,
-            amount=evidence_fee_str, chain=chain,
-            token_address=USDC_ADDRESSES.get(chain),
-        )
-
-        _state["total_spent"] += evidence_fee
-        _state["daily_transfers"] = _state.get("daily_transfers", 0) + 1
-
-        logger.info(f"Scheduler STEP_UP transfer: ${evidence_fee_str} tx={tx.tx_hash[:20]}...")
-        return {
-            "status": "executed",
-            "amount": evidence_fee_str,
-            "tx_hash": tx.tx_hash,
-            "explorer_url": tx.explorer_url,
-            "chain": chain,
-        }
-    except Exception as e:
-        logger.warning(f"Scheduler STEP_UP transfer failed: {e}")
-        return {"status": "failed", "error": str(e)}
 
 
 async def _scheduler_loop():
