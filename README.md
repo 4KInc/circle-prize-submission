@@ -8,6 +8,7 @@
 
 | What | Link |
 |------|------|
+| **Judge landing page** | [verigate.cloud/judge](https://verigate.cloud/judge) — everything in one page: try it, screen a payment, verify on Basescan |
 | **Live demo** | [verigate.cloud](https://verigate.cloud) → **Live Demo** tab — three-agent autonomous loop visualization |
 | **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) - autonomous evidence purchase, real USDC on Base |
 | **Repo + tests** | [GitHub](https://github.com/4KInc/verigate) - 163 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |

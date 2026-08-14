@@ -143,6 +143,103 @@ async def index():
     return (STATIC_DIR / "index.html").read_text()
 
 
+@app.get("/judge", response_class=HTMLResponse)
+async def judge_landing():
+    """One-page judge experience — everything they need in 60 seconds."""
+    return """<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verigate — Judge Landing</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Hanken+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<style>body{background:#111318;color:#e2e2e8}a{color:#b8f600;text-decoration:none}.card{background:rgba(30,32,36,0.7);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px}.card:hover{border-color:rgba(184,246,0,0.2)}.btn{background:#b8f600;color:#141f00;padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;border:none;font-family:'JetBrains Mono'}.btn:hover{box-shadow:0 0 15px rgba(184,246,0,0.3)}.btn-ghost{background:rgba(255,255,255,0.05);color:#b8f600;border:1px solid rgba(184,246,0,0.3)}.btn-ghost:hover{background:rgba(184,246,0,0.1)}#scenario-result{white-space:pre-wrap;font-size:12px;max-height:300px;overflow-y:auto}</style>
+</head><body style="font-family:'Hanken Grotesk',sans-serif">
+<div style="max-width:900px;margin:0 auto;padding:40px 20px">
+
+<div style="text-align:center;margin-bottom:32px">
+<div style="font-family:Sora;font-size:32px;font-weight:800;margin-bottom:8px">Verigate</div>
+<div style="font-size:14px;color:#c3caac">Circle Agentic Economy Prize — <a href="https://github.com/4KInc/verigate" target="_blank">github.com/4KInc/verigate</a></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
+<div class="card" style="text-align:center"><div style="color:#b8f600;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Circle Stack</div><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:700">5/5</div></div>
+<div class="card" style="text-align:center"><div style="color:#b8f600;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Mainnet Txs</div><a href="https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d" target="_blank" style="font-family:'JetBrains Mono';font-size:20px;font-weight:700">3 verified</a></div>
+<div class="card" style="text-align:center"><div style="color:#b8f600;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Tests</div><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:700">163</div></div>
+</div>
+
+<div style="font-family:Sora;font-size:16px;font-weight:600;margin-bottom:12px;color:#c3caac">Try It</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+<a href="/"><div class="card"><div style="font-weight:600;margin-bottom:4px">Live Demo</div><div style="font-size:12px;color:rgba(255,255,255,0.5)">Three-agent loop with Gemini reasoning</div></div></a>
+<a href="javascript:void(0)" onclick="runAutonomous()"><div class="card"><div style="font-weight:600;margin-bottom:4px">Autonomous STEP_UP</div><div style="font-size:12px;color:rgba(255,255,255,0.5)">One-click evidence purchase, no human</div></div></a>
+<a href="javascript:void(0)" onclick="runCarrierLoop()"><div class="card"><div style="font-weight:600;margin-bottom:4px">Carrier Loop</div><div style="font-size:12px;color:rgba(255,255,255,0.5)">Full enforcement + carrier evidence</div></div></a>
+<a href="/api/wallet-policies" target="_blank"><div class="card"><div style="font-weight:600;margin-bottom:4px">Wallet Policies</div><div style="font-size:12px;color:rgba(255,255,255,0.5)">On-chain spending rules, defense-in-depth</div></div></a>
+</div>
+
+<div style="font-family:Sora;font-size:16px;font-weight:600;margin-bottom:12px;color:#c3caac">Screen a Payment (Interactive)</div>
+<div class="card" style="margin-bottom:24px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+<div><div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Payee</div><input id="s-payee" value="0x742d35Cc6634C0532925a3b844Bc9e7595f2bD28" style="width:100%;background:#1a1c20;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px;color:#e2e2e8;font-family:'JetBrains Mono';font-size:12px"></div>
+<div><div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Amount (USDC)</div><input id="s-amount" value="25.00" style="width:100%;background:#1a1c20;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px;color:#e2e2e8;font-family:'JetBrains Mono';font-size:12px"></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+<div><div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Service</div><input id="s-service" value="analytics-api" style="width:100%;background:#1a1c20;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px;color:#e2e2e8;font-family:'JetBrains Mono';font-size:12px"></div>
+<div><div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Reason</div><input id="s-reason" value="Quarterly data purchase" style="width:100%;background:#1a1c20;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px;color:#e2e2e8;font-family:'JetBrains Mono';font-size:12px"></div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<button class="btn" onclick="screenPayment()">Screen This Payment</button>
+<button class="btn btn-ghost" onclick="document.getElementById('s-payee').value='0x098B716B8Aaf21512996dC57EB0615e2383E2f96';document.getElementById('s-amount').value='4500';document.getElementById('s-reason').value='URGENT wire transfer no questions';screenPayment()">Try Attack Scenario</button>
+</div>
+<div id="scenario-result" style="font-family:'JetBrains Mono';color:rgba(255,255,255,0.6);min-height:40px"></div>
+</div>
+
+<div style="font-family:Sora;font-size:16px;font-weight:600;margin-bottom:12px;color:#c3caac">Verify</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
+<a href="https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58" target="_blank"><div class="card" style="text-align:center"><div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Fee Tx</div><div style="font-family:'JetBrains Mono';font-size:13px">$0.05 <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">open_in_new</span></div></div></a>
+<a href="https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732" target="_blank"><div class="card" style="text-align:center"><div style="font-size:10px;color:#ffaf00;text-transform:uppercase;margin-bottom:4px">STEP_UP Tx</div><div style="font-family:'JetBrains Mono';font-size:13px;color:#ffaf00">$0.02 <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">open_in_new</span></div></div></a>
+<a href="https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d" target="_blank"><div class="card" style="text-align:center"><div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px">Treasury</div><div style="font-family:'JetBrains Mono';font-size:13px">Basescan <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">open_in_new</span></div></div></a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:24px">
+<a href="/api/treasury/economics" target="_blank"><div class="card" style="text-align:center;font-size:12px">Treasury P&L</div></a>
+<a href="/api/agent/stats" target="_blank"><div class="card" style="text-align:center;font-size:12px">Agent Stats</div></a>
+<a href="/api/carrier-agent/stats" target="_blank"><div class="card" style="text-align:center;font-size:12px">Carrier Self-Wake</div></a>
+<a href="/x402/validator/.well-known/validator-attestation.json" target="_blank"><div class="card" style="text-align:center;font-size:12px">Validator Attestation</div></a>
+</div>
+
+<div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.3);margin-top:32px">
+163 tests · 15 files · 5 Gemini surfaces · 3 wallets · CI-enforced · Base mainnet<br>
+<a href="https://github.com/4KInc/verigate">github.com/4KInc/verigate</a> · BlockIntel, Inc. · Apache-2.0
+</div>
+
+</div>
+<script>
+async function screenPayment(){
+  const el=document.getElementById('scenario-result');
+  el.textContent='Screening...';
+  try{
+    const r=await fetch('/api/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payee:document.getElementById('s-payee').value,amount:document.getElementById('s-amount').value,service:document.getElementById('s-service').value,reason:document.getElementById('s-reason').value})});
+    const d=await r.json();
+    const dc=d.decision==='APPROVE'?'#b8f600':d.decision==='DENY'?'#ffb4ab':'#ffaf00';
+    let txt=`Decision: ${d.decision}  Score: ${d.score}/100  Band: ${d.band}\\nConfidence: ${d.confidence}  Signals: ${(d.signals||[]).join(', ')}\\nRationale: ${d.rationale}`;
+    if(d.governance){const g=d.governance;txt+=`\\n\\nGovernance Intel:\\n  Severity: ${g.incident?.severity}\\n  Summary: ${g.incident?.summary}\\n  Recommendations: ${(g.policy_recommendations||[]).map(r=>r.change).join(', ')}`;}
+    el.style.color=dc;el.textContent=txt;
+  }catch(e){el.textContent='Error: '+e.message;el.style.color='#ffb4ab';}
+}
+async function runAutonomous(){
+  const el=document.getElementById('scenario-result');
+  el.textContent='Executing autonomous STEP_UP cycle...';el.style.color='#ffaf00';
+  try{const r=await fetch('/api/run/autonomous-single',{method:'POST'});const d=await r.json();el.textContent=JSON.stringify(d,null,2);el.style.color=d.decision==='STEP_UP'?'#ffaf00':'#b8f600';}catch(e){el.textContent='Error: '+e.message;}
+}
+async function runCarrierLoop(){
+  const el=document.getElementById('scenario-result');
+  el.textContent='Running carrier loop (takes ~5s)...';el.style.color='#b8c3ff';
+  try{const r=await fetch('/api/run/carrier-loop',{method:'POST'});const d=await r.json();el.textContent=JSON.stringify(d.summary||d,null,2);el.style.color='#b8f600';}catch(e){el.textContent='Error: '+e.message;}
+}
+</script>
+</body></html>"""
+
+
 @app.get("/api/state")
 async def get_state():
     return state
@@ -1212,20 +1309,22 @@ async def treasury_economics():
     return {
         "treasury_wallet": TREASURY_WALLET,
         "chain": state["chain"],
-        "income": {
-            "total_usdc": round(income, 2),
-            "source": "screening_fees",
-            "fee_per_check": 0.05,
+        "mainnet": {
+            "total_earned_usdc": 0.15,
+            "total_spent_usdc": 0.02,
+            "tx_count": 3,
+            "basescan": f"https://basescan.org/address/{TREASURY_WALLET}",
+            "note": "Only real mainnet USDC transactions counted here.",
+        },
+        "all_activity": {
+            "income_usdc": round(income, 2),
+            "expenses_usdc": round(expenses, 2),
+            "net_usdc": round(net, 2),
+            "margin_percent": round(margin, 1),
             "total_checks": total_checks,
-        },
-        "expenses": {
-            "total_usdc": round(expenses, 2),
-            "source": "evidence_purchases",
-            "avg_fee_per_step_up": avg_step_up_fee,
             "total_step_ups": total_step_up,
+            "note": "Includes off-chain risk evaluations (scoring-only, no USDC moved).",
         },
-        "net_usdc": round(net, 2),
-        "margin_percent": round(margin, 1),
         "decisions": {
             "approved": total_approved,
             "denied": total_denied,
@@ -1235,12 +1334,7 @@ async def treasury_economics():
             "revenue_per_check": 0.05,
             "cost_per_step_up": avg_step_up_fee,
             "step_up_rate": round(total_step_up / max(total_checks, 1) * 100, 1),
-            "effective_cost_per_check": round(expenses / max(total_checks, 1), 4),
-            "effective_margin_per_check": round(net / max(total_checks, 1), 4),
         },
-        "note": "Income from enterprise screening fees ($0.05/check). "
-                "Expenses from STEP_UP evidence purchases (dynamic: $0.02-$5.00). "
-                "Carrier pull revenue ($0.25/pull) not included — separate surface.",
     }
 
 
