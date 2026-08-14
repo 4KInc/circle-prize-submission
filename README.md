@@ -428,6 +428,9 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 | PyPI | [`pip install verigate`](https://pypi.org/project/verigate/) |
 | Event-driven agent | `POST /api/agent/handle` — reactive screening, economic rationality |
 | Agent stats | `GET /api/agent/stats` — autonomous decision history |
+| Carrier self-wake | `GET /api/carrier-agent/stats` — Gemini decides if DENY events are worth investigating |
+| Carrier investigations | `GET /api/carrier-agent/investigations` — investigation history with Gemini reasoning |
+| Judge landing page | [`/judge`](https://verigate.cloud/judge) — one-page experience with interactive screener |
 | Autonomous STEP_UP | `POST /api/run/autonomous-single` — full cycle, no UI |
 | Carrier loop | `POST /api/run/carrier-loop` — enforcement + carrier evidence loop |
 | Policy synthesis | `POST /api/synthesize-policy` — Gemini translates natural language to Circle policy |
@@ -438,7 +441,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 
 ## Tests
 
-163 tests across 14 test files. CI-enforced with ruff + mypy + pytest on every push.
+163 tests across 15 test files. CI-enforced with ruff + mypy + pytest on every push.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
