@@ -204,7 +204,7 @@ The step-by-step timeline shows every phase — no human clicks trigger the flow
 
 ### Continuous Autonomous Operation
 
-A background scheduler runs risk checks every 30 minutes without human intervention. Results are stored as GCS proof bundles. The overview page shows a live "Autonomous Operations" dashboard with total payments screened, approved/blocked counts, and last check result. The scheduler has been running since Aug 9, 2026.
+A background scheduler runs risk checks every 30 minutes without human intervention. Results are stored as GCS proof bundles. The overview page shows a live "Autonomous Operations" dashboard with total payments screened, approved/blocked counts, and last check result. The scheduler has been running since Aug 9, 2025.
 
 For a single on-demand autonomous STEP_UP cycle (no UI, no human button):
 
@@ -259,6 +259,18 @@ Verigate receives signed verdict → final APPROVE/DENY
 **What Gemini does:** Helps the validator reason about evidence context that deterministic checks cannot evaluate — service/amount plausibility, injection pattern analysis, payee reputation signals.
 
 **What Gemini does NOT do:** Make the authorization decision. The scorer's STEP_UP trigger is deterministic. The validator's final sign/deny applies a deterministic threshold to Gemini's structured output. If Gemini hallucinates, the worst case is a suboptimal validator call — the same risk you accept with any evidence source.
+
+**Gemini's 5 structural roles — what happens without each one:**
+
+| # | Role | File | Remove Gemini, what breaks |
+|---|------|------|---------------------------|
+| 1 | STEP_UP validator reasoning | `circle/validator_gemini.py` | Validator loses contextual analysis, falls back to INSUFFICIENT (fail-closed) |
+| 2 | Carrier self-wake | `circle/carrier_agent.py` | Carrier can't evaluate if investigation is worth $0.25 |
+| 3 | Governance agents | `circle/agents.py` | No forensic analysis or compliance reports on DENY |
+| 4 | Policy synthesis | `circle/policy_synthesis.py` | Agents can't configure policies in natural language |
+| 5 | Cross-agent negotiation | `circle/negotiation.py` | No automated evidence scope consensus |
+
+All 5 have deterministic fallbacks. The system degrades gracefully but loses significant capability.
 
 **Gemini is also used in production for:**
 - **Carrier self-wake** - Carrier agent uses Gemini to decide if a DENY event is worth $0.25 to investigate (economic rationality for the carrier side)
