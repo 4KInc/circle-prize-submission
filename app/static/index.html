@@ -88,6 +88,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <button class="nav-link" onclick="go('receipts')">Receipts</button>
     <button class="nav-link" onclick="go('evidence')">Evidence Vault</button>
     <button class="nav-link" onclick="go('compliance')">Compliance</button>
+    <button class="nav-link" onclick="go('integrate')">Integrate</button>
   </div>
   <div class="flex items-center gap-3">
   </div>
@@ -1124,6 +1125,626 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   </div>
 </div>
 
+<!-- VIEW: Integrate -->
+<div class="view" id="v-integrate">
+<style>
+.docs-layout{display:flex;gap:0;min-height:calc(100vh - 120px)}
+.docs-sidebar{width:220px;shrink:0;position:sticky;top:100px;align-self:flex-start;height:fit-content;padding-right:24px;border-right:1px solid rgba(255,255,255,.04)}
+.docs-sidebar a{display:block;padding:6px 12px;font-size:12px;color:#8d9479;border-radius:6px;transition:all .15s;text-decoration:none;font-family:'Hanken Grotesk',sans-serif}
+.docs-sidebar a:hover{color:#c3caac;background:rgba(255,255,255,.03)}
+.docs-sidebar a.ds-active{color:#b8f600;background:rgba(184,246,0,.06);font-weight:600}
+.docs-sidebar .ds-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);padding:16px 12px 6px;font-family:'JetBrains Mono',monospace}
+.docs-sidebar .ds-label:first-child{padding-top:0}
+.docs-main{flex:1;min-width:0;padding-left:32px}
+.docs-section{padding-bottom:40px;margin-bottom:40px;border-bottom:1px solid rgba(255,255,255,.04)}
+.docs-section:last-child{border-bottom:none}
+.docs-two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.docs-desc{padding-right:8px}
+.docs-desc h3{font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:#e2e2e8;margin-bottom:8px}
+.docs-desc p{font-size:13px;color:#c3caac;line-height:1.6;margin-bottom:12px}
+.docs-desc .ds-param{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.docs-desc .ds-param:last-child{border-bottom:none}
+.docs-desc .ds-param-name{font-family:'JetBrains Mono',monospace;font-size:12px;color:#e2e2e8;font-weight:500;white-space:nowrap}
+.docs-desc .ds-param-type{font-family:'JetBrains Mono',monospace;font-size:10px;color:#8d9479;white-space:nowrap}
+.docs-desc .ds-param-desc{font-size:12px;color:#8d9479}
+.docs-desc .ds-required{color:#b8f600;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.docs-desc .ds-optional{color:#8d9479;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.ds-code-block{background:#0a0c10;border:1px solid rgba(255,255,255,.06);border-radius:10px;overflow:hidden}
+.ds-code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.04)}
+.ds-code-header span{font-family:'JetBrains Mono',monospace;font-size:10px;color:#8d9479;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.ds-code-header .ds-method{padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px}
+.ds-code-header .ds-post{background:rgba(184,246,0,.1);color:#b8f600}
+.ds-code-header .ds-get{background:rgba(184,195,255,.1);color:#b8c3ff}
+.ds-code-block pre{padding:14px;margin:0;overflow-x:auto;font-size:11.5px;font-family:'JetBrains Mono',monospace;line-height:1.65;color:#c3caac}
+.ds-code-block .cm{color:rgba(141,148,121,.5)}
+.ds-code-block .kw{color:#b8c3ff}
+.ds-code-block .str{color:#b8f600}
+.ds-code-block .key{color:#e2e2e8}
+.ds-code-block .num{color:#dcb8ff}
+.ds-code-block .fn{color:#e2e2e8}
+.ds-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600}
+.ds-badge-green{background:rgba(184,246,0,.08);color:#b8f600;border:1px solid rgba(184,246,0,.15)}
+.ds-badge-blue{background:rgba(184,195,255,.08);color:#b8c3ff;border:1px solid rgba(184,195,255,.15)}
+.ds-badge-purple{background:rgba(220,184,255,.08);color:#dcb8ff;border:1px solid rgba(220,184,255,.15)}
+.ds-badge-red{background:rgba(255,180,171,.08);color:#ffb4ab;border:1px solid rgba(255,180,171,.15)}
+.ds-endpoint-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:#e2e2e8;font-weight:500}
+.ds-response-tab{padding:6px 14px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono',monospace;background:transparent;border:none;color:#8d9479;cursor:pointer;transition:.15s}
+.ds-response-tab:hover{color:#c3caac;background:rgba(255,255,255,.03)}
+.ds-response-tab.active{color:#b8f600;background:rgba(184,246,0,.08)}
+.ds-tier-card{border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:20px;transition:border-color .2s,box-shadow .2s;background:rgba(30,32,36,.4)}
+.ds-tier-card:hover{border-color:rgba(184,246,0,.15);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.ds-tier-card.featured{border-color:rgba(184,246,0,.25);background:rgba(184,246,0,.02)}
+@media(max-width:768px){.docs-layout{flex-direction:column}.docs-sidebar{width:100%;position:static;border-right:none;border-bottom:1px solid rgba(255,255,255,.04);padding:0 0 16px;display:flex;flex-wrap:wrap;gap:4px}.docs-sidebar .ds-label{width:100%;padding:8px 0 4px}.docs-main{padding-left:0;padding-top:24px}.docs-two-col{grid-template-columns:1fr}}
+</style>
+
+<div class="docs-layout">
+<!-- Sidebar -->
+<nav class="docs-sidebar">
+  <div class="ds-label">Getting Started</div>
+  <a href="#docs-quickstart" class="ds-active" onclick="scrollDoc(this)">Quick Start</a>
+  <a href="#docs-auth" onclick="scrollDoc(this)">Authentication</a>
+  <div class="ds-label">API Reference</div>
+  <a href="#docs-check" onclick="scrollDoc(this)">Screen Payment</a>
+  <a href="#docs-responses" onclick="scrollDoc(this)">Response Types</a>
+  <a href="#docs-agent-handle" onclick="scrollDoc(this)">Agent Handle</a>
+  <a href="#docs-policy" onclick="scrollDoc(this)">Synthesize Policy</a>
+  <a href="#docs-negotiate" onclick="scrollDoc(this)">Negotiate Scope</a>
+  <a href="#docs-carrier" onclick="scrollDoc(this)">Carrier Pull</a>
+  <div class="ds-label">SDKs</div>
+  <a href="#docs-python" onclick="scrollDoc(this)">Python</a>
+  <a href="#docs-frameworks" onclick="scrollDoc(this)">Frameworks</a>
+  <a href="#docs-mcp" onclick="scrollDoc(this)">MCP Server</a>
+  <div class="ds-label">Pricing</div>
+  <a href="#docs-pricing" onclick="scrollDoc(this)">Three Products</a>
+</nav>
+
+<!-- Main Content -->
+<div class="docs-main">
+
+<!-- Quick Start -->
+<div class="docs-section" id="docs-quickstart">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <div class="flex items-center gap-3 mb-4">
+        <h3 style="margin:0">Quick Start</h3>
+        <span class="ds-badge ds-badge-green">Base URL: verigate.cloud</span>
+      </div>
+      <p>Screen any agent payment before it executes. One POST, one response. Three possible verdicts:</p>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <span class="ds-badge ds-badge-green">APPROVE</span>
+        <span class="ds-badge ds-badge-purple">STEP_UP</span>
+        <span class="ds-badge ds-badge-red">DENY</span>
+      </div>
+      <p>Verigate scores risk, checks sanctions, detects prompt injection, evaluates behavioral anomalies, and returns a signed receipt. On uncertain cases (STEP_UP), it autonomously purchases independent evidence before deciding.</p>
+      <p style="font-size:12px;color:#8d9479">Every decision produces an Ed25519-signed, hash-linked receipt anchored to BASE mainnet.</p>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>Request</span><span class="ds-method ds-post">POST</span></div>
+        <pre><span class="cm"># Screen a payment before executing</span>
+<span class="kw">curl</span> -X POST https://verigate.cloud/api/check \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "payee": "0x742d35Cc6634C0532925a3b8",
+    "amount": "12.50",
+    "service": "market-data-api",
+    "reason": "Fetch latest ETH price data"
+  }'</span></pre>
+      </div>
+      <div class="ds-code-block" style="margin-top:8px">
+        <div class="ds-code-header"><span>Response</span><span style="font-size:10px;color:#b8f600">200 OK</span></div>
+        <pre>{
+  <span class="key">"decision"</span>: <span class="str">"APPROVE"</span>,
+  <span class="key">"score"</span>: <span class="num">12</span>,
+  <span class="key">"band"</span>: <span class="str">"LOW"</span>,
+  <span class="key">"confidence"</span>: <span class="num">0.95</span>,
+  <span class="key">"rationale"</span>: <span class="str">"Low risk — known vendor, within cap"</span>,
+  <span class="key">"contributions"</span>: [
+    {<span class="key">"category"</span>: <span class="str">"novel_counterparty"</span>, <span class="key">"weight"</span>: <span class="num">12</span>}
+  ],
+  <span class="key">"enforcement"</span>: {<span class="key">"status"</span>: <span class="str">"OK"</span>}
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Authentication -->
+<div class="docs-section" id="docs-auth">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <h3>Authentication</h3>
+      <p>Verigate is currently in open beta. No API key required. All endpoints accept unauthenticated requests.</p>
+      <p>Payment is per-call via USDC on Base. The screening fee ($0.05) is collected either upstream via x402 Gateway nanopayments or via direct wallet transfer.</p>
+      <div style="margin-top:12px;padding:12px;border-radius:8px;background:rgba(184,246,0,.04);border:1px solid rgba(184,246,0,.1)">
+        <div style="font-size:11px;font-weight:600;color:#b8f600;margin-bottom:4px">Production</div>
+        <div style="font-size:12px;color:#c3caac">API keys and rate limiting will be available when Verigate exits beta. Payment via x402 Gateway nanopayments provides implicit authentication.</div>
+      </div>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>x402 Payment Flow</span></div>
+        <pre><span class="cm"># Step 1: Call endpoint — get 402 + payment requirements</span>
+<span class="kw">curl</span> https://verigate.cloud/x402/security-check
+
+<span class="cm"># Step 2: Pay via Circle Gateway (gas-free)</span>
+<span class="kw">circle</span> services pay \
+  https://verigate.cloud/x402/security-check \
+  --address 0xYOUR_WALLET \
+  --chain BASE-SEPOLIA
+
+<span class="cm"># Step 3: Endpoint returns security verdict</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POST /api/check -->
+<div class="docs-section" id="docs-check">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <div class="flex items-center gap-3 mb-2">
+        <h3 style="margin:0">Screen Payment</h3>
+      </div>
+      <div class="flex items-center gap-2 mb-4">
+        <span class="ds-code-header ds-method ds-post" style="padding:3px 10px;border-radius:4px;font-size:11px">POST</span>
+        <span class="ds-endpoint-path">/api/check</span>
+      </div>
+      <p>Submit a payment intent for risk assessment. Returns a verdict, risk breakdown, enforcement state, and signed receipt.</p>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);margin:20px 0 10px;font-family:'JetBrains Mono',monospace">Request Body</div>
+      <div class="ds-param"><span class="ds-param-name">payee</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Destination wallet address (0x...)</span></div>
+      <div class="ds-param"><span class="ds-param-name">amount</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">USDC amount (e.g. "12.50")</span></div>
+      <div class="ds-param"><span class="ds-param-name">service</span><span class="ds-param-type">string</span><span class="ds-optional">optional</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Service being paid for</span></div>
+      <div class="ds-param"><span class="ds-param-name">reason</span><span class="ds-param-type">string</span><span class="ds-optional">optional</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Why the agent is making this payment</span></div>
+      <div class="ds-param"><span class="ds-param-name">tier</span><span class="ds-param-type">string</span><span class="ds-optional">optional</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc"><code style="background:rgba(255,255,255,.05);padding:1px 6px;border-radius:3px;font-size:11px">"screening"</code> ($0.05, default) or <code style="background:rgba(255,255,255,.05);padding:1px 6px;border-radius:3px;font-size:11px">"governance"</code> ($0.15)</span></div>
+      <div class="ds-param"><span class="ds-param-name">session_id</span><span class="ds-param-type">string</span><span class="ds-optional">optional</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Session ID for circuit breaker tracking</span></div>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);margin:20px 0 10px;font-family:'JetBrains Mono',monospace">Response Fields</div>
+      <div class="ds-param"><span class="ds-param-name">decision</span><span class="ds-param-type">string</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">APPROVE | STEP_UP | DENY</span></div>
+      <div class="ds-param"><span class="ds-param-name">score</span><span class="ds-param-type">integer</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Risk score 0-100</span></div>
+      <div class="ds-param"><span class="ds-param-name">band</span><span class="ds-param-type">string</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">LOW | MEDIUM | HIGH | CRITICAL</span></div>
+      <div class="ds-param"><span class="ds-param-name">contributions</span><span class="ds-param-type">array</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Risk factor breakdown with category, weight, detail</span></div>
+      <div class="ds-param"><span class="ds-param-name">governance</span><span class="ds-param-type">object</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Forensic intel + policy recommendations (on DENY)</span></div>
+      <div class="ds-param"><span class="ds-param-name">enforcement</span><span class="ds-param-type">object</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Circuit breaker state: OK | THROTTLED | SUSPENDED</span></div>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>Request</span><span class="ds-method ds-post">POST</span></div>
+        <pre><span class="kw">curl</span> -X POST https://verigate.cloud/api/check \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "payee": "0x9a1B2c3D4e5F6789...",
+    "amount": "8.00",
+    "service": "analytics-subscription",
+    "reason": "Monthly renewal",
+    "tier": "governance"
+  }'</span></pre>
+      </div>
+      <div class="ds-code-block" style="margin-top:8px">
+        <div class="ds-code-header"><span>Response — DENY (governance tier)</span><span style="font-size:10px;color:#ffb4ab">DENY</span></div>
+        <pre>{
+  <span class="key">"decision"</span>: <span class="str">"DENY"</span>,
+  <span class="key">"score"</span>: <span class="num">95</span>,
+  <span class="key">"band"</span>: <span class="str">"CRITICAL"</span>,
+  <span class="key">"confidence"</span>: <span class="num">0.98</span>,
+  <span class="key">"contributions"</span>: [
+    {<span class="key">"category"</span>: <span class="str">"injection"</span>, <span class="key">"weight"</span>: <span class="num">30</span>},
+    {<span class="key">"category"</span>: <span class="str">"amount_outlier"</span>, <span class="key">"weight"</span>: <span class="num">20</span>}
+  ],
+  <span class="key">"governance"</span>: {
+    <span class="key">"tier"</span>: <span class="str">"governance"</span>,
+    <span class="key">"fee"</span>: <span class="str">"$0.15"</span>,
+    <span class="key">"forensic"</span>: {
+      <span class="key">"severity"</span>: <span class="str">"CRITICAL"</span>,
+      <span class="key">"root_cause"</span>: <span class="str">"Prompt injection via..."</span>,
+      <span class="key">"attack_vector"</span>: <span class="str">"tool_output_poisoning"</span>,
+      <span class="key">"containment_actions"</span>: [<span class="str">"..."</span>],
+      <span class="key">"estimated_loss_prevented"</span>: <span class="str">"$50.00"</span>
+    },
+    <span class="key">"recommendations"</span>: {
+      <span class="key">"policy_changes"</span>: [{
+        <span class="key">"change"</span>: <span class="str">"add_to_blocklist"</span>,
+        <span class="key">"rationale"</span>: <span class="str">"Known attack addr..."</span>
+      }]
+    }
+  },
+  <span class="key">"enforcement"</span>: {
+    <span class="key">"status"</span>: <span class="str">"OK"</span>,
+    <span class="key">"denials_in_window"</span>: <span class="num">1</span>
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Response Types -->
+<div class="docs-section" id="docs-responses">
+  <div class="docs-desc" style="max-width:100%">
+    <h3>Response Types</h3>
+    <p>Six possible response shapes depending on the verdict and enforcement state.</p>
+  </div>
+  <div style="overflow-x:auto;margin-top:16px">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="border-bottom:1px solid rgba(255,255,255,.08)">
+          <th style="text-align:left;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Type</th>
+          <th style="text-align:left;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.06em;font-weight:600">What triggers it</th>
+          <th style="text-align:left;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Key fields</th>
+          <th style="text-align:right;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+          <td style="padding:10px 12px"><span class="ds-badge ds-badge-green" style="font-size:10px">APPROVE</span></td>
+          <td style="padding:10px 12px;color:#c3caac">Low risk, no uncertainty</td>
+          <td style="padding:10px 12px;color:#8d9479;font-family:'JetBrains Mono',monospace;font-size:11px">decision + risk + receipt</td>
+          <td style="padding:10px 12px;text-align:right;color:#b8f600;font-family:'JetBrains Mono',monospace">$0.05</td>
+        </tr>
+        <tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+          <td style="padding:10px 12px"><span class="ds-badge ds-badge-purple" style="font-size:10px">STEP_UP &rarr; APPROVE</span></td>
+          <td style="padding:10px 12px;color:#c3caac">Uncertain, evidence confirmed safe</td>
+          <td style="padding:10px 12px;color:#8d9479;font-family:'JetBrains Mono',monospace;font-size:11px">+ step_up.validator_verdict + gemini_reasoning</td>
+          <td style="padding:10px 12px;text-align:right;color:#dcb8ff;font-family:'JetBrains Mono',monospace">$0.07</td>
+        </tr>
+        <tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+          <td style="padding:10px 12px"><span class="ds-badge ds-badge-red" style="font-size:10px">STEP_UP &rarr; DENY</span></td>
+          <td style="padding:10px 12px;color:#c3caac">Uncertain, evidence confirmed dangerous</td>
+          <td style="padding:10px 12px;color:#8d9479;font-family:'JetBrains Mono',monospace;font-size:11px">+ governance + settlement proof</td>
+          <td style="padding:10px 12px;text-align:right;color:#dcb8ff;font-family:'JetBrains Mono',monospace">$0.07</td>
+        </tr>
+        <tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+          <td style="padding:10px 12px"><span class="ds-badge ds-badge-red" style="font-size:10px">DENY</span></td>
+          <td style="padding:10px 12px;color:#c3caac">High risk, unambiguous</td>
+          <td style="padding:10px 12px;color:#8d9479;font-family:'JetBrains Mono',monospace;font-size:11px">+ governance intel + receipt</td>
+          <td style="padding:10px 12px;text-align:right;color:#b8f600;font-family:'JetBrains Mono',monospace">$0.05</td>
+        </tr>
+        <tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+          <td style="padding:10px 12px"><span class="ds-badge" style="background:rgba(255,255,255,.04);color:#8d9479;border:1px solid rgba(255,255,255,.08);font-size:10px">REPLAY</span></td>
+          <td style="padding:10px 12px;color:#c3caac">Same denied intent re-submitted</td>
+          <td style="padding:10px 12px;color:#8d9479;font-family:'JetBrains Mono',monospace;font-size:11px">replay: true + enforcement</td>
+          <td style="padding:10px 12px;text-align:right;color:#8d9479;font-family:'JetBrains Mono',monospace">$0.00</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px"><span class="ds-badge ds-badge-red" style="font-size:10px">BREAKER</span></td>
+          <td style="padding:10px 12px;color:#c3caac">5 denials &rarr; throttle, 10 &rarr; suspend</td>
+          <td style="padding:10px 12px;color:#8d9479;font-family:'JetBrains Mono',monospace;font-size:11px">enforcement.status: SUSPENDED</td>
+          <td style="padding:10px 12px;text-align:right;color:#8d9479;font-family:'JetBrains Mono',monospace">$0.00</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- POST /api/agent/handle -->
+<div class="docs-section" id="docs-agent-handle">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="ds-code-header ds-method ds-post" style="padding:3px 10px;border-radius:4px;font-size:11px">POST</span>
+        <span class="ds-endpoint-path">/api/agent/handle</span>
+      </div>
+      <p>Event-driven agent endpoint. Submit a payment event and Verigate evaluates economic rationality: is the evidence worth buying?</p>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);margin:16px 0 10px;font-family:'JetBrains Mono',monospace">Body</div>
+      <div class="ds-param"><span class="ds-param-name">payee</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param"><span class="ds-param-name">amount</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param"><span class="ds-param-name">service</span><span class="ds-param-type">string</span><span class="ds-optional">optional</span></div>
+
+      <p style="margin-top:16px">Returns economic rationality stats at <code style="background:rgba(255,255,255,.05);padding:1px 6px;border-radius:3px;font-size:11px">GET /api/agent/stats</code></p>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>Request</span><span class="ds-method ds-post">POST</span></div>
+        <pre><span class="kw">curl</span> -X POST https://verigate.cloud/api/agent/handle \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "payee": "0x742d35Cc...",
+    "amount": "0.50",
+    "service": "price-feed"
+  }'</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POST /api/synthesize-policy -->
+<div class="docs-section" id="docs-policy">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="ds-code-header ds-method ds-post" style="padding:3px 10px;border-radius:4px;font-size:11px">POST</span>
+        <span class="ds-endpoint-path">/api/synthesize-policy</span>
+      </div>
+      <p>Natural language to Circle wallet policy. Describe what you want in plain English, Gemini generates a structured Circle-compatible policy.</p>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);margin:16px 0 10px;font-family:'JetBrains Mono',monospace">Body</div>
+      <div class="ds-param"><span class="ds-param-name">description</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Natural language policy description</span></div>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>Request</span><span class="ds-method ds-post">POST</span></div>
+        <pre><span class="kw">curl</span> -X POST https://verigate.cloud/api/synthesize-policy \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "description": "Allow up to $10 per tx,
+     max 5 tx per hour, only to known
+     vendors on the allowlist"
+  }'</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POST /api/negotiate-scope -->
+<div class="docs-section" id="docs-negotiate">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="ds-code-header ds-method ds-post" style="padding:3px 10px;border-radius:4px;font-size:11px">POST</span>
+        <span class="ds-endpoint-path">/api/negotiate-scope</span>
+      </div>
+      <p>Cross-agent scope negotiation. Two agents propose their policies, Gemini negotiates a mutually acceptable scope.</p>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);margin:16px 0 10px;font-family:'JetBrains Mono',monospace">Body</div>
+      <div class="ds-param"><span class="ds-param-name">agent_a_policy</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param"><span class="ds-param-name">agent_b_policy</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>Request</span><span class="ds-method ds-post">POST</span></div>
+        <pre><span class="kw">curl</span> -X POST https://verigate.cloud/api/negotiate-scope \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "agent_a_policy": "Max $5/tx, data APIs only",
+    "agent_b_policy": "Max $20/tx, any service"
+  }'</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POST /api/carrier/pull -->
+<div class="docs-section" id="docs-carrier">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="ds-code-header ds-method ds-post" style="padding:3px 10px;border-radius:4px;font-size:11px">POST</span>
+        <span class="ds-endpoint-path">/api/carrier/pull</span>
+        <span class="ds-badge ds-badge-purple" style="font-size:9px">$0.25</span>
+      </div>
+      <p>x402-paid proof pull. Carrier agents pay $0.25 USDC for the full signed evidence bundle. Requires a valid consent grant and payment proof.</p>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);margin:16px 0 10px;font-family:'JetBrains Mono',monospace">Body</div>
+      <div class="ds-param"><span class="ds-param-name">carrier_id</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param"><span class="ds-param-name">bundle_ref</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param"><span class="ds-param-name">tx_hash</span><span class="ds-param-type">string</span><span class="ds-required">required</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">x402 settlement tx proving $0.25 payment</span></div>
+      <div class="ds-param"><span class="ds-param-name">purpose</span><span class="ds-param-type">string</span><span class="ds-optional">optional</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Default: "underwriting"</span></div>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>Request</span><span class="ds-method ds-post">POST</span></div>
+        <pre><span class="kw">curl</span> -X POST https://verigate.cloud/api/carrier/pull \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "carrier_id": "carrier-agent-1",
+    "bundle_ref": "bundle_abc123",
+    "tx_hash": "0xdfcd6729a28fe...",
+    "purpose": "underwriting"
+  }'</span></pre>
+      </div>
+      <div class="ds-code-block" style="margin-top:8px">
+        <div class="ds-code-header"><span>No payment</span><span style="font-size:10px;color:#ffb4ab">402</span></div>
+        <pre>{
+  <span class="key">"error"</span>: <span class="str">"Payment required: $0.25 USDC via x402. Provide tx_hash."</span>
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Python SDK -->
+<div class="docs-section" id="docs-python">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <h3>Python SDK</h3>
+      <p>Drop-in screening for any Python agent. Works with LangChain, CrewAI, OpenAI function calling, or plain Python.</p>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);margin:16px 0 10px;font-family:'JetBrains Mono',monospace">screen() Parameters</div>
+      <div class="ds-param"><span class="ds-param-name">payment</span><span class="ds-param-type">dict</span><span class="ds-required">required</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Keys: to/payee, amount, service/purpose, from, currency</span></div>
+      <div class="ds-param"><span class="ds-param-name">base_url</span><span class="ds-param-type">string</span><span class="ds-optional">optional</span></div>
+      <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Default: VERIGATE_URL env or https://verigate.cloud</span></div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.25);margin:16px 0 10px;font-family:'JetBrains Mono',monospace">Returns</div>
+      <div class="ds-param"><span class="ds-param-name">verdict</span><span class="ds-param-type">string</span></div>
+      <div class="ds-param"><span class="ds-param-name">risk_score</span><span class="ds-param-type">int</span></div>
+      <div class="ds-param"><span class="ds-param-name">reasoning</span><span class="ds-param-type">string</span></div>
+      <div class="ds-param"><span class="ds-param-name">signals</span><span class="ds-param-type">list</span></div>
+      <div class="ds-param"><span class="ds-param-name">fee</span><span class="ds-param-type">string</span></div>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>Python SDK</span></div>
+        <pre><span class="kw">from</span> verigate <span class="kw">import</span> screen
+
+result = screen({
+    <span class="str">"from"</span>: <span class="str">"procurement-agent"</span>,
+    <span class="str">"to"</span>: <span class="str">"0x742d35Cc6634C053..."</span>,
+    <span class="str">"amount"</span>: <span class="num">500</span>,
+    <span class="str">"currency"</span>: <span class="str">"USDC"</span>,
+    <span class="str">"purpose"</span>: <span class="str">"SaaS subscription renewal"</span>
+})
+
+<span class="kw">if</span> result[<span class="str">"verdict"</span>] == <span class="str">"APPROVE"</span>:
+    execute_payment()
+<span class="kw">elif</span> result[<span class="str">"verdict"</span>] == <span class="str">"STEP_UP"</span>:
+    <span class="cm"># Verigate is buying evidence — wait</span>
+    wait_for_confirmation()
+<span class="kw">else</span>:
+    log_blocked(result[<span class="str">"reasoning"</span>])</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Framework Integrations -->
+<div class="docs-section" id="docs-frameworks">
+  <div class="docs-desc" style="max-width:100%;margin-bottom:16px">
+    <h3>Framework Integrations</h3>
+    <p>Plug Verigate into your existing agent framework with one import.</p>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="ds-code-block">
+      <div class="ds-code-header"><span>LangChain</span><span class="ds-badge ds-badge-green" style="font-size:9px">Tool</span></div>
+      <pre><span class="kw">from</span> verigate.integrations <span class="kw">import</span> VerigateToolkit
+
+toolkit = VerigateToolkit(
+    base_url=<span class="str">"https://verigate.cloud"</span>
+)
+agent = initialize_agent(
+    tools=toolkit.get_tools(), llm=llm
+)</pre>
+    </div>
+    <div class="ds-code-block">
+      <div class="ds-code-header"><span>CrewAI</span><span class="ds-badge ds-badge-blue" style="font-size:9px">Tool</span></div>
+      <pre><span class="kw">from</span> verigate.integrations <span class="kw">import</span> VerigateCrewTool
+
+screen_tool = VerigateCrewTool(
+    base_url=<span class="str">"https://verigate.cloud"</span>
+)
+agent = Agent(
+    role=<span class="str">"Purchasing Agent"</span>,
+    tools=[screen_tool]
+)</pre>
+    </div>
+    <div class="ds-code-block">
+      <div class="ds-code-header"><span>OpenAI Function Calling</span><span class="ds-badge ds-badge-purple" style="font-size:9px">Schema</span></div>
+      <pre><span class="kw">from</span> verigate.integrations <span class="kw">import</span> verigate_openai_schema
+
+response = openai.chat.completions.create(
+    model=<span class="str">"gpt-4"</span>,
+    tools=[verigate_openai_schema()],
+    messages=messages
+)</pre>
+    </div>
+    <div class="ds-code-block">
+      <div class="ds-code-header"><span>BlockRun / x402</span><span class="ds-badge ds-badge-red" style="font-size:9px">Middleware</span></div>
+      <pre><span class="kw">from</span> verigate <span class="kw">import</span> screen
+
+<span class="kw">def</span> <span class="fn">x402_middleware</span>(payment):
+    v = screen(payment)
+    <span class="kw">if</span> v[<span class="str">"verdict"</span>] != <span class="str">"APPROVE"</span>:
+        <span class="kw">raise</span> BlockedPayment(v)
+    <span class="kw">return</span> route(payment)</pre>
+    </div>
+  </div>
+</div>
+
+<!-- MCP Server -->
+<div class="docs-section" id="docs-mcp">
+  <div class="docs-two-col">
+    <div class="docs-desc">
+      <h3>MCP Server</h3>
+      <p>Connect Claude Desktop, Cursor, or any MCP-compatible client directly to Verigate. Tools available:</p>
+      <div style="margin-top:12px;space-y:8px">
+        <div class="ds-param"><span class="ds-param-name">check_payment</span></div>
+        <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Full risk assessment with decision</span></div>
+        <div class="ds-param"><span class="ds-param-name">get_risk_score</span></div>
+        <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Quick pre-flight risk check</span></div>
+        <div class="ds-param"><span class="ds-param-name">get_receipt</span></div>
+        <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Retrieve a signed receipt by hash</span></div>
+        <div class="ds-param"><span class="ds-param-name">get_evidence_bundle</span></div>
+        <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Full audit trail for underwriting</span></div>
+        <div class="ds-param"><span class="ds-param-name">check_payment_x402</span></div>
+        <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Production flow with Gateway settlement</span></div>
+        <div class="ds-param"><span class="ds-param-name">get_gateway_status</span></div>
+        <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Gateway facilitator connectivity</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="ds-code-block">
+        <div class="ds-code-header"><span>Claude Desktop</span></div>
+        <pre><span class="cm">// claude_desktop_config.json</span>
+{
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"verigate"</span>: {
+      <span class="key">"command"</span>: <span class="str">"npx"</span>,
+      <span class="key">"args"</span>: [
+        <span class="str">"mcp-remote"</span>,
+        <span class="str">"https://verigate.cloud/mcp"</span>
+      ]
+    }
+  }
+}</pre>
+      </div>
+      <div class="ds-code-block" style="margin-top:8px">
+        <div class="ds-code-header"><span>Standalone</span></div>
+        <pre><span class="cm"># Run as standalone MCP server (stdio)</span>
+<span class="kw">python</span> -m verigate.mcp_server</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pricing -->
+<div class="docs-section" id="docs-pricing" style="border-bottom:none">
+  <div class="docs-desc" style="max-width:100%;margin-bottom:20px">
+    <h3>Three Products, Three Prices</h3>
+    <p>Every piece of intelligence Verigate produces is a product someone pays for. Pay per use via USDC. No monthly minimums.</p>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="ds-tier-card">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#b8f600;margin-bottom:12px;font-family:'JetBrains Mono',monospace">Screening</div>
+      <div style="margin-bottom:12px"><span style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:#e2e2e8">$0.05</span><span style="font-size:12px;color:#8d9479;margin-left:4px">/ check</span></div>
+      <div style="font-size:12px;color:#c3caac;line-height:1.6;margin-bottom:16px">Decision + risk score + forensic summary + recommendation change types.</div>
+      <div style="space-y:6px;font-size:11px;color:#8d9479">
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8f600;font-size:14px">&#10003;</span> APPROVE / STEP_UP / DENY</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8f600;font-size:14px">&#10003;</span> Risk score + contributions</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8f600;font-size:14px">&#10003;</span> Enforcement state</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8f600;font-size:14px">&#10003;</span> Signed receipt</div>
+      </div>
+    </div>
+    <div class="ds-tier-card featured">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#b8c3ff;margin-bottom:12px;font-family:'JetBrains Mono',monospace">Governance</div>
+      <div style="margin-bottom:12px"><span style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:#e2e2e8">$0.15</span><span style="font-size:12px;color:#8d9479;margin-left:4px">/ check</span></div>
+      <div style="font-size:12px;color:#c3caac;line-height:1.6;margin-bottom:16px">Everything in Screening, plus full forensic analysis and actionable recommendations with rationale.</div>
+      <div style="space-y:6px;font-size:11px;color:#8d9479">
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8c3ff;font-size:14px">&#10003;</span> Full forensic narrative</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8c3ff;font-size:14px">&#10003;</span> Attack vector + root cause</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8c3ff;font-size:14px">&#10003;</span> Containment actions</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8c3ff;font-size:14px">&#10003;</span> Policy changes with rationale</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#b8c3ff;font-size:14px">&#10003;</span> Loss prevention estimate</div>
+      </div>
+    </div>
+    <div class="ds-tier-card">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#dcb8ff;margin-bottom:12px;font-family:'JetBrains Mono',monospace">Evidence</div>
+      <div style="margin-bottom:12px"><span style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:#e2e2e8">$0.25</span><span style="font-size:12px;color:#8d9479;margin-left:4px">/ pull</span></div>
+      <div style="font-size:12px;color:#c3caac;line-height:1.6;margin-bottom:16px">Full signed proof bundle for carrier underwriting. Paid via x402 Gateway nanopayments.</div>
+      <div style="space-y:6px;font-size:11px;color:#8d9479">
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#dcb8ff;font-size:14px">&#10003;</span> Compliance report (EU AI Act + NIST)</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#dcb8ff;font-size:14px">&#10003;</span> ERC-8004 reputation event</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#dcb8ff;font-size:14px">&#10003;</span> Settlement binding + tx proof</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0"><span style="color:#dcb8ff;font-size:14px">&#10003;</span> Consent-gated access</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /docs-main -->
+</div><!-- /docs-layout -->
+</div>
+
 </main>
 
 <script>
@@ -1135,12 +1756,18 @@ let nOk=0,nNo=0,spend=0,nIso=0,nArtifacts=0;
 let storeReceipts=[],storeAgents={},storeVerify=null,storeCompliance=null,storeIncidents=[];
 
 // ── Navigation ──
+function scrollDoc(el){
+  document.querySelectorAll('.docs-sidebar a').forEach(a=>a.classList.remove('ds-active'));
+  el.classList.add('ds-active');
+  const target=document.querySelector(el.getAttribute('href'));
+  if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+}
 function go(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   const el=document.getElementById('v-'+view);
   if(el)el.classList.add('on');
   document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
-  const viewMap={demo:'live',livedemo:'livedemo',tryit:'try',evidence:'evidence',wallets:'security',agents:'agent',receipts:'receipt',compliance:'compliance',overview:'overview'};
+  const viewMap={demo:'live',livedemo:'livedemo',tryit:'try',evidence:'evidence',wallets:'security',agents:'agent',receipts:'receipt',compliance:'compliance',overview:'overview',integrate:'integrate'};
   const key=viewMap[view]||view;
   const match=[...document.querySelectorAll('#nav button')].find(b=>b.textContent.toLowerCase().includes(key));
   if(match)match.classList.add('active');

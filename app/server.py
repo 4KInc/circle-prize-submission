@@ -137,6 +137,17 @@ from app.validator import router as validator_router
 app.include_router(x402_router)
 app.include_router(validator_router)
 
+# Mount MCP server over SSE (for npx mcp-remote / Claude Desktop)
+try:
+    from verigate.mcp_server import mcp as _mcp_instance
+    from starlette.routing import Mount
+
+    _mcp_sse_app = _mcp_instance.sse_app()
+    app.mount("/mcp", _mcp_sse_app)
+    logger.info("MCP server mounted at /mcp")
+except Exception as _mcp_err:
+    logger.warning("MCP server not mounted: %s", _mcp_err)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -968,6 +979,7 @@ async def api_check(request: Request):
     service = body.get("service", "unknown")
     reason = body.get("reason", "")
     session_id = body.get("session_id", "default")
+    tier = body.get("tier", "screening")  # screening ($0.05) | governance ($0.15)
 
     enforcement = get_enforcement()
 
@@ -1098,18 +1110,55 @@ async def api_check(request: Request):
             )
             inc = pipeline["incident"]["body"]
             prop = pipeline["proposal"]["body"]
-            governance_intel = {
-                "incident": {
-                    "severity": inc.get("severity"),
-                    "summary": inc.get("narrative", {}).get("summary", ""),
-                    "root_cause": inc.get("narrative", {}).get("root_cause_hypothesis", ""),
-                },
-                "policy_recommendations": [
-                    {"change": p.get("change_type"), "description": p.get("description")}
-                    for p in prop.get("proposals", [])
-                ],
-                "note": "Full signed artifacts available to authorized carriers via /api/carrier/pull ($0.25).",
-            }
+
+            if tier == "governance":
+                # Governance tier ($0.15): full forensic + full recommendations
+                governance_intel = {
+                    "tier": "governance",
+                    "fee": "$0.15",
+                    "forensic": {
+                        "severity": inc.get("severity"),
+                        "summary": inc.get("narrative", {}).get("summary", ""),
+                        "root_cause": inc.get("narrative", {}).get("root_cause_hypothesis", ""),
+                        "attack_vector": inc.get("narrative", {}).get("attack_vector", ""),
+                        "attack_class": inc.get("narrative", {}).get("attack_class", ""),
+                        "containment_actions": inc.get("narrative", {}).get("containment_actions", []),
+                        "estimated_loss_prevented": f"${float(amount):.2f}" if amount else "$0.00",
+                        "full_narrative": inc.get("narrative", {}),
+                        "evidence_refs": inc.get("evidence_refs", []),
+                    },
+                    "recommendations": {
+                        "policy_changes": [
+                            {
+                                "change": p.get("change_type"),
+                                "target": p.get("target", ""),
+                                "description": p.get("description"),
+                                "rationale": p.get("rationale", ""),
+                                "scope": p.get("scope", "agent"),
+                                "priority": p.get("priority", "medium"),
+                            }
+                            for p in prop.get("proposals", [])
+                        ],
+                        "agent_actions": prop.get("agent_actions", []),
+                    },
+                    "note": "Compliance report + ERC-8004 + settlement binding available to carriers via /api/carrier/pull ($0.25).",
+                }
+            else:
+                # Screening tier ($0.05): summary only
+                governance_intel = {
+                    "tier": "screening",
+                    "fee": "$0.05",
+                    "incident": {
+                        "severity": inc.get("severity"),
+                        "summary": inc.get("narrative", {}).get("summary", ""),
+                        "root_cause": inc.get("narrative", {}).get("root_cause_hypothesis", ""),
+                    },
+                    "policy_recommendations": [
+                        {"change": p.get("change_type"), "description": p.get("description")}
+                        for p in prop.get("proposals", [])
+                    ],
+                    "note": "Full forensic + recommendations available with tier='governance' ($0.15). Full proof bundle via /api/carrier/pull ($0.25).",
+                }
         except Exception as _gov_err:  # noqa: BLE001
             logger.warning("Governance pipeline failed: %s", _gov_err, exc_info=True)
 

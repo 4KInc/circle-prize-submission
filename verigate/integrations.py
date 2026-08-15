@@ -5,22 +5,25 @@ Each tool wraps Verigate's screening API so any agent framework
 can check payments before executing them.
 
 Usage with LangChain:
-    from verigate.integrations import langchain_check_payment
-    agent = initialize_agent(tools=[langchain_check_payment], ...)
+    from verigate.integrations import VerigateToolkit
+    toolkit = VerigateToolkit(base_url="https://verigate.cloud")
+    agent = initialize_agent(tools=toolkit.get_tools(), llm=llm)
 
 Usage with CrewAI:
-    from verigate.integrations import crewai_check_payment
-    agent = Agent(tools=[crewai_check_payment], ...)
+    from verigate.integrations import VerigateCrewTool
+    screen_tool = VerigateCrewTool(base_url="https://verigate.cloud")
+    agent = Agent(role="Purchasing Agent", tools=[screen_tool])
 
 Usage with OpenAI function calling:
-    from verigate.integrations import openai_tool_schema, handle_tool_call
-    tools = [openai_tool_schema]
+    from verigate.integrations import verigate_openai_schema
+    tools = [verigate_openai_schema()]
 """
 
 from __future__ import annotations
 
 import json
 import os
+from typing import Any
 
 VERIGATE_URL = os.environ.get("VERIGATE_URL", "https://verigate.cloud")
 
@@ -83,7 +86,7 @@ def _format_result(result: dict) -> str:
 
 # ── LangChain Integration ───────────────────────────────────────────
 
-def _make_langchain_tool():
+def _make_langchain_tool(base_url: str = VERIGATE_URL):
     """Create a LangChain tool for payment screening."""
     try:
         from langchain_core.tools import tool
@@ -110,9 +113,39 @@ def _make_langchain_tool():
         return None
 
 
+class VerigateToolkit:
+    """LangChain-compatible toolkit wrapping Verigate's screening API.
+
+    Usage:
+        from verigate.integrations import VerigateToolkit
+        toolkit = VerigateToolkit(base_url="https://verigate.cloud")
+        agent = initialize_agent(tools=toolkit.get_tools(), llm=llm)
+    """
+
+    def __init__(self, base_url: str = VERIGATE_URL):
+        self.base_url = base_url
+
+    def get_tools(self) -> list:
+        """Return LangChain tools for Verigate screening."""
+        tool = _make_langchain_tool(self.base_url)
+        if tool is not None:
+            return [tool]
+        # Fallback: return a plain function wrapper if langchain not installed
+        return [self._plain_tool()]
+
+    def _plain_tool(self):
+        """Plain function fallback when LangChain is not installed."""
+        def check_payment_safety(payee: str, amount: float, service: str = "", reason: str = "") -> str:
+            result = _check_payment(payee, amount, service, reason)
+            return _format_result(result)
+        check_payment_safety.__name__ = "check_payment_safety"
+        check_payment_safety.__doc__ = "Screen a USDC payment through Verigate. Returns APPROVE/STEP_UP/DENY."
+        return check_payment_safety
+
+
 # ── CrewAI Integration ──────────────────────────────────────────────
 
-def _make_crewai_tool():
+def _make_crewai_tool(base_url: str = VERIGATE_URL):
     """Create a CrewAI tool for payment screening."""
     try:
         from crewai.tools import tool
@@ -136,6 +169,34 @@ def _make_crewai_tool():
         return None
 
 
+class VerigateCrewTool:
+    """CrewAI-compatible tool wrapping Verigate's screening API.
+
+    Usage:
+        from verigate.integrations import VerigateCrewTool
+        screen_tool = VerigateCrewTool(base_url="https://verigate.cloud")
+        agent = Agent(role="Purchasing Agent", tools=[screen_tool])
+    """
+
+    def __init__(self, base_url: str = VERIGATE_URL):
+        self.base_url = base_url
+        self.name = "verify_payment"
+        self.description = (
+            "Screen a USDC payment through Verigate before executing. "
+            "Returns APPROVE, STEP_UP, or DENY with risk score and explanation."
+        )
+        self._inner = _make_crewai_tool(base_url)
+
+    def run(self, payee: str, amount: float, service: str = "", reason: str = "") -> str:
+        if self._inner is not None:
+            return self._inner(payee=payee, amount=amount, service=service, reason=reason)
+        result = _check_payment(payee, amount, service, reason)
+        return _format_result(result)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> str:
+        return self.run(*args, **kwargs)
+
+
 # ── OpenAI Function Calling Schema ──────────────────────────────────
 
 openai_tool_schema = {
@@ -156,6 +217,20 @@ openai_tool_schema = {
         },
     },
 }
+
+
+def verigate_openai_schema() -> dict:
+    """Return the OpenAI function calling schema for Verigate.
+
+    Usage:
+        from verigate.integrations import verigate_openai_schema
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            tools=[verigate_openai_schema()],
+            messages=messages
+        )
+    """
+    return openai_tool_schema
 
 
 def handle_tool_call(function_name: str, arguments: dict) -> str:

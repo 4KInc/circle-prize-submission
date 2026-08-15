@@ -21,7 +21,7 @@ COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
 # Install Python deps
-RUN pip install --no-cache-dir cryptography PyJWT PyYAML google-genai reportlab fastapi "uvicorn[standard]" httpx google-cloud-storage
+RUN pip install --no-cache-dir cryptography PyJWT PyYAML google-genai reportlab fastapi "uvicorn[standard]" httpx google-cloud-storage "mcp[cli]"
 
 ENV PORT=8080
 ENV CIRCLE_ACCEPT_TERMS=1
