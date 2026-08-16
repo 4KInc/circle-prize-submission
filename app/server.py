@@ -169,6 +169,7 @@ _PAGE_ROUTES = {
     "compliance": "compliance",
     "docs": "integrate",
     "pricing": "pricing",
+    "judge": "judge",
 }
 
 
@@ -201,10 +202,14 @@ async def openapi_download():
     )
 
 
-@app.get("/judge", response_class=HTMLResponse)
-async def judge_landing():
-    """One-page judge experience — everything they need in 60 seconds."""
-    return """<!DOCTYPE html>
+@app.get("/api/state")
+async def get_state():
+    return state
+
+# NOTE: /judge is now served by the _PAGE_ROUTES handler as a tab in the main dashboard.
+# The old standalone HTML judge page has been removed.
+# This placeholder prevents the route gap from causing issues.
+_JUDGE_REMOVED = """<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Verigate — Judge Landing</title>
@@ -313,11 +318,6 @@ async function runCarrierLoop(){
 }
 </script>
 </body></html>"""
-
-
-@app.get("/api/state")
-async def get_state():
-    return state
 
 
 _gcs_cache = {"data": None}  # Cache GCS fallback to avoid repeated slow fetches
