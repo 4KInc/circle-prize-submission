@@ -280,6 +280,8 @@ All 6 have deterministic fallbacks. The system degrades gracefully but loses sig
 
 All Gemini calls have deterministic fallbacks for testing/CI. If Gemini is unavailable, the validator defaults to `INSUFFICIENT` (fail-closed).
 
+**Why Gemini is advisory, not decisive:** Verigate could put Gemini in the authorization trust path. We deliberately chose not to. If Gemini makes the payment decision, a hallucination can APPROVE a malicious payment - that's an unacceptable security property for a system guarding real USDC. Instead, Gemini grounds the validator's reasoning in verified historical data (RAG), and the validator signs with Ed25519. The system is safe even if Gemini fails. That's production-grade AI integration, not demo-grade.
+
 ### x402 Payment (Circle CLI)
 
 The public CLI walkthrough uses Base Sepolia to avoid requiring judge funds; the documented customer-fee and STEP_UP evidence transfers were separately executed with USDC on Base mainnet.
