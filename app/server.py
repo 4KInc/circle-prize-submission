@@ -283,8 +283,10 @@ async function screenPayment(){
     const r=await fetch('/api/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payee:document.getElementById('s-payee').value,amount:document.getElementById('s-amount').value,service:document.getElementById('s-service').value,reason:document.getElementById('s-reason').value})});
     const d=await r.json();
     const dc=d.decision==='APPROVE'?'#b8f600':d.decision==='DENY'?'#ffb4ab':'#ffaf00';
-    let txt=`Decision: ${d.decision}  Score: ${d.score}/100  Band: ${d.band}\\nConfidence: ${d.confidence}  Signals: ${(d.signals||[]).join(', ')}\\nRationale: ${d.rationale}`;
-    if(d.governance){const g=d.governance;txt+=`\\n\\nGovernance Intel:\\n  Severity: ${g.incident?.severity}\\n  Summary: ${g.incident?.summary}\\n  Recommendations: ${(g.policy_recommendations||[]).map(r=>r.change).join(', ')}`;}
+    let txt=`Decision: ${d.decision}  Score: ${d.score}/100  Band: ${d.band}\\nConfidence: ${d.confidence}\\nSignals: ${(d.signals||[]).join(', ')}\\nRationale: ${d.rationale}`;
+    if(d.contributions&&d.contributions.length){txt+=`\\n\\n--- Risk Contributions ---`;d.contributions.forEach(c=>txt+=`\\n  ${c.category}: +${c.score_delta} pts`);}
+    if(d.governance){const g=d.governance;txt+=`\\n\\n--- Governance (${g.tier||'screening'}, ${g.fee||'$0.05'}) ---`;if(g.incident)txt+=`\\n  Severity: ${g.incident.severity}\\n  Summary: ${g.incident.summary}`;if(g.forensic)txt+=`\\n  Severity: ${g.forensic.severity}\\n  Root cause: ${g.forensic.root_cause}\\n  Loss prevented: ${g.forensic.estimated_loss_prevented}`;if(g.policy_recommendations)txt+=`\\n  Recommendations: ${g.policy_recommendations.map(r=>r.change).join(', ')}`;if(g.recommendations?.policy_changes)txt+=`\\n  Policy changes: ${g.recommendations.policy_changes.map(r=>r.change+' - '+r.rationale).join('; ')}`;}
+    if(d.enforcement)txt+=`\\n\\n--- Enforcement ---\\n  Status: ${d.enforcement.status}  Denials: ${d.enforcement.denials_in_window}/${d.enforcement.breaker_threshold}`;
     el.style.color=dc;el.textContent=txt;
   }catch(e){el.textContent='Error: '+e.message;el.style.color='#ffb4ab';}
 }
@@ -292,10 +294,14 @@ async function runAutonomous(){
   const el=document.getElementById('scenario-result');
   el.textContent='Executing autonomous STEP_UP cycle...';el.style.color='#ffaf00';
   try{const r=await fetch('/api/run/autonomous-single',{method:'POST'});const d=await r.json();
-    let txt=`Decision: ${d.decision}  Score: ${d.score}/100  Band: ${d.band}\nAutonomous: ${d.autonomous}  Human: ${d.human_intervention}\nRationale: ${d.rationale}`;
-    if(d.step_up)txt+=`\n\nSTEP_UP Settlement:\n  Evidence fee: $${d.step_up.evidence_fee} USDC\n  Tx: ${d.step_up.tx_hash||d.step_up.error||'n/a'}`;
-    if(d.validator_verdict){const v=d.validator_verdict;txt+=`\n\nValidator Verdict (Gemini + RAG):\n  Action: ${v.action}  Confidence: ${v.confidence}\n  RAG records retrieved: ${v.rag_records_retrieved}\n  RAG context used: ${v.rag_context_used}\n  Reasoning: ${v.reasoning}`;}
-    if(d.governance)txt+=`\n\nGovernance: severity=${d.governance.incident?.severity}`;
+    let txt=`Decision: ${d.decision}  Score: ${d.score}/100  Band: ${d.band}\nAutonomous: ${d.autonomous}  Human: ${d.human_intervention}`;
+    if(d.intent_hash)txt+=`\nIntent hash: ${d.intent_hash.substring(0,32)}...`;
+    txt+=`\nRationale: ${d.rationale}`;
+    if(d.step_up)txt+=`\n\n--- STEP_UP Settlement ---\n  Evidence fee: $${d.step_up.evidence_fee} USDC\n  Tx: ${d.step_up.tx_hash||d.step_up.error||'n/a'}`;
+    if(d.validator_verdict){const v=d.validator_verdict;txt+=`\n\n--- Validator Verdict (Gemini + RAG) ---\n  Action: ${v.action}  Confidence: ${v.confidence}\n  Threshold: ${v.validator_threshold}  ${v.decision_reason}\n  RAG records: ${v.rag_records_retrieved}  Context used: ${v.rag_context_used}\n  Signed by: ${v.signed_by}\n  Reasoning: ${v.reasoning}`;}
+    if(d.protected_payment){const pp=d.protected_payment;txt+=`\n\n--- Protected Payment ---\n  Status: ${pp.status}\n  Recipient: ${pp.recipient}\n  Amount: $${pp.amount_usdc} USDC\n  Gated by: ${pp.gated_by||pp.blocked_by}`;if(pp.funds_moved_to_attacker!==undefined)txt+=`\n  Funds moved to attacker: ${pp.funds_moved_to_attacker}`;}
+    if(d.lifecycle){txt+=`\n\n--- Payment Lifecycle ---`;d.lifecycle.forEach(s=>txt+=`\n  ${s.state}: ${s.detail.substring(0,70)}`);}
+    if(d.governance)txt+=`\n\n--- Governance ---\n  Severity: ${d.governance.incident?.severity}\n  Root cause: ${d.governance.incident?.root_cause}`;
     const dc=d.decision==='APPROVE'?'#b8f600':d.decision==='DENY'?'#ffb4ab':'#ffaf00';
     el.style.color=dc;el.textContent=txt;}catch(e){el.textContent='Error: '+e.message;}
 }
