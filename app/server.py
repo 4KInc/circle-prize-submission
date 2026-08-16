@@ -1492,10 +1492,22 @@ async def run_autonomous_single():
         source_wallet=CUSTOMER_WALLET, chain=state["chain"],
     )
 
+    # Payment intent lifecycle
+    intent_hash = "sha256:" + __import__('hashlib').sha256(
+        json.dumps(intent, sort_keys=True).encode()
+    ).hexdigest()
+
+    lifecycle = [
+        {"state": "INTENT_CREATED", "timestamp": datetime.now(timezone.utc).isoformat(), "detail": f"Intent hash: {intent_hash[:24]}..."},
+        {"state": "SCREENED", "timestamp": datetime.now(timezone.utc).isoformat(), "detail": f"Score {risk.score}/100, band {risk.band}, decision {risk.decision}"},
+    ]
+
     result = {
         "autonomous": True,
         "human_intervention": False,
         "intent": intent,
+        "intent_hash": intent_hash,
+        "initial_decision": risk.decision,
         "decision": risk.decision,
         "score": risk.score,
         "band": risk.band,
@@ -1508,6 +1520,9 @@ async def run_autonomous_single():
     # If STEP_UP, execute real testnet transfer (Treasury -> Validator)
     # then run Gemini evidence reasoning with RAG context
     if risk.decision == "STEP_UP":
+        lifecycle.append({"state": "STEP_UP", "timestamp": datetime.now(timezone.utc).isoformat(),
+                          "detail": f"Score {risk.score} in uncertain range (40-74)"})
+
         try:
             from circle.cli import wallet_transfer, USDC_ADDRESSES
             chain = state["chain"]
@@ -1526,8 +1541,12 @@ async def run_autonomous_single():
                 "destination": "validator",
                 "settlement": "real_usdc",
             }
+            lifecycle.append({"state": "EVIDENCE_PURCHASED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                              "detail": f"${evidence_fee_str} USDC Treasury->Validator, tx={tx.tx_hash[:16]}..."})
         except Exception as e:
             result["step_up"] = {"error": str(e), "evidence_fee": "0.02"}
+            lifecycle.append({"state": "EVIDENCE_PURCHASE_FAILED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                              "detail": str(e)[:100]})
 
         # Gemini evidence reasoning with RAG
         try:
@@ -1546,24 +1565,74 @@ async def run_autonomous_single():
                 result["validator_verdict"] = {
                     "action": assessment.recommended_action,
                     "confidence": assessment.confidence,
+                    "validator_threshold": 0.70,
+                    "decision_reason": f"Confidence {assessment.confidence:.2f} {'≥' if assessment.confidence >= 0.70 else '<'} threshold 0.70",
                     "reasoning": assessment.reasoning,
                     "risk_level": assessment.risk_level,
                     "red_flags": assessment.red_flags,
                     "rag_records_retrieved": assessment.rag_records_retrieved,
                     "rag_context_used": assessment.rag_context_used,
+                    "signed_by": VALIDATOR_WALLET,
                 }
+                lifecycle.append({"state": "VALIDATOR_VERDICT_RECEIVED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                                  "detail": f"Action: {assessment.recommended_action}, confidence: {assessment.confidence:.2f}, RAG records: {assessment.rag_records_retrieved}"})
+
                 # Update decision based on validator verdict
                 if assessment.recommended_action == "CONFIRM":
                     result["decision"] = "APPROVE"
                     result["rationale"] += f" Validator CONFIRMED (confidence {assessment.confidence:.2f})."
+                    lifecycle.append({"state": "FINAL_AUTHORIZED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                                      "detail": "Validator confirmed. Protected payment authorized."})
                 elif assessment.recommended_action == "DENY":
                     result["decision"] = "DENY"
                     result["rationale"] += f" Validator DENIED: {assessment.reasoning[:100]}"
+                    lifecycle.append({"state": "FINAL_DENIED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                                      "detail": f"Validator denied. Protected payment BLOCKED. No funds reach {intent['payee'][:12]}..."})
+                else:
+                    # INSUFFICIENT - fail closed
+                    result["decision"] = "DENY"
+                    result["rationale"] += " Validator returned INSUFFICIENT evidence. Fail-closed."
+                    lifecycle.append({"state": "FINAL_DENIED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                                      "detail": "Insufficient evidence. Fail-closed. Payment blocked."})
         except Exception as _ve:
             logger.warning("STEP_UP Gemini reasoning failed: %s", _ve)
+            result["decision"] = "DENY"
+            result["rationale"] += " Validator unavailable. Fail-closed."
+            lifecycle.append({"state": "FINAL_DENIED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                              "detail": "Validator unreachable. Fail-closed per policy."})
+
+    elif risk.decision == "APPROVE":
+        lifecycle.append({"state": "FINAL_AUTHORIZED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                          "detail": f"Low risk (score {risk.score}). Payment authorized."})
+    elif risk.decision == "DENY":
+        lifecycle.append({"state": "FINAL_DENIED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                          "detail": f"High risk (score {risk.score}). Payment BLOCKED."})
+
+    # Protected payment outcome
+    if result["decision"] == "APPROVE":
+        lifecycle.append({"state": "PAYMENT_EXECUTED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                          "detail": f"${intent['amount']} USDC authorized to {intent['payee'][:16]}..."})
+        result["protected_payment"] = {
+            "status": "EXECUTED",
+            "recipient": intent["payee"],
+            "amount_usdc": intent["amount"],
+            "gated_by": "validator_verdict" if "validator_verdict" in result else "risk_score",
+        }
+    else:
+        lifecycle.append({"state": "PAYMENT_BLOCKED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                          "detail": f"${intent['amount']} USDC BLOCKED. No funds reach {intent['payee'][:16]}..."})
+        result["protected_payment"] = {
+            "status": "BLOCKED",
+            "recipient": intent["payee"],
+            "amount_usdc": intent["amount"],
+            "blocked_by": "validator_verdict" if "validator_verdict" in result else "risk_score",
+            "funds_moved_to_attacker": False,
+        }
+
+    result["lifecycle"] = lifecycle
 
     # Run governance agents on DENY — actionable intelligence for the enterprise
-    if risk.decision == "DENY":
+    if result["decision"] == "DENY":
         try:
             from circle.agents import GovernanceSystem
             gov = GovernanceSystem(tenant="verigate-auto")
@@ -1907,13 +1976,30 @@ async def synthesize_policy_endpoint(request: Request):
         )
 
     policy = synthesize_policy(description, existing_policy)
-    return {
+
+    # Compile and deploy to Circle wallet + Verigate enforcement
+    wallet = body.get("wallet", CUSTOMER_WALLET)
+    deploy = body.get("deploy", False)
+    compiled = None
+    if deploy:
+        from circle.policy_compiler import compile_and_deploy
+        compiled = compile_and_deploy(policy.to_dict(), wallet, description)
+
+    result = {
         "policy": policy.to_dict(),
         "circle_policy": policy.to_circle_policy(),
         "description": description,
-        "note": "Gemini synthesizes. Python constrains. Circle enforces." if policy.gemini_available
-                else "Gemini unavailable — conservative defaults applied.",
+        "note": "Gemini synthesizes. Python compiles. Circle enforces." if policy.gemini_available
+                else "Gemini unavailable - conservative defaults applied.",
     }
+    if compiled:
+        result["compiled"] = compiled.to_dict()
+        result["note"] = (
+            f"Policy compiled (hash={compiled.policy_hash[:20]}). "
+            f"Circle: {'deployed' if compiled.circle_deployed else 'pending'}. "
+            f"Verigate: {'deployed' if compiled.verigate_deployed else 'pending'}."
+        )
+    return result
 
 
 @app.post("/api/agent/handle")

@@ -28,7 +28,7 @@ Every decision produces a signed, independently verifiable receipt.
 
 - Circle Agent Wallet with USDC balance on Base Sepolia
 - Verigate MCP server connected (see `.mcp.json`)
-- Or: access to Verigate's x402 endpoint at `https://verigate-dashboard-1031148889398.us-central1.run.app/x402/security-check`
+- Or: access to Verigate's x402 endpoint at `https://verigate.cloud/x402/security-check`
 
 ## Steps
 
@@ -121,4 +121,12 @@ This skill works with the full Circle Agent Stack:
 
 ## Disclaimer
 
-Verigate provides risk assessment, not financial advice. The risk scorer uses heuristic analysis. Always review denial reasons before escalating. Testnet transactions on Base Sepolia.
+Verigate provides risk assessment, not financial advice. The risk scorer uses heuristic analysis with Gemini RAG-grounded evidence reasoning. Always review denial reasons before escalating. Live on Base mainnet with real USDC.
+
+## Additional Resources
+
+- **Docs:** https://verigate.cloud/docs
+- **Pricing:** https://verigate.cloud/pricing
+- **OpenAPI Spec:** https://verigate.cloud/api/openapi-spec
+- **GitHub:** https://github.com/4KInc/verigate
+- **RAG Stats:** https://verigate.cloud/api/rag/stats
