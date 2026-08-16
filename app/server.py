@@ -7,6 +7,7 @@ to the frontend as Server-Sent Events for a cinematic demo experience.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import io
