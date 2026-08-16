@@ -1669,6 +1669,65 @@ async def run_autonomous_single():
         except Exception:  # noqa: BLE001
             pass
 
+    # Sign the receipt envelope with Ed25519
+    try:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        import base64 as _b64
+
+        # Use or create instance signing key
+        if not hasattr(app, '_auto_sign_key') or app._auto_sign_key is None:
+            app._auto_sign_key = Ed25519PrivateKey.generate()
+            pub_bytes = app._auto_sign_key.public_key().public_bytes_raw()
+            app._auto_sign_kid = "auto-" + _b64.urlsafe_b64encode(pub_bytes[:8]).decode().rstrip("=")
+            app._auto_sign_pub = _b64.urlsafe_b64encode(pub_bytes).decode().rstrip("=")
+
+        # Build canonical receipt body
+        receipt_body = {
+            "schema": "verigate-autonomous-receipt-v2",
+            "intent_hash": result.get("intent_hash", ""),
+            "intent": result.get("intent", {}),
+            "initial_decision": result.get("initial_decision", ""),
+            "final_decision": result["decision"],
+            "score": result["score"],
+            "band": result["band"],
+            "confidence": result["confidence"],
+            "signals": result["signals"],
+            "evidence_purchase": result.get("step_up", {}),
+            "validator_verdict": result.get("validator_verdict", {}),
+            "protected_payment": result.get("protected_payment", {}),
+            "lifecycle": result.get("lifecycle", []),
+            "timestamp": result["timestamp"],
+        }
+
+        # Sign
+        canonical = json.dumps(receipt_body, sort_keys=True, separators=(",", ":"))
+        receipt_hash = "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+        signature = app._auto_sign_key.sign(canonical.encode())
+        sig_b64 = _b64.urlsafe_b64encode(signature).decode()
+
+        result["receipt"] = {
+            "hash": receipt_hash,
+            "signature": f"ed25519:{sig_b64}",
+            "signer": TREASURY_WALLET,
+            "kid": app._auto_sign_kid,
+            "algorithm": "Ed25519",
+            "timestamp": result["timestamp"],
+            "public_key": app._auto_sign_pub,
+            "verify_url": f"/verify/{receipt_hash}",
+        }
+
+        # Store for verification lookup
+        if not hasattr(app, '_signed_receipts'):
+            app._signed_receipts = {}
+        app._signed_receipts[receipt_hash] = {
+            "body": receipt_body,
+            "signature": sig_b64,
+            "kid": app._auto_sign_kid,
+            "public_key": app._auto_sign_pub,
+        }
+    except Exception as _se:
+        logger.warning("Receipt signing failed: %s", _se)
+
     # Store to GCS
     try:
         from app.storage import store_proof_bundle
@@ -1683,6 +1742,121 @@ async def run_autonomous_single():
         pass
 
     return result
+
+
+@app.get("/verify/{receipt_hash:path}", response_class=HTMLResponse)
+async def verify_receipt_page(receipt_hash: str):
+    """One-click receipt verification page.
+
+    Retrieves the signed receipt, verifies the Ed25519 signature against
+    the public key, recalculates the hash, and displays the result.
+    """
+    import base64 as _b64
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+    stored = getattr(app, '_signed_receipts', {}).get(receipt_hash)
+
+    if not stored:
+        return HTMLResponse(f"""<!DOCTYPE html>
+<html><head><title>Verigate - Receipt Not Found</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body style="background:#111318;color:#e2e2e8;font-family:sans-serif">
+<div style="max-width:600px;margin:80px auto;text-align:center">
+<h1 style="font-size:24px;margin-bottom:12px">Receipt Not Found</h1>
+<p style="color:#8d9479">{receipt_hash[:40]}...</p>
+<p style="color:#8d9479;margin-top:12px">This receipt may have expired or the server may have restarted.</p>
+<a href="/judge" style="color:#b8f600">Back to Dashboard</a>
+</div></body></html>""", status_code=404)
+
+    # Verify signature
+    body = stored["body"]
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    computed_hash = "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+    hash_match = computed_hash == receipt_hash
+
+    sig_valid = False
+    try:
+        pub_bytes = _b64.urlsafe_b64decode(stored["public_key"] + "==")
+        pub_key = Ed25519PublicKey.from_public_bytes(pub_bytes)
+        sig_bytes = _b64.urlsafe_b64decode(stored["signature"] + "==")
+        pub_key.verify(sig_bytes, canonical.encode())
+        sig_valid = True
+    except Exception:
+        sig_valid = False
+
+    overall = "VERIFIED" if hash_match and sig_valid else "FAILED"
+    color = "#b8f600" if overall == "VERIFIED" else "#ffb4ab"
+    icon = "verified" if overall == "VERIFIED" else "error"
+
+    decision = body.get("final_decision", body.get("decision", "?"))
+    dec_color = "#b8f600" if decision == "APPROVE" else "#ffb4ab" if decision == "DENY" else "#ffaf00"
+
+    lifecycle_html = ""
+    for s in body.get("lifecycle", []):
+        st = s["state"]
+        sc = "#b8f600" if "AUTHORIZED" in st or "EXECUTED" in st else "#ffb4ab" if "DENIED" in st or "BLOCKED" in st else "#8d9479"
+        lifecycle_html += f'<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="color:{sc};font-weight:600;font-size:11px">{st}</span> <span style="color:#8d9479;font-size:11px">{s["detail"][:80]}</span></div>'
+
+    pp = body.get("protected_payment", {})
+    vv = body.get("validator_verdict", {})
+
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html><head><title>Verigate - Receipt Verification</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400,1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Sora:wght@600;700;800&family=Hanken+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body style="background:#111318;color:#e2e2e8;font-family:'Hanken Grotesk',sans-serif">
+<div style="max-width:700px;margin:40px auto;padding:0 20px">
+
+<div style="text-align:center;margin-bottom:32px">
+  <span class="material-symbols-outlined" style="font-size:48px;color:{color}">{icon}</span>
+  <h1 style="font-family:Sora;font-size:28px;font-weight:800;margin:8px 0">{overall}</h1>
+  <p style="color:#8d9479;font-size:12px">Independent cryptographic verification of Verigate receipt</p>
+</div>
+
+<div style="background:rgba(30,32,36,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:16px">
+  <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Verification Checks</div>
+  <div style="display:flex;gap:12px;margin-bottom:8px">
+    <span class="material-symbols-outlined" style="font-size:18px;color:{'#b8f600' if hash_match else '#ffb4ab'}">{'check_circle' if hash_match else 'cancel'}</span>
+    <div><div style="font-size:13px">Hash integrity</div><div style="font-size:10px;color:#8d9479">Recomputed SHA-256 matches receipt hash</div></div>
+  </div>
+  <div style="display:flex;gap:12px">
+    <span class="material-symbols-outlined" style="font-size:18px;color:{'#b8f600' if sig_valid else '#ffb4ab'}">{'check_circle' if sig_valid else 'cancel'}</span>
+    <div><div style="font-size:13px">Ed25519 signature</div><div style="font-size:10px;color:#8d9479">Signature verified against public key (kid: {stored['kid']})</div></div>
+  </div>
+</div>
+
+<div style="background:rgba(30,32,36,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:16px">
+  <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Decision</div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+    <span style="font-family:Sora;font-size:24px;font-weight:800;color:{dec_color}">{decision}</span>
+    <span style="font-family:'JetBrains Mono';font-size:12px;color:#8d9479">Score {body.get('score', '?')}/100 | Band {body.get('band', '?')}</span>
+  </div>
+  <div style="font-size:12px;color:#c3caac">{body.get('signals', [])}</div>
+</div>
+
+{'<div style="background:rgba(30,32,36,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:16px"><div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Protected Payment</div><div style="font-family:JetBrains Mono;font-size:13px"><span style="color:' + ('#b8f600' if pp.get('status')=='EXECUTED' else '#ffb4ab') + '">' + pp.get('status','?') + '</span> | $' + str(pp.get('amount_usdc','?')) + ' USDC to ' + str(pp.get('recipient','?'))[:16] + '...</div>' + ('<div style="font-size:11px;color:#ffb4ab;margin-top:4px">Funds moved to attacker: ' + str(pp.get('funds_moved_to_attacker')) + '</div>' if pp.get('funds_moved_to_attacker') is not None else '') + '</div>' if pp else ''}
+
+{'<div style="background:rgba(30,32,36,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:16px"><div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Validator Verdict</div><div style="font-family:JetBrains Mono;font-size:12px;color:#c3caac">Action: ' + str(vv.get('action','?')) + ' | Confidence: ' + str(vv.get('confidence','?')) + ' | RAG records: ' + str(vv.get('rag_records_retrieved','?')) + '</div></div>' if vv else ''}
+
+<div style="background:rgba(30,32,36,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:16px">
+  <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Payment Lifecycle</div>
+  {lifecycle_html}
+</div>
+
+<div style="background:rgba(30,32,36,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:16px">
+  <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Receipt Hash</div>
+  <div style="font-family:'JetBrains Mono';font-size:11px;word-break:break-all;color:#c3caac">{receipt_hash}</div>
+</div>
+
+<div style="text-align:center;margin-top:24px">
+  <a href="/judge" style="color:#b8f600;font-size:13px">Back to Dashboard</a>
+  <span style="color:#333;margin:0 12px">|</span>
+  <a href="https://github.com/4KInc/verigate" target="_blank" style="color:#8d9479;font-size:13px">GitHub</a>
+</div>
+
+</div></body></html>""")
 
 
 @app.post("/api/autonomous-check")
