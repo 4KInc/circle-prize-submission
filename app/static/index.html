@@ -142,6 +142,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
   <!-- Stats Bar — evenly spaced metrics -->
   <div class="rounded-2xl px-6 py-5 mb-10 border border-primary-fixed/10 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.4) 0%, rgba(20,22,28,0.7) 100%)">
+    <div class="text-center mb-3"><span class="font-mono text-[8px] text-on-surface-variant/30 uppercase tracking-widest">Live autonomous operations since Aug 9, 2026 - intent value screened, not funds held</span></div>
     <div class="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
       <div class="flex flex-col items-center">
         <span class="font-mono text-2xl font-bold text-on-surface" id="sched-runs">0</span>
@@ -176,27 +177,36 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <div class="hidden" id="sched-evidence-spend"></div>
   </div>
 
-  <!-- How It Works — compact 4-step flow -->
+  <!-- How It Works — 6-step causal chain -->
   <div class="mb-10">
-    <div>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div class="rounded-xl p-4 border border-white/[.06]" style="background:rgba(30,32,36,0.7)">
-          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase tracking-wider mb-1">01</div>
-          <div class="font-display text-sm font-bold text-on-surface">Agent pays $0.05</div>
-        </div>
-        <div class="rounded-xl p-4 border border-white/[.06]" style="background:rgba(30,32,36,0.7)">
-          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase tracking-wider mb-1">02</div>
-          <div class="font-display text-sm font-bold text-on-surface">Risk scored</div>
-        </div>
-        <div class="rounded-xl p-4 border border-[#ffaf00]/20" style="background:rgba(40,32,16,0.7)">
-          <div class="font-mono text-[9px] text-[#ffaf00]/60 uppercase tracking-wider mb-1">03 STEP_UP</div>
-          <div class="font-display text-sm font-bold text-[#ffaf00]">Buy evidence</div>
-          <div class="text-[10px] text-on-surface-variant/50 mt-0.5">Gemini reasons. Validator signs.</div>
-        </div>
-        <div class="rounded-xl p-4 border border-white/[.06]" style="background:rgba(30,32,36,0.7)">
-          <div class="font-mono text-[9px] text-primary-fixed/40 uppercase tracking-wider mb-1">04</div>
-          <div class="font-display text-sm font-bold text-on-surface">Signed receipt</div>
-        </div>
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+      <div class="rounded-xl p-3 border border-white/[.06]" style="background:rgba(30,32,36,0.7)">
+        <div class="font-mono text-[8px] text-primary-fixed/40 uppercase tracking-wider mb-1">01</div>
+        <div class="font-display text-xs font-bold text-on-surface">Agent requests payment</div>
+      </div>
+      <div class="rounded-xl p-3 border border-white/[.06]" style="background:rgba(30,32,36,0.7)">
+        <div class="font-mono text-[8px] text-primary-fixed/40 uppercase tracking-wider mb-1">02</div>
+        <div class="font-display text-xs font-bold text-on-surface">Deterministic risk check</div>
+      </div>
+      <div class="rounded-xl p-3 border border-[#ffaf00]/20" style="background:rgba(40,32,16,0.7)">
+        <div class="font-mono text-[8px] text-[#ffaf00]/60 uppercase tracking-wider mb-1">03 STEP_UP</div>
+        <div class="font-display text-xs font-bold text-[#ffaf00]">Treasury buys evidence</div>
+        <div class="text-[9px] text-on-surface-variant/50 mt-0.5">$0.02 USDC autonomous</div>
+      </div>
+      <div class="rounded-xl p-3 border border-secondary/20" style="background:rgba(20,24,40,0.7)">
+        <div class="font-mono text-[8px] text-secondary/60 uppercase tracking-wider mb-1">04</div>
+        <div class="font-display text-xs font-bold text-secondary">Validator signs verdict</div>
+        <div class="text-[9px] text-on-surface-variant/50 mt-0.5">Gemini + RAG + Ed25519</div>
+      </div>
+      <div class="rounded-xl p-3 border border-primary-fixed/20" style="background:rgba(25,35,15,0.7)">
+        <div class="font-mono text-[8px] text-primary-fixed/60 uppercase tracking-wider mb-1">05</div>
+        <div class="font-display text-xs font-bold text-primary-fixed">Payment releases</div>
+        <div class="text-[9px] text-primary-fixed/40 mt-0.5">$50.00 USDC paid</div>
+      </div>
+      <div class="rounded-xl p-3 border border-error/20" style="background:rgba(40,15,15,0.7)">
+        <div class="font-mono text-[8px] text-error/60 uppercase tracking-wider mb-1">or</div>
+        <div class="font-display text-xs font-bold text-error">Payment blocked</div>
+        <div class="text-[9px] text-error/40 mt-0.5">$0.00 reached attacker</div>
       </div>
     </div>
   </div>
@@ -961,7 +971,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 <div class="view" id="v-evidence">
   <div class="mb-6">
     <h2 class="font-display text-2xl md:text-4xl font-bold text-on-surface mb-2">Evidence Vault</h2>
-    <p class="text-on-surface-variant text-sm">Cryptographically signed proof bundles for insurance claims, carrier underwriting, and regulatory audits. Every bundle is independently verifiable.</p>
+    <p class="text-on-surface-variant text-sm">Cryptographically signed evidence bundles designed for underwriting, claims review, and audit workflows. Every bundle is independently verifiable.</p>
   </div>
 
   <!-- Stats row -->
@@ -1018,6 +1028,9 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <div class="mb-6">
     <h2 class="font-display text-2xl md:text-4xl font-bold text-on-surface mb-2">Compliance & Audit</h2>
     <p class="text-on-surface-variant text-sm">Verigate earns $0.02 USDC per compliance report. Automated regulatory analysis powered by Gemini over real USDC spend data.</p>
+    <div class="rounded-lg px-3 py-1.5 mt-2 inline-flex items-center gap-1.5 border border-white/6" style="background:rgba(255,255,255,0.02)">
+      <span class="font-mono text-[9px] text-on-surface-variant/40">Internal readiness assessment - not certification. Scores reflect control coverage, not regulatory approval.</span>
+    </div>
   </div>
 
   <!-- Compliance Frameworks -->
