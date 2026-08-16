@@ -261,11 +261,16 @@ async def judge_landing():
 <a href="/api/treasury/economics" target="_blank"><div class="card" style="text-align:center;font-size:12px">Treasury P&L</div></a>
 <a href="/api/agent/stats" target="_blank"><div class="card" style="text-align:center;font-size:12px">Agent Stats</div></a>
 <a href="/api/carrier-agent/stats" target="_blank"><div class="card" style="text-align:center;font-size:12px">Carrier Self-Wake</div></a>
-<a href="/x402/validator/.well-known/validator-attestation.json" target="_blank"><div class="card" style="text-align:center;font-size:12px">Validator Attestation</div></a>
+<a href="/api/rag/stats" target="_blank"><div class="card" style="text-align:center;font-size:12px">RAG Knowledge Base</div></a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+<a href="/docs"><div class="card"><div style="font-weight:600;margin-bottom:4px">API Docs</div><div style="font-size:12px;color:rgba(255,255,255,0.5)">Stripe-style endpoint reference + OpenAPI spec</div></div></a>
+<a href="/pricing"><div class="card"><div style="font-weight:600;margin-bottom:4px">Pricing</div><div style="font-size:12px;color:rgba(255,255,255,0.5)">$0.05 screening · $0.15 governance · $0.25 evidence</div></div></a>
 </div>
 
 <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.3);margin-top:32px">
-163 tests · 15 files · 5 Gemini surfaces · 3 wallets · CI-enforced · Base mainnet<br>
+163 tests · 15 files · 6 Gemini roles (incl. RAG) · 3 wallets · CI-enforced · Base mainnet<br>
 <a href="https://github.com/4KInc/verigate">github.com/4KInc/verigate</a> · BlockIntel, Inc. · Apache-2.0
 </div>
 
@@ -286,7 +291,13 @@ async function screenPayment(){
 async function runAutonomous(){
   const el=document.getElementById('scenario-result');
   el.textContent='Executing autonomous STEP_UP cycle...';el.style.color='#ffaf00';
-  try{const r=await fetch('/api/run/autonomous-single',{method:'POST'});const d=await r.json();el.textContent=JSON.stringify(d,null,2);el.style.color=d.decision==='STEP_UP'?'#ffaf00':'#b8f600';}catch(e){el.textContent='Error: '+e.message;}
+  try{const r=await fetch('/api/run/autonomous-single',{method:'POST'});const d=await r.json();
+    let txt=`Decision: ${d.decision}  Score: ${d.score}/100  Band: ${d.band}\nAutonomous: ${d.autonomous}  Human: ${d.human_intervention}\nRationale: ${d.rationale}`;
+    if(d.step_up)txt+=`\n\nSTEP_UP Settlement:\n  Evidence fee: $${d.step_up.evidence_fee} USDC\n  Tx: ${d.step_up.tx_hash||d.step_up.error||'n/a'}`;
+    if(d.validator_verdict){const v=d.validator_verdict;txt+=`\n\nValidator Verdict (Gemini + RAG):\n  Action: ${v.action}  Confidence: ${v.confidence}\n  RAG records retrieved: ${v.rag_records_retrieved}\n  RAG context used: ${v.rag_context_used}\n  Reasoning: ${v.reasoning}`;}
+    if(d.governance)txt+=`\n\nGovernance: severity=${d.governance.incident?.severity}`;
+    const dc=d.decision==='APPROVE'?'#b8f600':d.decision==='DENY'?'#ffb4ab':'#ffaf00';
+    el.style.color=dc;el.textContent=txt;}catch(e){el.textContent='Error: '+e.message;}
 }
 async function runCarrierLoop(){
   const el=document.getElementById('scenario-result');
