@@ -60,6 +60,39 @@ Agent wants to make a payment
 
 **Step 3 is the key innovation.** The system detected uncertainty and autonomously spent money to reduce it before deciding. This is not a demo feature - it is a bounded, pre-authorized economic action that distinguishes Verigate from every binary allow/block gate. The evidence cost scales dynamically with the transaction value, so a $10,000 payment triggers deeper verification than a $0.50 one.
 
+### Payment Intent Lifecycle
+
+Every payment flows through a tracked lifecycle. The protected payment only executes if the validator authorizes it:
+
+```
+INTENT_CREATED → SCREENED → STEP_UP → EVIDENCE_PURCHASED
+    → VALIDATOR_VERDICT_RECEIVED → FINAL_AUTHORIZED or FINAL_DENIED
+    → PAYMENT_EXECUTED or PAYMENT_BLOCKED
+```
+
+On DENY: `protected_payment.status = "BLOCKED"`, `funds_moved_to_attacker = false`. The validator's signed verdict gates whether USDC moves. If the validator is unavailable or returns INSUFFICIENT, the system **fails closed** - payment blocked.
+
+### Policy Compiler
+
+Gemini-synthesized policies are compiled and deployed to both layers:
+
+1. **Enterprise describes policy** in natural language
+2. **Gemini synthesizes** structured rules (spending limits, allowlists, rate limits)
+3. **Python compiler validates** against organization-level hard ceilings ($100/tx max, $500/day max)
+4. **Deploys to Circle Agent Wallet** (spending rules enforced at wallet layer)
+5. **Deploys to Verigate** (application-layer enforcement, independent of Circle)
+
+Defense-in-depth: even if Verigate is bypassed, Circle's wallet policies independently constrain the wallet. Even if Circle's policies are misconfigured, Verigate's application-layer policies independently screen.
+
+```
+POST /api/synthesize-policy
+{
+  "description": "Max $5/tx, $25/day, only data feeds and analytics",
+  "deploy": true
+}
+→ Gemini synthesizes → Python compiles → Circle + Verigate enforce
+```
+
 ## Mainnet STEP_UP Transaction (Base L2)
 
 The autonomous STEP_UP flow has been executed on **Base mainnet** with real USDC. The STEP_UP transaction verifies the Treasury-to-Validator settlement. The linked signed receipt and proof record bind that settlement to the risk decision, policy evaluation, and validator request:

@@ -62,6 +62,30 @@ Gemini is **never** in the authorization trust path. The scoring
 decision is deterministic Python. Gemini provides advisory input
 to the validator and RAG provides historical context.
 
+## Payment Intent Lifecycle
+
+Every autonomous-single run tracks a full lifecycle:
+
+```
+INTENT_CREATED → SCREENED → STEP_UP → EVIDENCE_PURCHASED
+  → VALIDATOR_VERDICT_RECEIVED → FINAL_AUTHORIZED/FINAL_DENIED
+  → PAYMENT_EXECUTED/PAYMENT_BLOCKED
+```
+
+The protected payment is gated by the validator verdict. On DENY
+or validator unavailable, the system fails closed: `PAYMENT_BLOCKED`,
+`funds_moved_to_attacker: false`.
+
+## Policy Compiler
+
+`circle/policy_compiler.py` syncs Gemini-synthesized policies to both:
+- **Circle Agent Wallet** (wallet-layer enforcement via CLI)
+- **Verigate on-chain policy store** (application-layer enforcement)
+
+Compilation validates against org-level ceilings ($100/tx, $500/day)
+and ensures required blocked patterns (OVERRIDE, IGNORE, BYPASS).
+Policy hash computed from canonical JSON for tamper detection.
+
 ## Key Custody
 
 - Receipt signing keys: ephemeral Ed25519, per-instance, `kid` in receipt

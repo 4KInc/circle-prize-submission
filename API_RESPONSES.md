@@ -535,4 +535,74 @@ BREAKER:            Session throttled or suspended
                     -> Cost: $0.00
 ```
 
-**The enterprise agent always gets enough information to understand what happened and what to do next.** Even a DENY produces value — governance intelligence, policy recommendations, and a signed receipt that proves the control worked.
+**The enterprise agent always gets enough information to understand what happened and what to do next.** Even a DENY produces value - governance intelligence, policy recommendations, and a signed receipt that proves the control worked.
+
+---
+
+## Payment Intent Lifecycle (autonomous-single)
+
+The `/api/run/autonomous-single` endpoint returns a full payment intent lifecycle tracking every state transition:
+
+```json
+{
+  "intent_hash": "sha256:f31ad7d3...",
+  "initial_decision": "STEP_UP",
+  "decision": "DENY",
+  "protected_payment": {
+    "status": "BLOCKED",
+    "recipient": "0x4f30bc704c...",
+    "amount_usdc": "8.00",
+    "blocked_by": "validator_verdict",
+    "funds_moved_to_attacker": false
+  },
+  "validator_verdict": {
+    "action": "DENY",
+    "confidence": 0.85,
+    "validator_threshold": 0.70,
+    "decision_reason": "Confidence 0.85 >= threshold 0.70",
+    "rag_records_retrieved": 5,
+    "rag_context_used": true,
+    "signed_by": "0xbe14...a558"
+  },
+  "lifecycle": [
+    {"state": "INTENT_CREATED", "detail": "Intent hash: sha256:f31ad7..."},
+    {"state": "SCREENED", "detail": "Score 50/100, band MEDIUM, decision STEP_UP"},
+    {"state": "STEP_UP", "detail": "Score 50 in uncertain range (40-74)"},
+    {"state": "EVIDENCE_PURCHASED", "detail": "$0.02 USDC Treasury->Validator"},
+    {"state": "VALIDATOR_VERDICT_RECEIVED", "detail": "Action: DENY, confidence: 0.85, RAG records: 5"},
+    {"state": "FINAL_DENIED", "detail": "Validator denied. Protected payment BLOCKED."},
+    {"state": "PAYMENT_BLOCKED", "detail": "$8.00 USDC BLOCKED. No funds reach 0x4f30..."}
+  ]
+}
+```
+
+The protected payment only executes when the validator returns CONFIRM with confidence above the threshold. On DENY, INSUFFICIENT, or validator unavailable, the system fails closed.
+
+---
+
+## Policy Compiler Response
+
+The `/api/synthesize-policy` endpoint with `deploy: true` returns compilation and deployment status:
+
+```json
+{
+  "policy": {
+    "max_amount_per_tx": 5.0,
+    "max_amount_per_day": 25.0,
+    "rate_limit_per_hour": 20,
+    "allowed_service_categories": ["data feeds", "analytics APIs"],
+    "confidence": 0.9
+  },
+  "compiled": {
+    "policy_hash": "sha256:c901224ba48d...",
+    "valid": true,
+    "violations": [],
+    "warnings": [],
+    "circle_deployed": true,
+    "verigate_deployed": true
+  },
+  "note": "Policy compiled. Circle: deployed. Verigate: deployed."
+}
+```
+
+Gemini synthesizes. Python compiles against org-level ceilings. Circle and Verigate enforce independently.
