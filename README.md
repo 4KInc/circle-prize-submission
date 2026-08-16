@@ -438,6 +438,8 @@ Removing Circle would break wallet controls, USDC settlement, Gateway micropayme
 
 Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle Agent Wallets on Base mainnet.
 
+**Validator independence:** The validator is independently keyed, separately deployed, and independently signed — but is currently team-operated. The interface is designed for third-party validator operators. We have not yet onboarded a third-party validator. We have made it operationally easy and cryptographically verifiable for one to join.
+
 ## Architecture
 
 | Module | Purpose |
@@ -455,7 +457,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 | `circle/negotiation.py` | Gemini-mediated evidence scope negotiation between agents |
 | `circle/on_chain_policy.py` | On-chain spending policies — defense-in-depth with Circle wallet layer |
 | `circle/policy_synthesis.py` | Gemini translates natural language to Circle spending policies |
-| `app/validator.py` | Evidence Validator — Gemini-powered, x402-paywalled, independently signed |
+| `app/validator.py` | Evidence Validator — Gemini-powered, x402-paywalled, independently keyed (team-operated, interface designed for third-party operators) |
 | `verigate/` | Python SDK + MCP server + LangChain/CrewAI/OpenAI integrations |
 
 **Key properties:** Zero LLM in authorization trust path. Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 163 tests).
