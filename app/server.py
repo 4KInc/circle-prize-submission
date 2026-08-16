@@ -147,14 +147,16 @@ app.include_router(validator_router)
 
 # Mount MCP server over SSE (for npx mcp-remote / Claude Desktop)
 try:
+    import mcp as _mcp_pkg
+    logger.info("MCP package imported OK")
     from verigate.mcp_server import mcp as _mcp_instance
-    from starlette.routing import Mount
-
-    _mcp_sse_app = _mcp_instance.sse_app()
-    app.mount("/mcp", _mcp_sse_app)
-    logger.info("MCP server mounted at /mcp")
+    logger.info("MCP server instance created OK")
+    _mcp_app = _mcp_instance.sse_app()
+    app.mount("/mcp", _mcp_app)
+    logger.info("MCP server mounted at /mcp (SSE)")
 except Exception as _mcp_err:
-    logger.warning("MCP server not mounted: %s", _mcp_err)
+    import traceback
+    logger.warning("MCP server not mounted: %s\n%s", _mcp_err, traceback.format_exc())
 
 
 _PAGE_ROUTES = {
@@ -1493,6 +1495,7 @@ async def run_autonomous_single():
     }
 
     # If STEP_UP, execute real testnet transfer (Treasury -> Validator)
+    # then run Gemini evidence reasoning with RAG context
     if risk.decision == "STEP_UP":
         try:
             from circle.cli import wallet_transfer, USDC_ADDRESSES
@@ -1514,6 +1517,39 @@ async def run_autonomous_single():
             }
         except Exception as e:
             result["step_up"] = {"error": str(e), "evidence_fee": "0.02"}
+
+        # Gemini evidence reasoning with RAG
+        try:
+            from circle.validator_gemini import assess_evidence
+            assessment = assess_evidence({
+                "payee": intent["payee"],
+                "amount": float(intent["amount"]),
+                "service": intent.get("service", "unknown"),
+                "reason": intent.get("reason", ""),
+                "risk_score": risk.score,
+                "scorer_signals": risk.signals,
+                "step_up_reason": f"Score {risk.score} in STEP_UP range, confidence {risk.confidence}",
+                "agent_id": CUSTOMER_WALLET,
+            })
+            if assessment.gemini_available:
+                result["validator_verdict"] = {
+                    "action": assessment.recommended_action,
+                    "confidence": assessment.confidence,
+                    "reasoning": assessment.reasoning,
+                    "risk_level": assessment.risk_level,
+                    "red_flags": assessment.red_flags,
+                    "rag_records_retrieved": assessment.rag_records_retrieved,
+                    "rag_context_used": assessment.rag_context_used,
+                }
+                # Update decision based on validator verdict
+                if assessment.recommended_action == "CONFIRM":
+                    result["decision"] = "APPROVE"
+                    result["rationale"] += f" Validator CONFIRMED (confidence {assessment.confidence:.2f})."
+                elif assessment.recommended_action == "DENY":
+                    result["decision"] = "DENY"
+                    result["rationale"] += f" Validator DENIED: {assessment.reasoning[:100]}"
+        except Exception as _ve:
+            logger.warning("STEP_UP Gemini reasoning failed: %s", _ve)
 
     # Run governance agents on DENY — actionable intelligence for the enterprise
     if risk.decision == "DENY":
@@ -2199,6 +2235,7 @@ async def run_carrier_loop():
             "risk_score": risk.score,
             "scorer_signals": risk.signals,
             "step_up_reason": "DENIAL_ANALYSIS",
+            "agent_id": CUSTOMER_WALLET,
         })
         if _assessment.gemini_available:
             _gemini_reasoning = {
@@ -2359,6 +2396,7 @@ async def _carrier_loop_sse():
             "risk_score": risk.score,
             "scorer_signals": risk.signals,
             "step_up_reason": "ELEVATED_RISK",
+            "agent_id": CUSTOMER_WALLET,
         })
         if assessment.gemini_available:
             gemini_reasoning = {
