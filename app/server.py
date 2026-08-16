@@ -121,9 +121,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:  # noqa: BLE001
         logger.warning("Behavioral engine not restored: %s", e)
 
+    # Restore RAG knowledge base for evidence validator memory
+    try:
+        from circle.rag_store import get_rag_store
+        rag = get_rag_store()
+        logger.info("RAG store initialized: %d records", rag.size)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("RAG store not restored: %s", e)
+
     yield
 
-app = FastAPI(title="Verigate Live Dashboard", lifespan=lifespan)
+app = FastAPI(title="Verigate Live Dashboard", lifespan=lifespan, docs_url="/api/swagger", redoc_url="/api/redoc")
 app._governance = None
 app._executor_jwk = None
 app._isolator_jwk = None
@@ -149,9 +157,45 @@ except Exception as _mcp_err:
     logger.warning("MCP server not mounted: %s", _mcp_err)
 
 
+_PAGE_ROUTES = {
+    "live-demo": "livedemo",
+    "treasury": "wallets",
+    "agents": "agents",
+    "receipts": "receipts",
+    "evidence": "evidence",
+    "compliance": "compliance",
+    "docs": "integrate",
+    "pricing": "pricing",
+}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return (STATIC_DIR / "index.html").read_text()
+
+
+# Clean URL page routes — registered individually so they don't shadow
+# /judge, /health, /proof/*, /api/*, /static/*, /mcp/*, /x402/*
+for _slug, _view in _PAGE_ROUTES.items():
+    def _make_handler(view: str):
+        async def handler():
+            html = (STATIC_DIR / "index.html").read_text()
+            inject = f'<script>document.addEventListener("DOMContentLoaded",function(){{go("{view}")}});</script>'
+            return HTMLResponse(html.replace("</body>", inject + "</body>"))
+        return handler
+    app.get(f"/{_slug}", response_class=HTMLResponse, include_in_schema=False)(_make_handler(_view))
+
+
+@app.get("/api/openapi-spec")
+async def openapi_download():
+    """Serve the OpenAPI spec as a downloadable YAML file."""
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        STATIC_DIR / "openapi.yaml",
+        media_type="application/x-yaml",
+        filename="verigate-openapi.yaml",
+        headers={"Content-Disposition": "attachment; filename=verigate-openapi.yaml"},
+    )
 
 
 @app.get("/judge", response_class=HTMLResponse)
@@ -1213,6 +1257,28 @@ async def api_check(request: Request):
     except Exception:  # noqa: BLE001
         pass
 
+    # Store in RAG knowledge base for future evidence reasoning
+    try:
+        from circle.rag_store import get_rag_store, ScreeningRecord
+        import secrets as _sec
+        rag = get_rag_store()
+        rag.add(ScreeningRecord(
+            record_id=f"chk_{_sec.token_hex(8)}",
+            agent_id=CUSTOMER_WALLET,
+            payee=payee,
+            amount=float(amount),
+            service=service,
+            score=risk.score,
+            decision=risk.decision,
+            signals=risk.signals,
+            rationale=risk.rationale[:200],
+            timestamp=__import__('datetime').datetime.now(
+                __import__('datetime').timezone.utc
+            ).isoformat(),
+        ))
+    except Exception:  # noqa: BLE001
+        pass
+
     return result
 
 
@@ -1855,6 +1921,27 @@ async def carrier_agent_investigations():
     return {
         "investigations": [i.to_dict() for i in agent.investigations[-20:]],
         "stats": agent.get_stats(),
+    }
+
+
+@app.get("/api/rag/stats")
+async def rag_stats():
+    """RAG knowledge base statistics - screening history used for evidence reasoning."""
+    from circle.rag_store import get_rag_store
+    store = get_rag_store()
+    return store.stats()
+
+
+@app.get("/api/rag/records")
+async def rag_records(limit: int = 20):
+    """Recent RAG knowledge base records (without embeddings)."""
+    from circle.rag_store import get_rag_store
+    store = get_rag_store()
+    with store._lock:
+        records = store._records[-limit:]
+    return {
+        "records": [r.to_dict() for r in reversed(records)],
+        "total": store.size,
     }
 
 
