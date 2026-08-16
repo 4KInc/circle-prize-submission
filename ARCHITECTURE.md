@@ -50,14 +50,17 @@ Dry-run replay → demo display only, tagged, cannot produce live auth.
 
 ## Gemini Usage
 
-Gemini 2.5 Flash is used for **ops/compliance/explanation only**:
-- Ops agent: task analysis, service selection
-- Forensic recorder: incident severity analysis
-- Auditor: EU AI Act + NIST AI RMF compliance narrative
-- Recommender: policy change suggestions
+Gemini 2.5 Flash is used in **6 structural roles**:
+1. STEP_UP validator reasoning (`circle/validator_gemini.py`)
+2. RAG embeddings + retrieval (`circle/rag_store.py`) - Gemini embedding-001 embeds every screening decision; validator retrieves relevant history before reasoning
+3. Carrier self-wake (`circle/carrier_agent.py`)
+4. Governance agents (`circle/agents.py`) - Investigator, Auditor, Recommender
+5. Policy synthesis (`circle/policy_synthesis.py`)
+6. Cross-agent negotiation (`circle/negotiation.py`)
 
 Gemini is **never** in the authorization trust path. The scoring
-decision is deterministic Python.
+decision is deterministic Python. Gemini provides advisory input
+to the validator and RAG provides historical context.
 
 ## Key Custody
 

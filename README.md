@@ -260,17 +260,18 @@ Verigate receives signed verdict → final APPROVE/DENY
 
 **What Gemini does NOT do:** Make the authorization decision. The scorer's STEP_UP trigger is deterministic. The validator's final sign/deny applies a deterministic threshold to Gemini's structured output. If Gemini hallucinates, the worst case is a suboptimal validator call — the same risk you accept with any evidence source.
 
-**Gemini's 5 structural roles — what happens without each one:**
+**Gemini's 6 structural roles — what happens without each one:**
 
 | # | Role | File | Remove Gemini, what breaks |
 |---|------|------|---------------------------|
 | 1 | STEP_UP validator reasoning | `circle/validator_gemini.py` | Validator loses contextual analysis, falls back to INSUFFICIENT (fail-closed) |
-| 2 | Carrier self-wake | `circle/carrier_agent.py` | Carrier can't evaluate if investigation is worth $0.25 |
-| 3 | Governance agents | `circle/agents.py` | No forensic analysis or compliance reports on DENY |
-| 4 | Policy synthesis | `circle/policy_synthesis.py` | Agents can't configure policies in natural language |
-| 5 | Cross-agent negotiation | `circle/negotiation.py` | No automated evidence scope consensus |
+| 2 | RAG embeddings + retrieval | `circle/rag_store.py` | Validator loses all historical context. Every case evaluated in isolation. System cannot learn from past decisions. |
+| 3 | Carrier self-wake | `circle/carrier_agent.py` | Carrier can't evaluate if investigation is worth $0.25 |
+| 4 | Governance agents | `circle/agents.py` | No forensic analysis or compliance reports on DENY |
+| 5 | Policy synthesis | `circle/policy_synthesis.py` | Agents can't configure policies in natural language |
+| 6 | Cross-agent negotiation | `circle/negotiation.py` | No automated evidence scope consensus |
 
-All 5 have deterministic fallbacks. The system degrades gracefully but loses significant capability.
+All 6 have deterministic fallbacks. The system degrades gracefully but loses significant capability.
 
 **Gemini is also used in production for:**
 - **Carrier self-wake** - Carrier agent uses Gemini to decide if a DENY event is worth $0.25 to investigate (economic rationality for the carrier side)
