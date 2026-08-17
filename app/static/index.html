@@ -124,7 +124,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">Autonomous on Base Mainnet</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-display font-extrabold tracking-tight mb-4 text-on-surface leading-tight">The agent buys evidence <span class="hero-gradient-text">before it decides.</span></h1>
-      <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">When a payment is uncertain, Verigate autonomously spends a fraction of a cent of USDC to buy a second opinion, then decides. That primitive only works because <strong class="text-on-surface">Circle Nanopayments</strong> make sub-cent, gas-free settlement viable &mdash; at $0.30 card interchange it is absurd. Payment screening is the application; spend-to-decide is the thesis.</p>
+      <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">A three-wallet autonomous economy native to <strong class="text-on-surface">Circle Agent Wallets</strong>. Every decision terminates in a Circle Agent Wallet UserOperation; the Treasury spends under a Circle-enforced policy to buy a second opinion when a payment is uncertain. The paying wallet holds <strong class="text-on-surface">zero ETH</strong> &mdash; Circle&rsquo;s relayer sponsors gas, so the agent pays only the sub-cent USDC. Remove Circle and the economy does not exist.</p>
       <div class="flex gap-3 mb-5">
         <button class="btn-primary h-10 px-5 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('livedemo')">Watch Live Demo <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
         <button class="btn-secondary h-10 px-5 rounded-xl font-display text-sm flex items-center gap-2" onclick="go('wallets')">View Treasury</button>
@@ -517,7 +517,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
         <div class="flex items-center gap-2 pt-1">
           <img src="/static/circle-logo.png" width="10" height="10" alt="Circle" class="inline"/>
-          <span class="text-[11px] text-on-surface-variant/40">Powered by Circle Gateway nanopayments &middot; $0.05 per check</span>
+          <span class="text-[11px] text-on-surface-variant/40">Powered by Circle Agent Wallets &middot; gas sponsored &middot; $0.05 per check</span>
         </div>
         <div class="flex items-center gap-3 pt-1 flex-wrap">
           <span class="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#4ade80]/10 text-[#4ade80] border border-[#4ade80]/15">0-39 APPROVE</span>
@@ -594,7 +594,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
             <span class="material-symbols-outlined text-[#ffaf00]" style="font-size:16px;font-variation-settings:'FILL' 1">bolt</span>
             <span class="font-mono text-xs text-[#ffaf00] font-bold">STEP_UP: Evidence Purchase</span>
           </div>
-          <div class="text-xs text-on-surface-variant/70">Paid Evidence Validator $0.02 USDC for independent verification via Circle Gateway nanopayment.</div>
+          <div class="text-xs text-on-surface-variant/70">Paid Evidence Validator $0.02 USDC for independent verification &mdash; a Circle Agent Wallet transfer, gas sponsored.</div>
           <div id="tryit-stepup-tx" class="font-mono text-[10px] text-on-surface-variant/40 mt-2">tx 0xdfcd67…  BASE MAINNET</div>
         </div>
         <!-- Receipt -->
@@ -1279,7 +1279,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <div class="docs-desc">
       <h3>Authentication</h3>
       <p>Verigate is currently in open beta. No API key required. All endpoints accept unauthenticated requests.</p>
-      <p>Payment is per-call via USDC on Base. The screening fee ($0.05) is collected either upstream via x402 Gateway nanopayments or via direct wallet transfer.</p>
+      <p>Payment is per-call via USDC on Base. The screening fee ($0.05) is collected by a Circle Agent Wallet transfer. An x402 facilitator path is implemented but is not currently settling.</p>
       <div style="margin-top:12px;padding:12px;border-radius:8px;background:rgba(184,246,0,.04);border:1px solid rgba(184,246,0,.1)">
         <div style="font-size:11px;font-weight:600;color:#b8f600;margin-bottom:4px">Production</div>
         <div style="font-size:12px;color:#c3caac">API keys and rate limiting will be available when Verigate exits beta. Payment via x402 Gateway nanopayments provides implicit authentication.</div>
@@ -1291,7 +1291,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <pre><span class="cm"># Step 1: Call endpoint — get 402 + payment requirements</span>
 <span class="kw">curl</span> https://verigate.cloud/x402/security-check
 
-<span class="cm"># Step 2: Pay via Circle Gateway (gas-free)</span>
+<span class="cm"># Step 2: Pay via Circle Agent Wallet (gas sponsored)</span>
 <span class="kw">circle</span> services pay \
   https://verigate.cloud/x402/security-check \
   --address 0xYOUR_WALLET \
@@ -1691,7 +1691,7 @@ response = openai.chat.completions.create(
         <div class="ds-param"><span class="ds-param-name">get_evidence_bundle</span></div>
         <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Full audit trail for underwriting</span></div>
         <div class="ds-param"><span class="ds-param-name">check_payment_x402</span></div>
-        <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Production flow with Gateway settlement</span></div>
+        <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Production flow with Circle Agent Wallet settlement</span></div>
         <div class="ds-param"><span class="ds-param-name">get_gateway_status</span></div>
         <div class="ds-param" style="padding-left:16px"><span class="ds-param-desc">Gateway facilitator connectivity</span></div>
       </div>
@@ -1769,7 +1769,7 @@ response = openai.chat.completions.create(
     <div class="bento-card">
       <div class="font-mono text-[10px] font-bold uppercase tracking-wider text-tertiary-fixed-dim mb-4">Evidence</div>
       <div class="mb-4"><span class="font-display text-4xl font-extrabold text-on-surface">$0.25</span><span class="text-sm text-on-surface-variant ml-1">/ pull</span></div>
-      <p class="text-xs text-on-surface-variant mb-5 leading-relaxed">Full signed proof bundle for carrier underwriting. Paid via x402 Gateway nanopayments.</p>
+      <p class="text-xs text-on-surface-variant mb-5 leading-relaxed">Full signed proof bundle for carrier underwriting. Paid by Circle Agent Wallet transfer via the x402 endpoint.</p>
       <div class="space-y-2.5 text-xs text-on-surface-variant/80">
         <div class="flex items-center gap-2"><span class="text-tertiary-fixed-dim">&#10003;</span> Compliance report (EU AI Act + NIST)</div>
         <div class="flex items-center gap-2"><span class="text-tertiary-fixed-dim">&#10003;</span> ERC-8004 reputation event</div>
@@ -1786,7 +1786,7 @@ response = openai.chat.completions.create(
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-on-surface-variant">
       <div>
         <div class="font-mono text-[10px] font-bold uppercase tracking-wider text-primary-fixed mb-2">For Enterprise Agents</div>
-        <p class="leading-relaxed">Call <code class="text-primary-fixed/80 bg-white/5 px-1 py-0.5 rounded font-mono text-[10px]">POST /api/check</code> with <code class="text-primary-fixed/80 bg-white/5 px-1 py-0.5 rounded font-mono text-[10px]">tier: "screening"</code> or <code class="text-primary-fixed/80 bg-white/5 px-1 py-0.5 rounded font-mono text-[10px]">tier: "governance"</code>. Fee is collected via x402 Gateway nanopayments (gas-free, sub-cent USDC) or direct wallet transfer.</p>
+        <p class="leading-relaxed">Call <code class="text-primary-fixed/80 bg-white/5 px-1 py-0.5 rounded font-mono text-[10px]">POST /api/check</code> with <code class="text-primary-fixed/80 bg-white/5 px-1 py-0.5 rounded font-mono text-[10px]">tier: "screening"</code> or <code class="text-primary-fixed/80 bg-white/5 px-1 py-0.5 rounded font-mono text-[10px]">tier: "governance"</code>. Fee is collected by a Circle Agent Wallet transfer (sub-cent USDC, gas sponsored by Circle&rsquo;s relayer).</p>
       </div>
       <div>
         <div class="font-mono text-[10px] font-bold uppercase tracking-wider text-secondary mb-2">For Carrier Agents</div>
@@ -1850,7 +1850,7 @@ response = openai.chat.completions.create(
 
   <!-- Stats -->
   <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
-    <div class="bento-card text-center py-4"><div class="font-mono text-[9px] text-primary-fixed/60 uppercase tracking-wider mb-1">Circle Stack</div><div class="font-display text-xl font-bold text-on-surface">5/5</div></div>
+    <div class="bento-card text-center py-4"><div class="font-mono text-[9px] text-primary-fixed/60 uppercase tracking-wider mb-1">Circle Stack</div><div class="font-display text-xl font-bold text-on-surface">4/5</div></div>
     <div class="bento-card text-center py-4"><div class="font-mono text-[9px] text-primary-fixed/60 uppercase tracking-wider mb-1">Mainnet Txs</div><a href="https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d" target="_blank" class="font-display text-xl font-bold text-on-surface">3</a></div>
     <div class="bento-card text-center py-4"><div class="font-mono text-[9px] text-primary-fixed/60 uppercase tracking-wider mb-1">Tests</div><div class="font-display text-xl font-bold text-on-surface">282</div></div>
     <div class="bento-card text-center py-4"><div class="font-mono text-[9px] text-secondary/60 uppercase tracking-wider mb-1">Gemini Roles</div><div class="font-display text-xl font-bold text-on-surface">6</div></div>
@@ -2921,7 +2921,7 @@ async function runTryIt(){
       feature_version:d.feature_version,
       thresholds:d.thresholds,
       intent:{payee,amount,service,reason},
-      settlement_method:'circle-gateway-nanopayment',
+      settlement_method:'circle-agent-wallet-usdc',
       timestamp:new Date().toISOString(),
       scorer:d.model_version||'blockintel-heuristic-v1',
     };

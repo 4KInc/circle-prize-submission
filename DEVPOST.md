@@ -1,8 +1,12 @@
 ## Inspiration
 
-**When a payment is uncertain, the agent autonomously spends a fraction of a cent to buy evidence before deciding — a primitive that only exists because Circle Nanopayments make sub-cent, gas-free USDC settlement viable.**
+**Verigate is a three-wallet autonomous economy native to Circle Agent Wallets.**
 
-Card rails cannot express this. At $0.30 interchange, a $0.02 evidence purchase is economically absurd. On Circle's Agent Stack it is routine — so an agent can treat spending money as a way to *reduce uncertainty*, not just a way to acquire things. Payment screening is the application; spend-to-decide is the thesis.
+Every decision terminates in a Circle Agent Wallet UserOperation. The Treasury spends autonomously under a Circle-enforced spending policy — when a payment is uncertain it buys a second opinion before deciding, with no human in the loop. The paying wallet holds **zero ETH**; Circle's relayer sponsors gas, so the agent pays only the sub-cent USDC itself. Remove Circle and the economy does not exist: not the settlement, not the gas model, not the policy enforcement. At $0.30 card interchange a $0.02 evidence purchase is simply absurd.
+
+Three flows, all decodable on Base mainnet: the $0.05 screening fee ([`0x5db44668…`](https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58)), the $0.02 autonomous evidence purchase ([`0xdfcd6729…`](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732)), and $0.10 funding ([`0x958f2c40…`](https://basescan.org/tx/0x958f2c400d0f955dc02678ff1172cd055305842f18d32a73783386e295af59b5)) — each an ERC-4337 UserOperation, gas paid by Circle's relayer against a 0-ETH Treasury.
+
+Payment screening is the application; a self-funding agent economy on Circle is the thesis.
 
 
 AI agents are getting spending authority. Circle Agent Wallets let them hold USDC and pay for services autonomously. But every other agent payment demo answers the same question: "can an agent spend money?"
@@ -46,9 +50,9 @@ Gemini-synthesized policies are compiled against org-level hard ceilings ($100/t
 **Payment Intent Lifecycle:**
 Every autonomous check tracks a full lifecycle: INTENT_CREATED -> SCREENED -> STEP_UP -> EVIDENCE_PURCHASED -> VALIDATOR_VERDICT_RECEIVED -> FINAL_AUTHORIZED/FINAL_DENIED -> PAYMENT_EXECUTED/PAYMENT_BLOCKED. The protected payment only executes when the validator authorizes it. Fails closed on validator unavailable.
 
-**Circle Agent Stack (5/5 components):**
+**Circle Agent Stack (4/5 components):**
 - 3 Circle Agent Wallets (Customer, Treasury, Validator) with programmable spending policies
-- Circle Gateway nanopayments for gas-free x402 fee settlement
+- Circle Agent Wallets with relayer-sponsored gas — the paying wallet holds zero ETH, so settlement is a direct USDC transfer on Base mainnet at sub-cent cost to the agent. (Gateway/x402 facilitator is integrated but holds $0 balance on every domain and has never settled; not counted in the 4/5.)
 - Circle CLI for wallet creation, policy management, USDC transfers
 - x402 protocol for paywalled endpoints
 - MCP server at verigate.cloud/mcp
@@ -90,7 +94,7 @@ Every autonomous check tracks a full lifecycle: INTENT_CREATED -> SCREENED -> ST
 
 ## What we learned
 
-Circle's Agent Wallet + Gateway stack makes sub-cent micropayments viable in ways impossible on card rails ($0.30+ interchange kills any $0.05 transaction). This unlocks machine-to-machine economic decisions that couldn't exist before — an agent spending $0.02 to buy evidence is economically rational only because the payment rail costs effectively zero.
+Circle's Agent Wallet stack makes sub-cent micropayments viable in ways impossible on card rails ($0.30+ interchange kills any $0.05 transaction). This unlocks machine-to-machine economic decisions that couldn't exist before — an agent spending $0.02 to buy evidence is economically rational only because the payment rail costs effectively zero.
 
 Gemini's strength isn't replacing deterministic controls — it's reasoning about context that rules can't capture. Our prompt injection regex catches "OVERRIDE" patterns. Gemini catches "this sounds like a CEO impersonation using urgency framing to bypass approval." The two layers are complementary, not competing.
 

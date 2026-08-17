@@ -6,11 +6,23 @@
 
 ---
 
-### When a payment is uncertain, the agent autonomously spends a fraction of a cent to buy evidence before deciding — a primitive that only exists because Circle Nanopayments make sub-cent, gas-free USDC settlement viable.
+### Verigate is a three-wallet autonomous economy native to Circle Agent Wallets.
 
-Card rails cannot express this: $0.30 interchange makes a $0.02 evidence purchase economically absurd. On Circle's Agent Stack it is routine, so an agent can treat *spending money* as a way to *reduce uncertainty* rather than merely a way to acquire things. Verigate is the working proof — [$0.02 Treasury→Validator on Base mainnet](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732), no human in the loop.
+Every decision terminates in a **Circle Agent Wallet UserOperation**. The Treasury spends autonomously under a Circle-enforced spending policy — when a payment is uncertain, it buys a second opinion before deciding, without a human in the loop. The paying wallet holds **zero ETH**; Circle's relayer sponsors gas, so the agent pays only the sub-cent USDC itself.
 
-Payment screening is the **application**. Spend-to-decide is the **thesis**.
+**Remove Circle and the economy does not exist** — not the settlement, not the gas model, not the policy enforcement. Card rails cannot express it at all: $0.30 interchange makes a $0.02 evidence purchase absurd.
+
+Proven on Base mainnet, decodable from the receipts:
+
+| Flow | Proof |
+|---|---|
+| Agent → Treasury, $0.05 screening fee | [`0x5db44668…`](https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58) |
+| Treasury → Validator, $0.02 autonomous evidence purchase | [`0xdfcd6729…`](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) |
+| Agent → Treasury, $0.10 funding | [`0x958f2c40…`](https://basescan.org/tx/0x958f2c400d0f955dc02678ff1172cd055305842f18d32a73783386e295af59b5) |
+
+Each is an ERC-4337 UserOperation through the EntryPoint, gas paid by Circle's relayer against a Treasury balance of 0 wei ETH.
+
+Payment screening is the **application**. A self-funding agent economy on Circle is the **thesis**.
 
 ---
 
@@ -22,13 +34,13 @@ Payment screening is the **application**. Spend-to-decide is the **thesis**.
 | **Live demo** | [verigate.cloud](https://verigate.cloud) → **Live Demo** tab — three-agent autonomous loop visualization |
 | **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) - autonomous evidence purchase, real USDC on Base |
 | **Repo + tests** | [GitHub](https://github.com/4KInc/verigate) - 282 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
-| **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) - 4-step flow, 3 wallets, 5/5 Circle stack |
+| **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) - 4-step flow, 3 wallets, 4/5 Circle stack |
 
 ## Eligibility Confirmation
 
 | Requirement | Evidence |
 |-------------|----------|
-| Uses Circle Agent Stack | Agent Wallets, Gateway Nanopayments, CLI, x402, Skills (5/5) |
+| Uses Circle Agent Stack | Agent Wallets, Circle CLI, x402, Skills (4/5 — Gateway integrated but not settling, see stack table) |
 | Public GitHub repo | [4KInc/verigate](https://github.com/4KInc/verigate) |
 | Real USDC transaction | [3 mainnet txs on Basescan](#mainnet-step_up-transaction-base-l2) |
 | Agent wallet addresses | [Customer](https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2), [Treasury](https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d), [Validator](https://basescan.org/address/0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558) |
@@ -145,7 +157,7 @@ Agent finds a market data service for $0.01
 
 Total cost: $0.08 ($0.05 screening + $0.02 evidence + $0.01 service)
 Evidence cost scales dynamically: max($0.02, min(amount * 0.1%, $5.00))
-Time: ~5 seconds via Circle Gateway
+Time: ~5 seconds via Circle Agent Wallet transfer
 ```
 
 ### Attack Path: Prompt Injection
@@ -225,14 +237,14 @@ Replays are **free but not unlimited** — you don't pay twice, but you can't ha
 - **A3 — Circuit breaker:** Replays count toward the breaker. 5 denials → throttle. 10 → session suspended. The attacker gets locked out.
 - **A4 — Synchronous state:** Every response includes the `enforcement` field so the agent can see its own breaker status and stop.
 
-## Circle Agent Stack Coverage (5/5)
+## Circle Agent Stack Coverage (4/5)
 
 | Stack Component | How Verigate Uses It |
 |----------------|---------------------|
 | **Agent Wallets** | 3 wallets (Customer, Treasury, Validator) with independent spending policies |
-| **Gateway Nanopayments** | $0.05 security check fee settled via Circle Gateway facilitator API (`circle/gateway.py`) |
+| **Gateway Nanopayments** | *Integrated, not settling — not counted in the 4/5.* The x402 facilitator path is implemented (`circle/gateway.py`, wired at `app/x402.py:151`), but the Gateway balance is **0 across all domains including Base**, so it has never settled. Every settlement to date is a direct Circle Agent Wallet transfer. |
 | **Circle CLI** | Wallet transfers, x402 payments, balance queries (`circle/cli.py`) |
-| **Agent Marketplace** | Agent-discoverable OpenAPI specification (`/static/openapi.json`) and x402-compatible service endpoint |
+| **Agent Marketplace** | Agent-discoverable OpenAPI spec (`/static/openapi.json`, live) and an x402 endpoint returning HTTP 402. Submitted for listing; listing not yet confirmed. |
 | **Circle Skills** | SKILL.md plugin teaches agents to check payments before executing (`plugins/verigate/`) |
 
 ## Try It Live
@@ -389,7 +401,7 @@ AI agents discover and use Verigate through MCP (Model Context Protocol). 6 tool
 |------|-------------|
 | `check_payment` | Submit payee + amount + reason → risk score + APPROVE/STEP_UP/DENY + explanation |
 | `get_risk_score` | Quick pre-flight check. Score + band + signals. No execution. |
-| `check_payment_x402` | Check via the live x402 endpoint (Circle Gateway nanopayment) |
+| `check_payment_x402` | Check via the live x402 endpoint (HTTP 402 paywall; fee settles by Circle Agent Wallet transfer) |
 | `get_gateway_status` | Circle Gateway connectivity, supported networks, treasury balance |
 | `get_receipt` | Retrieve a signed receipt by hash |
 | `get_evidence_bundle` | Pull the full carrier audit trail |
@@ -440,7 +452,7 @@ Break-even at ~200K checks/month. See [`ECONOMICS.md`](ECONOMICS.md).
 
 ## Why Circle Is Central (Not Bolted On)
 
-Removing Circle would break wallet controls, USDC settlement, Gateway micropayments, x402 service payments, and programmatic wallet operations. **Circle is the economic infrastructure that makes an autonomous security agent possible.**
+Removing Circle would break every part of the economy: the Agent Wallets that hold and move the funds, the relayer-sponsored gas that makes a $0.02 purchase viable from a 0-ETH wallet, the wallet-layer spending policies that bound the Treasury, USDC settlement itself, and the programmatic wallet operations the autonomous loop depends on. **Circle is the economic infrastructure that makes an autonomous security agent possible.**
 
 ## The Three Wallets
 

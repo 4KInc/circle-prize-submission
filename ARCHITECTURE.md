@@ -3,7 +3,7 @@
 ## Settlement Layer Boundary
 
 The settlement layer sits behind an interface. `circle/gateway.py` is one
-implementation (Circle Gateway nanopayments on Base L2). The moat is NOT
+implementation (Circle Agent Wallet USDC settlement on Base L2). The moat is NOT
 the rail — it is:
 
 1. **The receipt chain** — hash-linked, Ed25519 signed, Merkle-anchored
@@ -12,12 +12,14 @@ the rail — it is:
    through which insurers retrieve and verify receipts for underwriting,
    renewal, and claims.
 
-Circle is central to the current product (5/5 stack coverage, real USDC
+Circle is central to the current product (4/5 stack coverage, real USDC
 flows, agent wallets) — and the STEP_UP primitive is Circle-dependent in a
 way the rest of the system is not. Spending $0.02 to buy evidence before
-deciding is only economically coherent on sub-cent, gas-free rails; on card
-interchange it is absurd. Circle Nanopayments are what make the core
-innovation possible, not merely convenient.
+deciding is only economically coherent on sub-cent, gas-sponsored rails; on card
+interchange it is absurd. Circle Agent Wallets are what make the core
+innovation possible, not merely convenient: the Treasury holds 0 wei ETH
+and Circle's relayer sponsors gas, so a $0.02 evidence purchase costs the
+agent $0.02 and nothing else.
 
 The *decision and receipt layer* is a separate matter, and it is
 architecturally rail-agnostic: a deployment on a different settlement rail
@@ -47,7 +49,7 @@ Agent intent
            ↓
     Signed receipt (Ed25519)
            ↓
-    Settlement (Circle Gateway / CLI)
+    Settlement (Circle Agent Wallet via Circle CLI)
 ```
 
 If `evaluate_risk()` crashes → HTTP 500 (fail-closed).
