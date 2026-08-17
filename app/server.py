@@ -1580,10 +1580,13 @@ async def run_autonomous_single():
                           or "wallet login" in raw.lower())
             if no_session:
                 detail = (
-                    "By design. Circle makes agent-wallet auth device-bound and human-gated, "
-                    "so no server holds unattended rights to move these funds -- including ours.\n"
-                    "  Same code path settled on mainnet: Treasury -> Validator, $0.02 USDC, "
-                    "ERC-4337, gas sponsored by Circle.\n"
+                    "Verigate settles through the Circle CLI, whose agent-wallet session is "
+                    "device-bound, so this container cannot transfer. A production deployment "
+                    "would use Circle's developer-controlled wallets (API key + entity secret), "
+                    "which are built for exactly this; we did not implement that path in the "
+                    "hackathon window.\n"
+                    "  The same code path did settle autonomously on mainnet: Treasury -> "
+                    "Validator, $0.02 USDC, ERC-4337, gas sponsored by Circle.\n"
                     "  basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732\n"
                     "  Everything below ran live. No paid evidence behind the verdict, so it fails closed."
                 )
