@@ -123,8 +123,8 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
         <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">Autonomous on Base Mainnet</span>
       </div>
-      <h1 class="text-3xl md:text-5xl font-display font-extrabold tracking-tight mb-4 text-on-surface leading-tight">Your agent's security guard. <span class="hero-gradient-text">Paid in USDC.</span></h1>
-      <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">Three-state screening. Gemini-powered evidence. Signed receipts. Two payment surfaces. Zero humans.</p>
+      <h1 class="text-3xl md:text-5xl font-display font-extrabold tracking-tight mb-4 text-on-surface leading-tight">The agent buys evidence <span class="hero-gradient-text">before it decides.</span></h1>
+      <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">When a payment is uncertain, Verigate autonomously spends a fraction of a cent of USDC to buy a second opinion, then decides. That primitive only works because <strong class="text-on-surface">Circle Nanopayments</strong> make sub-cent, gas-free settlement viable &mdash; at $0.30 card interchange it is absurd. Payment screening is the application; spend-to-decide is the thesis.</p>
       <div class="flex gap-3 mb-5">
         <button class="btn-primary h-10 px-5 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('livedemo')">Watch Live Demo <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
         <button class="btn-secondary h-10 px-5 rounded-xl font-display text-sm flex items-center gap-2" onclick="go('wallets')">View Treasury</button>
@@ -142,7 +142,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
   <!-- Stats Bar — evenly spaced metrics -->
   <div class="rounded-2xl px-6 py-5 mb-10 border border-primary-fixed/10 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.4) 0%, rgba(20,22,28,0.7) 100%)">
-    <div class="text-center mb-3"><span class="font-mono text-[8px] text-on-surface-variant/30 uppercase tracking-widest">Live autonomous operations since Aug 9, 2026 - intent value screened, not funds held</span></div>
+    <div class="text-center mb-3"><span class="font-mono text-[8px] text-on-surface-variant/30 uppercase tracking-widest">Autonomous risk scoring, every 30 min. Counters reset when the Cloud Run instance restarts, so these show the current instance only. Scoring is off-chain by design &mdash; the scheduler moves no USDC; settlement is proven separately by the mainnet transactions below.</span></div>
     <div class="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
       <div class="flex flex-col items-center">
         <span class="font-mono text-2xl font-bold text-on-surface" id="sched-runs">0</span>
@@ -268,7 +268,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <!-- Treasury P&L — one line -->
   <div class="flex items-center justify-center gap-6 mb-6 flex-wrap">
     <div class="flex items-center gap-1.5">
-      <span class="font-mono text-[10px] text-on-surface-variant/40">Earned</span>
+      <span class="font-mono text-[10px] text-on-surface-variant/40">Received (self-paid)</span>
       <span class="font-mono text-sm text-primary-fixed font-bold" id="ov-earned">—</span>
     </div>
     <div class="flex items-center gap-1.5">
@@ -387,7 +387,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 
       <!-- Revenue -->
       <div class="rounded-lg p-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
-        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Revenue</div>
+        <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Settlement (self-paid demo)</div>
         <div class="flex justify-between">
           <span class="font-mono text-[11px] text-on-surface-variant/50">Checks:</span>
           <span class="font-mono text-[11px] text-primary-fixed" id="ld-vg-rev-checks">—</span>
@@ -506,9 +506,9 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
         <div class="flex items-center gap-3 pt-2">
           <select id="tryit-scenario" onchange="updateTryItScenario()" class="bg-surface-container-lowest border border-white/[.08] rounded-lg px-3 py-2.5 font-mono text-xs text-on-surface focus:border-primary-fixed/40 focus:outline-none">
-            <option value="safe">Safe payment (APPROVE)</option>
+            <option value="rogue" selected>Rogue attack (DENY) &mdash; $0 loss</option>
             <option value="uncertain">Uncertain risk (STEP_UP)</option>
-            <option value="rogue">Rogue attack (DENY)</option>
+            <option value="safe">Safe payment (APPROVE)</option>
           </select>
           <button onclick="runTryIt()" id="tryit-btn" class="flex-1 btn-primary h-11 rounded-xl font-display text-sm font-bold flex items-center justify-center gap-2">
             <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1">shield</span>
@@ -595,7 +595,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
             <span class="font-mono text-xs text-[#ffaf00] font-bold">STEP_UP: Evidence Purchase</span>
           </div>
           <div class="text-xs text-on-surface-variant/70">Paid Evidence Validator $0.02 USDC for independent verification via Circle Gateway nanopayment.</div>
-          <div id="tryit-stepup-tx" class="font-mono text-[10px] text-on-surface-variant/40 mt-2">tx 0xdfcd67…  BASE-SEPOLIA</div>
+          <div id="tryit-stepup-tx" class="font-mono text-[10px] text-on-surface-variant/40 mt-2">tx 0xdfcd67…  BASE MAINNET</div>
         </div>
         <!-- Receipt -->
         <div class="rounded-xl p-4 border border-white/[.06]" style="background:rgba(255,255,255,0.02)">
@@ -647,7 +647,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <div class="font-mono text-2xl font-bold text-on-surface mt-1" id="ds-governed">$0.00</div>
     </div>
     <div class="bento-card !py-4 text-center border border-primary-fixed/20">
-      <div class="font-mono text-[10px] text-primary-fixed/80 uppercase tracking-wider font-semibold">Treasury Earned</div>
+      <div class="font-mono text-[10px] text-primary-fixed/80 uppercase tracking-wider font-semibold">Treasury Received (self-paid)</div>
       <div class="font-mono text-2xl font-bold text-primary-fixed mt-1" id="ds-earned">$0.00</div>
     </div>
     <div class="bento-card !py-4 text-center border border-error/20">
@@ -901,7 +901,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <div class="flex items-center justify-between mb-2">
     <div>
       <h1 class="font-display text-4xl font-extrabold text-on-surface">Proof Explorer</h1>
-      <p class="text-on-surface-variant text-sm mt-1">Every receipt Verigate earned USDC for. Tamper-evident, independently verifiable.</p>
+      <p class="text-on-surface-variant text-sm mt-1">Every receipt Verigate received USDC for. All transfers to date are between Verigate’s own wallets — self-paid demo settlement, not third-party revenue. Tamper-evident, independently verifiable.</p>
     </div>
     <div class="flex items-center gap-2 bg-surface-container/60 px-4 py-2 rounded-full border border-primary-fixed/20">
       <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
@@ -1240,7 +1240,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <span class="ds-badge ds-badge-red">DENY</span>
       </div>
       <p>Verigate scores risk, checks sanctions, detects prompt injection, evaluates behavioral anomalies, and returns a signed receipt. On uncertain cases (STEP_UP), it autonomously purchases independent evidence before deciding.</p>
-      <p style="font-size:12px;color:#8d9479">Every decision produces an Ed25519-signed, hash-linked receipt anchored to BASE mainnet.</p>
+      <p style="font-size:12px;color:#8d9479">Every decision produces an Ed25519-signed, hash-linked receipt. Merkle roots and the verification public key are anchored on Base Sepolia; the settlement proof transactions are on Base mainnet.</p>
     </div>
     <div>
       <div class="ds-code-block">
@@ -1794,7 +1794,7 @@ response = openai.chat.completions.create(
       </div>
       <div>
         <div class="font-mono text-[10px] font-bold uppercase tracking-wider text-tertiary-fixed-dim mb-2">Settlement</div>
-        <p class="leading-relaxed">All payments settle in USDC on Base mainnet via Circle Agent Wallets. No gas fees. No monthly minimums. No signup. Pay per use.</p>
+        <p class="leading-relaxed">Payments settle in USDC via Circle Agent Wallets &mdash; no gas fees, no minimums, no signup. The three proof transactions are on Base mainnet; the interactive demo settles on Base Sepolia to conserve mainnet funds. Every receipt is labelled with the chain it actually settled on.</p>
       </div>
     </div>
   </div>
@@ -1907,7 +1907,7 @@ response = openai.chat.completions.create(
 
   <!-- Footer -->
   <div class="text-center text-[10px] text-on-surface-variant/30 mt-8">
-    184 tests / 16 test files / 6 Gemini roles (incl. RAG) / 3 wallets / CI-enforced / Base mainnet<br>
+    226 tests / 17 test files / 6 Gemini roles (incl. RAG) / 3 wallets / CI-enforced / proof txs on Base mainnet<br>
     <a href="https://github.com/4KInc/verigate" class="text-primary-fixed/40">github.com/4KInc/verigate</a> / BlockIntel, Inc. / Apache-2.0
   </div>
 </div>
@@ -2749,6 +2749,7 @@ function updateComplianceFrameworks(d){
 
 // ── Try It: Interactive Security Check ──
 let _tryItReceipt=null;
+document.addEventListener('DOMContentLoaded',function(){try{updateTryItScenario()}catch(e){}});
 function updateTryItScenario(){
   const s=document.getElementById('tryit-scenario').value;
   if(s==='safe'){

@@ -13,11 +13,18 @@ the rail — it is:
    renewal, and claims.
 
 Circle is central to the current product (5/5 stack coverage, real USDC
-flows, agent wallets). But the authorization decision, the receipt, and
-the carrier evidence bundle are architecturally rail-agnostic. A future
-deployment on a different settlement rail would replace `gateway.py` and
-`cli.py` — the receipt chain, risk scorer, and carrier interface remain
-unchanged.
+flows, agent wallets) — and the STEP_UP primitive is Circle-dependent in a
+way the rest of the system is not. Spending $0.02 to buy evidence before
+deciding is only economically coherent on sub-cent, gas-free rails; on card
+interchange it is absurd. Circle Nanopayments are what make the core
+innovation possible, not merely convenient.
+
+The *decision and receipt layer* is a separate matter, and it is
+architecturally rail-agnostic: a deployment on a different settlement rail
+would replace `gateway.py` and `cli.py`, while the receipt chain, risk
+scorer, and carrier interface remain unchanged. That portability is an
+engineering-maturity property of the audit layer — it is explicitly **not**
+a claim that the STEP_UP economics survive off Circle's rails. They do not.
 
 ## Authorization Path (Fail-Closed)
 
