@@ -2296,7 +2296,13 @@ async def wallet_policies():
     from circle.on_chain_policy import get_all_policies
     return {
         "policies": [p.to_circle_format() for p in get_all_policies()],
-        "note": "Circle enforces these at the wallet layer. Verigate screens at the application layer. Both are independent.",
+        "note": ("Treasury and Customer carry CUSTOM Circle wallet policies, set via "
+                 "`circle wallet limit set` and enforced by Circle independently of Verigate "
+                 "(verify: `circle wallet limit --address <addr> --chain BASE`). Changing them "
+                 "requires human email-OTP authorization, so the agent spends autonomously "
+                 "within policy but cannot widen its own limits. The Validator wallet is "
+                 "receive-only by architecture and carries only Circle's default policy. "
+                 "Verigate additionally screens at the application layer; the two are independent."),
     }
 
 

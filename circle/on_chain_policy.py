@@ -53,6 +53,7 @@ TREASURY_POLICY = SpendingPolicy(
     rules=[
         {
             "type": "transfer_limit",
+            "enforced_by": "circle-wallet-policy (origin=CUSTOM)",
             "description": "Max STEP_UP evidence fee per transaction",
             "max_amount": "5.00",
             "asset": "USDC",
@@ -60,6 +61,7 @@ TREASURY_POLICY = SpendingPolicy(
         },
         {
             "type": "daily_limit",
+            "enforced_by": "circle-wallet-policy (origin=CUSTOM)",
             "description": "Max daily evidence spend",
             "max_amount_per_day": "50.00",
             "asset": "USDC",
@@ -67,6 +69,7 @@ TREASURY_POLICY = SpendingPolicy(
         },
         {
             "type": "destination_whitelist",
+            "enforced_by": "verigate-application (not a Circle wallet policy)",
             "description": "Treasury can only pay authorized validators",
             "allowed_destinations": [
                 "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558",  # Evidence Validator
@@ -75,6 +78,7 @@ TREASURY_POLICY = SpendingPolicy(
         },
         {
             "type": "rate_limit",
+            "enforced_by": "verigate-application (circle/treasury_budget.py; Circle wallet policies do not offer a rate-limit rule type)",
             "description": "Max evidence purchases per hour",
             "max_transfers_per_hour": 20,
             "rationale": "Prevents evidence purchase spam from a compromised agent",
@@ -91,6 +95,7 @@ CUSTOMER_POLICY = SpendingPolicy(
     rules=[
         {
             "type": "transfer_limit",
+            "enforced_by": "circle-wallet-policy (origin=CUSTOM)",
             "description": "Max screening fee per check",
             "max_amount": "0.10",
             "asset": "USDC",
@@ -98,6 +103,7 @@ CUSTOMER_POLICY = SpendingPolicy(
         },
         {
             "type": "daily_limit",
+            "enforced_by": "circle-wallet-policy (origin=CUSTOM)",
             "description": "Max daily screening spend",
             "max_amount_per_day": "25.00",
             "asset": "USDC",
@@ -105,6 +111,7 @@ CUSTOMER_POLICY = SpendingPolicy(
         },
         {
             "type": "destination_whitelist",
+            "enforced_by": "verigate-application (not a Circle wallet policy)",
             "description": "Customer can only pay Verigate treasury",
             "allowed_destinations": [
                 "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d",  # Verigate Treasury
@@ -122,11 +129,19 @@ VALIDATOR_POLICY = SpendingPolicy(
     wallet="0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558",
     rules=[
         {
-            "type": "transfer_limit",
-            "description": "Validator does not initiate outbound transfers",
-            "max_amount": "0.00",
+            "type": "architectural_constraint",
+            "enforced_by": "architecture (no send path in code); Circle layer is default only",
+            "description": "Validator never initiates outbound transfers",
+            "max_amount": None,
             "asset": "USDC",
-            "rationale": "Validator is receive-only; withdrawals require operator action",
+            "rationale": (
+                "Receive-only by architecture, not by wallet policy: no code path "
+                "in this repository sends from the validator wallet. Circle's "
+                "wallet layer currently carries only its default $100/month "
+                "transfer limit here (origin=DEFAULT) — unlike the Treasury and "
+                "Customer wallets, no custom Circle policy is set on this wallet. "
+                "Verify with: circle wallet limit --address 0xbe1424b7... --chain BASE"
+            ),
         },
     ],
 )
