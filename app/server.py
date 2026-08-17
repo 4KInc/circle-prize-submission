@@ -21,6 +21,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Query, Request
+from fastapi import BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -1023,8 +1024,36 @@ Run: <code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius
     return HTMLResponse(html)
 
 
+def _persist_behavioral_bg() -> None:
+    """Flush behavioral history off the response path.
+
+    In production this is a synchronous GCS upload. Running it inline made a
+    clean APPROVE wait on a network write it does not depend on.
+    """
+    try:
+        from circle.behavioral import get_engine
+        get_engine().persist()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _rag_add_bg(record) -> None:
+    """Index a screening decision off the response path.
+
+    rag_store.add() computes a Gemini embedding inline, so calling it during
+    the request made every check -- including a clean APPROVE -- block on an
+    LLM round trip. The record is still written, just after the client has
+    its answer; nothing about the decision depends on it.
+    """
+    try:
+        from circle.rag_store import get_rag_store
+        get_rag_store().add(record)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 @app.post("/api/check")
-async def api_check(request: Request):
+async def api_check(request: Request, background: BackgroundTasks):
     """Live risk check — calls the real BlockIntel risk scorer.
 
     Includes enforcement loop (A1-A4):
@@ -1106,7 +1135,8 @@ async def api_check(request: Request):
 
     try:
         behavioral.record(CUSTOMER_WALLET, payee, float(amount), service)
-        behavioral.persist()
+        # Durability, not correctness: flushed after the response is sent.
+        background.add_task(_persist_behavioral_bg)
     except Exception:  # noqa: BLE001
         pass
 
@@ -1284,8 +1314,8 @@ async def api_check(request: Request):
     try:
         from circle.rag_store import get_rag_store, ScreeningRecord
         import secrets as _sec
-        rag = get_rag_store()
-        rag.add(ScreeningRecord(
+        get_rag_store()  # warm the singleton on the request thread
+        background.add_task(_rag_add_bg, ScreeningRecord(
             record_id=f"chk_{_sec.token_hex(8)}",
             agent_id=CUSTOMER_WALLET,
             payee=payee,
