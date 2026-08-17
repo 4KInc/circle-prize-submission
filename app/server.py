@@ -1580,21 +1580,12 @@ async def run_autonomous_single():
                           or "wallet login" in raw.lower())
             if no_session:
                 detail = (
-                    "Settlement is disabled on this hosted endpoint by design, and Circle "
-                    "enforces that design. Agent-wallet authentication is device-bound and "
-                    "human-gated: a session cannot be ported into a container, and changing a "
-                    "wallet spending policy requires an email OTP. So no server anywhere holds "
-                    "unattended rights to move these funds, including ours. That is the correct "
-                    "security posture for a public unauthenticated endpoint, and we did not work "
-                    "around it. "
-                    "The same code path -- this endpoint, this scorer, this validator -- executed "
-                    "the autonomous evidence purchase on Base mainnet: Treasury -> Validator, "
-                    "$0.02 USDC, ERC-4337 UserOperation, gas sponsored by Circle's paymaster, "
-                    "verifiable at "
-                    "https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732 "
-                    "Everything below this line ran live just now: risk scoring, the Gemini + RAG "
-                    "validator verdict, the signed receipt, and the fail-closed outcome. With no "
-                    "paid evidence behind the verdict, the payment is blocked rather than approved."
+                    "By design. Circle makes agent-wallet auth device-bound and human-gated, "
+                    "so no server holds unattended rights to move these funds -- including ours.\n"
+                    "  Same code path settled on mainnet: Treasury -> Validator, $0.02 USDC, "
+                    "ERC-4337, gas sponsored by Circle.\n"
+                    "  basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732\n"
+                    "  Everything below ran live. No paid evidence behind the verdict, so it fails closed."
                 )
                 state_name = "EVIDENCE_SETTLEMENT_UNAVAILABLE"
             else:
