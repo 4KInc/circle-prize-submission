@@ -104,9 +104,8 @@ def verify_export(export_path: str) -> dict:
     This function requires NO network access and NO trust in the operator.
     It uses only the public key and the receipt data in the export file.
     """
-    ENGINE_PATH = os.path.join(os.path.dirname(__file__), "..", "engine")
-    if os.path.isdir(ENGINE_PATH) and ENGINE_PATH not in sys.path:
-        sys.path.insert(0, ENGINE_PATH)
+    from circle.engine_path import ensure_on_path
+    ensure_on_path()
 
     from circle.verifier import print_report, verify_payment_chain
 

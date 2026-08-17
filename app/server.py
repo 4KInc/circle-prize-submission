@@ -26,10 +26,13 @@ from fastapi.staticfiles import StaticFiles
 
 # Add project root and engine to path
 PROJECT_ROOT = Path(__file__).parent.parent
-ENGINE_PATH = PROJECT_ROOT / "engine"
 sys.path.insert(0, str(PROJECT_ROOT))
-if ENGINE_PATH.is_dir():
-    sys.path.insert(0, str(ENGINE_PATH))
+
+# Fail here, loudly and with the fix, rather than five frames deep in an
+# import of a package that does not exist in this repository.
+from circle.engine_path import ensure_on_path as _ensure_engine_on_path  # noqa: E402
+
+_ensure_engine_on_path()
 
 logging.basicConfig(level=logging.INFO, format="%(name)s | %(message)s")
 for name in ("httpx", "httpcore", "urllib3", "google", "google_genai"):

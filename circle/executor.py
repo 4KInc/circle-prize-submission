@@ -39,10 +39,12 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-# Add engine to path
-ENGINE_PATH = os.path.join(os.path.dirname(__file__), "..", "engine")
-if os.path.isdir(ENGINE_PATH) and ENGINE_PATH not in sys.path:
-    sys.path.insert(0, ENGINE_PATH)
+# Add engine to path. Checks for the gateway package, not merely the
+# directory — an uninitialised submodule leaves engine/ present but empty,
+# which passes isdir() and then fails at the gateway import below.
+from circle.engine_path import ensure_on_path as _ensure_engine_on_path
+
+_ensure_engine_on_path()
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from gateway.canonical import canonicalize

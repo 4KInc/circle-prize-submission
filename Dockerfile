@@ -20,6 +20,21 @@ COPY engine/ engine/
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
+# Fail the BUILD if the engine submodule was not checked out.
+# `COPY engine/ engine/` silently succeeds on an empty directory, so without
+# this the image builds fine and then dies at container start with a bare
+# ModuleNotFoundError — surfacing as a Cloud Run health-check timeout during
+# deploy, which is both slow to diagnose and expensive to hit in production.
+RUN test -f engine/gateway/__init__.py || ( \
+      echo "" >&2; \
+      echo "BUILD FAILED: engine/ submodule is not checked out." >&2; \
+      echo "engine/gateway/__init__.py is missing, so the gateway package" >&2; \
+      echo "(canonicalize, merkle, policy, receipts, tokens) is unavailable." >&2; \
+      echo "" >&2; \
+      echo "  Fix:  git submodule update --init --recursive" >&2; \
+      echo "" >&2; \
+      exit 1 )
+
 # Install Python deps
 RUN pip install --no-cache-dir cryptography PyJWT PyYAML google-genai reportlab fastapi "uvicorn[standard]" httpx google-cloud-storage && \
     pip install --no-cache-dir "mcp[cli]==1.23.3"

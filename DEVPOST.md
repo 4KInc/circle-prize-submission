@@ -66,7 +66,7 @@ Every autonomous check tracks a full lifecycle: INTENT_CREATED -> SCREENED -> ST
 
 **x402 payee screening:** An x402 payee is an HTTP endpoint, not a wallet — the settlement address sits behind it. Verigate classifies payees as wallet or service endpoint and screens each on its own terms: endpoints get reputation, typosquat (edit-distance against known providers), homograph/punycode, and insecure-scheme checks. Because an endpoint hides its settlement wallet, exact-match OFAC screening is unavailable — so every endpoint decision emits an explicit `settlement_address_unavailable` signal with a confidence penalty, recording the coverage gap in the receipt rather than assuming it away. A provider-agnostic reference client ships in `integrations/x402_screening.py`.
 
-**Infrastructure:** FastAPI on GCP Cloud Run, 226 passing tests (17 test files), CI-enforced (ruff + mypy + pytest).
+**Infrastructure:** FastAPI on GCP Cloud Run, 282 passing tests (19 test files), CI-enforced (ruff + mypy + pytest).
 
 ## Challenges we ran into
 
@@ -82,7 +82,7 @@ Every autonomous check tracks a full lifecycle: INTENT_CREATED -> SCREENED -> ST
 
 - **Real USDC on mainnet** — not testnet tokens, not simulated. Three verified transactions on Base.
 - **STEP_UP is genuinely novel** — no other payment screening system autonomously spends money to reduce its own uncertainty before deciding.
-- **226 tests passing** — including async concurrency tests, replay/breaker enforcement tests, x402 payee classification and evasion tests, and end-to-end STEP_UP cycle tests.
+- **282 tests passing** — including async concurrency tests, replay/breaker enforcement tests, x402 payee classification and evasion tests, and end-to-end STEP_UP cycle tests.
 - **Three revenue surfaces** — screening ($0.05), governance ($0.15), evidence ($0.25). Every piece of output has a buyer.
 - **Listed on Circle Agent Marketplace** — submitted for listing so other agents can discover and pay for Verigate's screening service.
 - **Early-stage integration conversations with a major x402 router** about using Verigate as pre-settlement screening middleware for routed agent payments.
