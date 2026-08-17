@@ -1984,7 +1984,10 @@ async function runJudgeAutonomous(){
     let txt=`Decision: ${d.decision}  Score: ${d.score}/100  Band: ${d.band}\nAutonomous: ${d.autonomous}  Human: ${d.human_intervention}`;
     if(d.intent_hash)txt+=`\nIntent hash: ${d.intent_hash.substring(0,32)}...`;
     txt+=`\nRationale: ${d.rationale}`;
-    if(d.step_up)txt+=`\n\n--- STEP_UP Settlement ---\n  Evidence fee: $${d.step_up.evidence_fee} USDC\n  Tx: ${d.step_up.tx_hash||d.step_up.error||'n/a'}`;
+    if(d.step_up){const su=d.step_up;
+      if(su.tx_hash){txt+=`\n\n--- STEP_UP Settlement ---\n  Evidence fee: $${su.evidence_fee} USDC\n  Tx: ${su.tx_hash}`;}
+      else{txt+=`\n\n--- STEP_UP Settlement: NOT SETTLED HERE ---\n  Quoted fee: $${su.evidence_fee_quoted||'0.02'} USDC\n  ${su.detail||'unavailable'}\n  Fails closed: ${su.fails_closed}`;}
+    }
     if(d.validator_verdict){const v=d.validator_verdict;txt+=`\n\n--- Validator Verdict (Gemini + RAG) ---\n  Action: ${v.action}  Confidence: ${v.confidence}\n  Threshold: ${v.validator_threshold}  ${v.decision_reason}\n  RAG records: ${v.rag_records_retrieved}  Context used: ${v.rag_context_used}\n  Signed by: ${v.signed_by}\n  Reasoning: ${v.reasoning}`;}
     if(d.protected_payment){const pp=d.protected_payment;txt+=`\n\n--- Protected Payment ---\n  Status: ${pp.status}\n  Recipient: ${pp.recipient}\n  Amount: $${pp.amount_usdc} USDC\n  Gated by: ${pp.gated_by||pp.blocked_by}`;if(pp.funds_moved_to_attacker!==undefined)txt+=`\n  Funds moved to attacker: ${pp.funds_moved_to_attacker}`;}
     if(d.lifecycle){txt+=`\n\n--- Payment Lifecycle ---`;d.lifecycle.forEach(s=>txt+=`\n  ${s.state}: ${s.detail.substring(0,70)}`);}

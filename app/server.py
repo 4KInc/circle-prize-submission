@@ -1569,9 +1569,42 @@ async def run_autonomous_single():
             evidence_purchased = True
         except Exception as e:
             evidence_purchased = False
-            result["step_up"] = {"error": str(e), "evidence_fee": "0.02"}
-            lifecycle.append({"state": "EVIDENCE_PURCHASE_FAILED", "timestamp": datetime.now(timezone.utc).isoformat(),
-                              "detail": str(e)[:100]})
+            # Distinguish "this deployment cannot settle" from a real failure.
+            # The hosted demo container has no Circle agent wallet session, so
+            # settlement is structurally unavailable here rather than broken.
+            # Surface that honestly instead of leaking a raw CLI error that
+            # tells the reader to run `circle wallet login`.
+            raw = str(e)
+            no_session = ("no agent session" in raw.lower()
+                          or "no local wallet matches" in raw.lower()
+                          or "wallet login" in raw.lower())
+            if no_session:
+                detail = (
+                    "Settlement unavailable in the hosted demo: this container holds no "
+                    "Circle agent wallet session, by design — a public endpoint that can "
+                    "move mainnet USDC is a treasury it cannot bound. The autonomous "
+                    "STEP_UP economics are proven instead by verified mainnet transactions: "
+                    "Treasury→Validator $0.02 at "
+                    "https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732 "
+                    "The decision path below ran in full and, with no paid evidence behind "
+                    "it, fails closed."
+                )
+                state_name = "EVIDENCE_SETTLEMENT_UNAVAILABLE"
+            else:
+                detail = raw[:200]
+                state_name = "EVIDENCE_PURCHASE_FAILED"
+            result["step_up"] = {
+                "settled": False,
+                "reason": "no_wallet_session_in_hosted_demo" if no_session else "transfer_failed",
+                "detail": detail,
+                "evidence_fee_quoted": f"{max(0.02, min(float(intent['amount']) * 0.001, 5.00)):.2f}",
+                "verified_mainnet_example": (
+                    "0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732"
+                ),
+                "fails_closed": True,
+            }
+            lifecycle.append({"state": state_name, "timestamp": datetime.now(timezone.utc).isoformat(),
+                              "detail": detail[:160]})
 
         # Gemini evidence reasoning with RAG
         try:
