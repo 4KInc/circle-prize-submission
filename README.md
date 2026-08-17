@@ -4,6 +4,16 @@
 
 > Submission for the [$50K Circle Agentic Economy Prize](https://www.xprize.org/prizes/build-with-gemini) (Build with Gemini XPRIZE)
 
+---
+
+### When a payment is uncertain, the agent autonomously spends a fraction of a cent to buy evidence before deciding — a primitive that only exists because Circle Nanopayments make sub-cent, gas-free USDC settlement viable.
+
+Card rails cannot express this: $0.30 interchange makes a $0.02 evidence purchase economically absurd. On Circle's Agent Stack it is routine, so an agent can treat *spending money* as a way to *reduce uncertainty* rather than merely a way to acquire things. Verigate is the working proof — [$0.02 Treasury→Validator on Base mainnet](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732), no human in the loop.
+
+Payment screening is the **application**. Spend-to-decide is the **thesis**.
+
+---
+
 ## Judge's Path (60 seconds)
 
 | What | Link |
@@ -11,7 +21,7 @@
 | **Judge landing page** | [verigate.cloud/judge](https://verigate.cloud/judge) — everything in one page: try it, screen a payment, verify on Basescan |
 | **Live demo** | [verigate.cloud](https://verigate.cloud) → **Live Demo** tab — three-agent autonomous loop visualization |
 | **Mainnet STEP_UP tx** | [Treasury→Validator $0.02](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) - autonomous evidence purchase, real USDC on Base |
-| **Repo + tests** | [GitHub](https://github.com/4KInc/verigate) - 217 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
+| **Repo + tests** | [GitHub](https://github.com/4KInc/verigate) - 226 tests, CI-enforced (`ruff` + `mypy` + `pytest`) |
 | **Architecture** | Scroll to [How It Works](#how-it-works-4-steps) - 4-step flow, 3 wallets, 5/5 Circle stack |
 
 ## Eligibility Confirmation
@@ -28,7 +38,7 @@
 
 Most agent-payment demos prove an agent *can* spend money. **Verigate proves spending money can itself be a risk-mitigation decision.**
 
-When an AI agent wants to make a USDC payment, Verigate screens it against policy, OFAC sanctions, and injection/anomaly signals. If the risk is clear, Verigate approves or denies. If the risk is uncertain, Verigate does something no binary allow/block gate can do: **it autonomously spends a small amount of USDC to purchase external evidence, then decides.** This three-state APPROVE / STEP_UP / DENY model is the core innovation.
+When an AI agent wants to make a USDC payment, Verigate screens it against policy, OFAC sanctions, deterministic prompt-injection heuristics (pattern detectors tested against obfuscation and encoding evasion — defense-in-depth over a deterministic floor, not a claim to catch novel injection), and behavioral anomaly signals. If the risk is clear, Verigate approves or denies. If the risk is uncertain, Verigate does something no binary allow/block gate can do: **it autonomously spends a small amount of USDC to purchase external evidence, then decides.** This three-state APPROVE / STEP_UP / DENY model is the core innovation.
 
 Every payment Verigate receives and every evidence purchase it makes is settled through **Circle's Agent Stack**. Verigate binds those settlement events to a cryptographically signed receipt chain designed for carrier underwriting, claims review, and audit workflows.
 
@@ -103,7 +113,11 @@ The autonomous STEP_UP flow has been executed on **Base mainnet** with real USDC
 | **STEP_UP evidence** | Treasury `0x0c74...` | Validator `0xbe14...` | $0.02 | [View tx](https://basescan.org/tx/0xdfcd6729a28fe7c6f476608b242fae38418b13dfde51b18de007db82aa76f732) |
 | Treasury funding | Customer `0x5c34...` | Treasury `0x0c74...` | $0.10 | [View tx](https://basescan.org/tx/0x958f2c400d0f955dc02678ff1172cd055305842f18d32a73783386e295af59b5) |
 
-These are real, independently verifiable USDC transactions on Base mainnet. The STEP_UP transaction verifies the Treasury-to-Validator USDC settlement. The linked signed receipt and autonomy-proof record bind that settlement to the STEP_UP decision, policy evaluation, and validator request.
+These are real, independently verifiable USDC transactions on Base mainnet.
+
+**These are self-paid.** All three transfers are between wallets Verigate operates (Customer, Treasury, Validator). They demonstrate that the payment mechanism and the autonomous STEP_UP economics genuinely execute on mainnet — they are **not** third-party revenue, and Verigate has had none. See [Honest Disclosures](#honest-disclosures).
+
+**Network provenance (read this before the live demo).** The three proof transactions above are **Base mainnet**. The *interactive* demo on verigate.cloud settles on **Base Sepolia** to conserve mainnet funds, and the ERC-8004 reputation contract and public-key anchor are also on **Base Sepolia**. So: mainnet proves the autonomous STEP_UP economics really executed; Sepolia carries the repeatable interactive path. Receipts and explorer links are labelled with the chain they actually settled on — a Sepolia receipt is never presented as mainnet. The STEP_UP transaction verifies the Treasury-to-Validator USDC settlement. The linked signed receipt and autonomy-proof record bind that settlement to the STEP_UP decision, policy evaluation, and validator request.
 
 ## Real Use Case: AI Agent With a Company Wallet
 
@@ -237,7 +251,7 @@ The step-by-step timeline shows every phase — no human clicks trigger the flow
 
 ### Continuous Autonomous Operation
 
-A background scheduler runs risk checks every 30 minutes without human intervention. Results are stored as GCS proof bundles. The overview page shows a live "Autonomous Operations" dashboard with total payments screened, approved/blocked counts, and last check result. The scheduler has been running since Aug 9, 2025.
+A background scheduler runs risk checks every 30 minutes without human intervention. Results are stored as GCS proof bundles. The overview page shows a live "Autonomous Operations" dashboard with total payments screened, approved/blocked counts, and last check result. Counters reflect the **current Cloud Run instance** and reset on redeploy or cold start — `/api/operation-log` reports `running_since` so the window is always explicit. The scheduler performs risk scoring only and **moves no USDC**; settlement is proven separately by the mainnet transactions above.
 
 For a single on-demand autonomous STEP_UP cycle (no UI, no human button):
 
@@ -460,7 +474,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 | `app/validator.py` | Evidence Validator — Gemini-powered, x402-paywalled, independently keyed (team-operated, interface designed for third-party operators) |
 | `verigate/` | Python SDK + MCP server + LangChain/CrewAI/OpenAI integrations |
 
-**Key properties:** Zero LLM in authorization trust path. Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 217 tests).
+**Key properties:** No LLM in the authorization trust path — the deterministic scorer alone decides APPROVE/STEP_UP/DENY. Gemini is *advisory* to the validator on STEP_UP only, with a fail-closed fallback (unavailable or INSUFFICIENT → blocked). Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 226 tests).
 
 **Stack:** Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC-8004 / Circle Agent Stack / Gemini 2.5 Flash / Base L2 / Cloud Run / GCS
 
@@ -491,7 +505,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 
 ## Tests
 
-217 tests across 17 test files. CI-enforced with ruff + mypy + pytest on every push.
+226 tests across 17 test files. CI-enforced with ruff + mypy + pytest on every push.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
