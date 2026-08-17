@@ -486,7 +486,7 @@ Money flow: `Customer ($0.05) → Treasury → Validator ($0.02)` — all Circle
 | `app/validator.py` | Evidence Validator — Gemini-powered, x402-paywalled, independently keyed (team-operated, interface designed for third-party operators) |
 | `verigate/` | Python SDK + MCP server + LangChain/CrewAI/OpenAI integrations |
 
-**Key properties:** No LLM in the authorization trust path — the deterministic scorer alone decides APPROVE/STEP_UP/DENY. Gemini is *advisory* to the validator on STEP_UP only, with a fail-closed fallback (unavailable or INSUFFICIENT → blocked). Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 282 tests).
+**Key properties:** No LLM in the **authorization trust path** — the deterministic scorer alone decides APPROVE/STEP_UP/DENY, so the verdict is reproducible and cannot be argued out of a DENY. Gemini runs in six structural roles *around* that decision (STEP_UP validator reasoning, RAG retrieval, the three governance agents on DENY, carrier self-wake, policy synthesis, scope negotiation); its STEP_UP verdict is advisory to the validator and fails closed (unavailable or INSUFFICIENT → blocked). Ed25519-only. Hash-linked receipt chain. Merkle-anchored. Settlement binding. ERC-8004 reputation. Fail-closed. CI-enforced (ruff + mypy + 282 tests).
 
 **Stack:** Python 3.12+ / Ed25519 / SHA-256 / RFC 8785 (JCS) / RFC 6962 Merkle / x401 / ERC-8004 / Circle Agent Stack / Gemini 2.5 Flash / Base L2 / Cloud Run / GCS
 
