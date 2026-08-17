@@ -1532,14 +1532,27 @@ async def run_autonomous_single():
 
         try:
             from circle.cli import wallet_transfer, USDC_ADDRESSES
+            from circle.treasury_budget import check_and_reserve, release
             chain = state["chain"]
             evidence_fee = max(0.02, min(float(intent["amount"]) * 0.001, 5.00))
+
+            # This endpoint is publicly reachable, so the treasury needs a
+            # bound on a *sequence* of purchases, not just a single one.
+            # A refusal is not an approval — it fails closed below.
+            budget = check_and_reserve(evidence_fee)
+            if not budget.allowed:
+                raise RuntimeError(f"evidence purchase refused: {budget.detail}")
+
             evidence_fee_str = f"{evidence_fee:.2f}"
-            tx = wallet_transfer(
-                source=TREASURY_WALLET, destination=VALIDATOR_WALLET,
-                amount=evidence_fee_str, chain=chain,
-                token_address=USDC_ADDRESSES.get(chain),
-            )
+            try:
+                tx = wallet_transfer(
+                    source=TREASURY_WALLET, destination=VALIDATOR_WALLET,
+                    amount=evidence_fee_str, chain=chain,
+                    token_address=USDC_ADDRESSES.get(chain),
+                )
+            except Exception:
+                release(evidence_fee)  # nothing settled; give the headroom back
+                raise
             result["step_up"] = {
                 "evidence_fee": evidence_fee_str,
                 "tx_hash": tx.tx_hash,
@@ -1550,7 +1563,9 @@ async def run_autonomous_single():
             }
             lifecycle.append({"state": "EVIDENCE_PURCHASED", "timestamp": datetime.now(timezone.utc).isoformat(),
                               "detail": f"${evidence_fee_str} USDC Treasury->Validator, tx={tx.tx_hash[:16]}..."})
+            evidence_purchased = True
         except Exception as e:
+            evidence_purchased = False
             result["step_up"] = {"error": str(e), "evidence_fee": "0.02"}
             lifecycle.append({"state": "EVIDENCE_PURCHASE_FAILED", "timestamp": datetime.now(timezone.utc).isoformat(),
                               "detail": str(e)[:100]})
@@ -1584,8 +1599,17 @@ async def run_autonomous_single():
                 lifecycle.append({"state": "VALIDATOR_VERDICT_RECEIVED", "timestamp": datetime.now(timezone.utc).isoformat(),
                                   "detail": f"Action: {assessment.recommended_action}, confidence: {assessment.confidence:.2f}, RAG records: {assessment.rag_records_retrieved}"})
 
-                # Update decision based on validator verdict
-                if assessment.recommended_action == "CONFIRM":
+                # Update decision based on validator verdict.
+                # A CONFIRM may only authorize if the evidence it is reasoning
+                # about was actually purchased. If the transfer was refused
+                # (budget, ceiling, transport), there is no paid second
+                # opinion behind the verdict — fail closed.
+                if assessment.recommended_action == "CONFIRM" and not evidence_purchased:
+                    result["decision"] = "DENY"
+                    result["rationale"] += " Evidence purchase did not settle; CONFIRM not honored. Fail-closed."
+                    lifecycle.append({"state": "FINAL_DENIED", "timestamp": datetime.now(timezone.utc).isoformat(),
+                                      "detail": "No paid evidence behind the verdict. Fail-closed. Payment blocked."})
+                elif assessment.recommended_action == "CONFIRM":
                     result["decision"] = "APPROVE"
                     result["rationale"] += f" Validator CONFIRMED (confidence {assessment.confidence:.2f})."
                     lifecycle.append({"state": "FINAL_AUTHORIZED", "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -3294,10 +3318,18 @@ async def _golden_path_stream():
             await asyncio.sleep(0.05)
 
             try:
-                validator_tx = await asyncio.to_thread(wallet_transfer,
-                    TREASURY_WALLET, VALIDATOR_WALLET, "0.02",
-                    chain, USDC_ADDRESSES.get(chain),
-                )
+                from circle.treasury_budget import check_and_reserve, release
+                _b = check_and_reserve(0.02)
+                if not _b.allowed:
+                    raise RuntimeError(f"evidence purchase refused: {_b.detail}")
+                try:
+                    validator_tx = await asyncio.to_thread(wallet_transfer,
+                        TREASURY_WALLET, VALIDATOR_WALLET, "0.02",
+                        chain, USDC_ADDRESSES.get(chain),
+                    )
+                except Exception:
+                    release(0.02)  # nothing settled; give the headroom back
+                    raise
                 state["treasury"]["spent"] += 0.02
                 state["treasury"]["transactions"].append({
                     "direction": "spend", "amount": "0.02", "to": VALIDATOR_WALLET,
