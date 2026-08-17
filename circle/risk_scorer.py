@@ -57,6 +57,26 @@ HIGH_RISK_SERVICES = frozenset({
     "anonymous-transfer", "privacy-swap",
 })
 
+# ── Payee grammars ───────────────────────────────────────────────────
+# A payee is either a wallet (direct USDC transfer) or an x402 service
+# endpoint (HTTP resource that settles to a wallet behind it). These are
+# screened differently, so they are recognised separately.
+EVM_ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
+# Hostname: dot-separated LDH labels, no leading/trailing hyphen, alpha TLD.
+HOSTNAME_RE = re.compile(
+    r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$"
+)
+
+# x402 service providers with established reputation. Membership means the
+# endpoint is a recognised counterparty, not that its payments are approved —
+# amount, injection, and behavioural signals still apply.
+KNOWN_X402_ENDPOINTS = frozenset({
+    "blockrun.ai",
+    "api.blockrun.ai",
+    "verigate.cloud",
+})
+
 # ── Prompt injection structural patterns ─────────────────────────────
 # These detect *structural* injection, not just keywords. Each pattern
 # targets a specific attack technique used against LLM-driven agents.
@@ -212,6 +232,125 @@ def _check_amount(amount: float, service: str) -> tuple[int, float, list[str], d
     return score, confidence, signals, details
 
 
+def _levenshtein(a: str, b: str) -> int:
+    """Edit distance, used only for typosquat proximity on short hostnames."""
+    if a == b:
+        return 0
+    if len(a) < len(b):
+        a, b = b, a
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def classify_payee(payee: str) -> str:
+    """Classify a payee as an EVM address, an x402 service endpoint, or neither.
+
+    x402 payments name an HTTP resource — the settlement wallet sits behind
+    the endpoint and is not visible in the payee field. Both forms are
+    legitimate, but they are screenable in different ways, so they must be
+    told apart before any format judgement is made.
+
+    Returns one of: "address", "endpoint", "unknown".
+    """
+    p = payee.lower().strip()
+
+    if EVM_ADDRESS_RE.match(p):
+        return "address"
+
+    # Strip a scheme if present; anything other than http(s) is not a payable
+    # web resource and falls through to "unknown".
+    if "://" in p:
+        scheme, _, rest = p.partition("://")
+        if scheme not in ("http", "https"):
+            return "unknown"
+        p = rest
+
+    # Credentials-in-URL is a phishing construction, never a service identity.
+    if "@" in p:
+        return "unknown"
+
+    host = p.split("/", 1)[0].split("?", 1)[0]
+    host = host.rsplit(":", 1)[0] if host.count(":") == 1 else host  # strip :port
+
+    # Bare IP literals are not a service identity we can build reputation on.
+    if IPV4_RE.match(host):
+        return "unknown"
+
+    return "endpoint" if HOSTNAME_RE.match(host) else "unknown"
+
+
+def _check_service_endpoint(payee: str) -> tuple[int, float, list[str], dict]:
+    """Reputation analysis for an x402 service endpoint.
+
+    Deliberately weaker than address screening, and says so. Sanctions
+    screening is an exact match against a wallet list; an endpoint hides its
+    settlement wallet, so OFAC coverage is *not* available here. Rather than
+    silently returning a clean result, this emits an explicit coverage-gap
+    signal and a confidence penalty so the receipt records what was and was
+    not checked. Supplying `settlement_address` alongside the endpoint
+    restores full screening.
+    """
+    score = 0
+    confidence = 0.0
+    signals: list[str] = []
+    details: dict = {}
+
+    stripped = payee.split("://", 1)[-1]
+    host = stripped.split("/", 1)[0].split("?", 1)[0]
+    host = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+
+    signals.append("service_endpoint")
+    details["payee_kind"] = f"x402 service endpoint ({host})"
+
+    # Coverage gap, stated explicitly rather than assumed away.
+    signals.append("settlement_address_unavailable")
+    confidence -= 0.10
+    details["sanctions_coverage"] = (
+        "OFAC screening unavailable: endpoint payee hides its settlement wallet. "
+        "Pass settlement_address to enable exact-match sanctions screening."
+    )
+
+    if payee.startswith("http://"):
+        signals.append("insecure_scheme")
+        score += 15
+        details["scheme"] = "cleartext http:// — endpoint is not authenticated in transit"
+
+    # Punycode is the standard homograph-attack carrier.
+    if any(label.startswith("xn--") for label in host.split(".")):
+        signals.append("punycode_hostname")
+        score += 25
+        details["homograph"] = f"punycode label in {host} — possible homograph attack"
+
+    if host in KNOWN_X402_ENDPOINTS:
+        details["endpoint_reputation"] = f"{host} is a known x402 service provider"
+        return score, confidence, signals, details
+
+    # Typosquat proximity against known providers (b1ockrun.ai vs blockrun.ai).
+    for known in KNOWN_X402_ENDPOINTS:
+        if _levenshtein(host, known) <= 2:
+            signals.append("endpoint_typosquat")
+            # Must clear APPROVE_CEILING on its own: a near-miss against a
+            # known provider is a targeted attack indicator, and must never
+            # approve silently on the strength of an otherwise clean payment.
+            score += 45
+            confidence += 0.05  # a near-miss is strong evidence, not uncertainty
+            details["typosquat"] = f"{host} is {_levenshtein(host, known)} edit(s) from {known}"
+            return score, confidence, signals, details
+
+    # Unknown endpoints carry real risk — never score them as clean.
+    signals.append("unknown_endpoint")
+    score += 10
+    confidence -= 0.05
+    details["endpoint_reputation"] = f"{host} is not a known x402 service provider"
+
+    return score, confidence, signals, details
+
+
 def _check_payee(payee: str, known_payees: list[str] | None) -> tuple[int, float, list[str], dict]:
     """Payee reputation analysis."""
     score = 0
@@ -220,6 +359,7 @@ def _check_payee(payee: str, known_payees: list[str] | None) -> tuple[int, float
     details = {}
 
     normalized = payee.lower().strip()
+    payee_kind = classify_payee(normalized)
 
     # Known-good payee
     if known_payees:
@@ -236,11 +376,21 @@ def _check_payee(payee: str, known_payees: list[str] | None) -> tuple[int, float
             confidence = -0.15
             details["payee"] = "not on allowlist"
 
-    # Address format validation
-    if not re.match(r"^0x[0-9a-fA-F]{40}$", normalized):
+    # Format validation, dispatched on payee kind. An x402 payee is an HTTP
+    # resource, not a wallet — judging it against the EVM address grammar
+    # produces a false `malformed_address` on every well-formed service call.
+    if payee_kind == "endpoint":
+        s, c, sig, det = _check_service_endpoint(normalized)
+        score += s
+        confidence += c
+        signals.extend(sig)
+        details.update(det)
+        return score, confidence, signals, details
+
+    if payee_kind == "unknown":
         signals.append("malformed_address")
         score += 15
-        details["format"] = "not a valid EVM address"
+        details["format"] = "neither a valid EVM address nor a valid service endpoint"
 
     # Null/dead address patterns (real check, not hash-modulo)
     if normalized in ("0x" + "0" * 40, "0x" + "dead" * 10, "0x" + "f" * 40):

@@ -239,6 +239,20 @@ import re
 # auditable — not a hidden magic number buried in a conditional.
 VALIDATOR_AMOUNT_CEILING = 10.0
 
+# Re-derived here rather than imported from circle.risk_scorer: the validator's
+# independence rests on not sharing the primary path's definitions.
+_VALIDATOR_HOSTNAME_RE = re.compile(
+    r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$"
+)
+
+# x402 endpoints the validator will co-sign for. Intentionally narrower than
+# circle.risk_scorer.KNOWN_X402_ENDPOINTS — an endpoint cannot be OFAC-screened,
+# so the validator only accepts ones it has independently accepted.
+VALIDATOR_ENDPOINT_ALLOWLIST = frozenset({
+    "blockrun.ai",
+    "api.blockrun.ai",
+})
+
 
 def _independent_risk(payee: str, amount: str) -> tuple[bool, str]:
     """The validator's OWN risk opinion, re-derived from source data.
@@ -251,10 +265,19 @@ def _independent_risk(payee: str, amount: str) -> tuple[bool, str]:
          same authoritative list Verigate uses, computed here from source.
          Independence comes from re-derivation, not from using a different
          (weaker) list. A sanctioned payee is a hard DENY.
-      2. Address well-formedness — a payee that is not a valid EVM address
-         cannot be a legitimate settlement destination.
+      2. Payee well-formedness — a payee must be either a valid EVM address
+         or a recognised x402 service endpoint. Anything else cannot be a
+         legitimate settlement destination.
       3. Amount ceiling — a declared, auditable threshold above which the
          validator refuses to co-sign without stronger evidence.
+
+    On x402 endpoints the validator is deliberately stricter than the primary
+    scorer. The scorer may approve an unknown endpoint on the strength of
+    other signals; the validator will not co-sign one, because an endpoint
+    conceals the settlement wallet and therefore cannot be sanctions-screened.
+    Only endpoints on the validator's own allowlist pass. This asymmetry is
+    the point of a second opinion — it is re-derived here, not imported from
+    circle.risk_scorer, so the two paths can disagree.
     """
     normalized = payee.lower().strip()
 
@@ -266,15 +289,31 @@ def _independent_risk(payee: str, amount: str) -> tuple[bool, str]:
     except ImportError:
         pass
 
-    # 2. Address well-formedness
+    # 2. Payee well-formedness — wallet address or known service endpoint
     if not re.match(r"^0x[0-9a-fA-F]{40}$", normalized):
-        return True, "payee is not a well-formed EVM address"
+        host = normalized.split("://", 1)[-1].split("/", 1)[0].split("?", 1)[0]
+        host = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+        if "@" in normalized or not _VALIDATOR_HOSTNAME_RE.match(host):
+            return True, "payee is not a well-formed EVM address"
+        if host not in VALIDATOR_ENDPOINT_ALLOWLIST:
+            return True, (
+                f"payee endpoint '{host}' is not on the validator allowlist; "
+                "settlement address unavailable for sanctions screening"
+            )
+        # Known endpoint: skip the address-shaped checks below, which do not
+        # apply, and go straight to the amount ceiling.
+        return _check_amount_ceiling(amount)
 
     # 3. Null / burn address is never a legitimate settlement destination
     if normalized in ("0x" + "0" * 40, "0x" + "f" * 40, "0x" + "dead" * 10):
         return True, "payee is a null/burn address"
 
     # 4. Declared amount ceiling
+    return _check_amount_ceiling(amount)
+
+
+def _check_amount_ceiling(amount: str) -> tuple[bool, str]:
+    """The validator's declared, auditable amount threshold."""
     try:
         amt = float(amount) if amount else 0.0
     except ValueError:
