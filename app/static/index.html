@@ -1973,7 +1973,7 @@ async function runJudgeScreen(){
     let txt=`Decision: ${d.decision}  Score: ${d.score}/100  Band: ${d.band}\nConfidence: ${d.confidence}\nSignals: ${(d.signals||[]).join(', ')}\nRationale: ${d.rationale}`;
     if(d.contributions&&d.contributions.length){txt+=`\n\n--- Risk Contributions ---`;d.contributions.forEach(c=>txt+=`\n  ${c.category}: +${c.score_delta} pts`);}
     if(d.governance){const g=d.governance;txt+=`\n\n--- Governance (${g.tier||'screening'}, ${g.fee||'$0.05'}) ---`;if(g.incident)txt+=`\n  Severity: ${g.incident.severity}\n  Summary: ${g.incident.summary}`;if(g.forensic)txt+=`\n  Severity: ${g.forensic.severity}\n  Root cause: ${g.forensic.root_cause}\n  Loss prevented: ${g.forensic.estimated_loss_prevented}`;if(g.recommendations?.policy_changes)txt+=`\n  Policy changes: ${g.recommendations.policy_changes.map(r=>r.change+' - '+r.rationale).join('; ')}`;}
-    if(d.enforcement)txt+=`\n\n--- Enforcement ---\n  Status: ${d.enforcement.status}  Denials: ${d.enforcement.denials_in_window}/${d.enforcement.breaker_threshold}`;
+    if(d.enforcement)txt+=`\n\n--- Enforcement ---\n  Status: ${d.enforcement.status}  Denials: ${d.enforcement.denial_count ?? d.enforcement.denials_in_window ?? 0}/${d.enforcement.breaker_threshold}`;
     el.style.color=dc;el.textContent=txt;
   }catch(e){el.textContent='Error: '+e.message;el.style.color='#ffb4ab';}
 }
