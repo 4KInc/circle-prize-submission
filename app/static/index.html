@@ -124,7 +124,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <span class="font-mono text-[11px] text-primary-fixed uppercase tracking-wider">Autonomous on Base Mainnet</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-display font-extrabold tracking-tight mb-4 text-on-surface leading-tight">The agent buys evidence <span class="hero-gradient-text">before it decides.</span></h1>
-      <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">A three-wallet autonomous economy native to <strong class="text-on-surface">Circle Agent Wallets</strong>. Every decision terminates in a Circle Agent Wallet UserOperation; the Treasury spends under a Circle-enforced policy to buy a second opinion when a payment is uncertain. The paying wallet holds <strong class="text-on-surface">zero ETH</strong> &mdash; Circle&rsquo;s relayer sponsors gas, so the agent pays only the sub-cent USDC. Remove Circle and the economy does not exist.</p>
+      <p class="text-on-surface-variant text-sm leading-relaxed mb-6 max-w-xl">A three-wallet autonomous economy native to <strong class="text-on-surface">Circle Agent Wallets</strong>. Every decision terminates in a Circle Agent Wallet UserOperation; the Treasury spends under a Circle-enforced policy to buy a second opinion when a payment is uncertain. The paying wallet holds <strong class="text-on-surface">zero ETH</strong>, so Circle&rsquo;s relayer sponsors the gas and the agent pays only the sub-cent USDC. Remove Circle and the economy does not exist.</p>
       <div class="flex gap-3 mb-5">
         <button class="btn-primary h-10 px-5 rounded-xl font-display text-sm font-bold flex items-center gap-2" onclick="go('livedemo')">Watch Live Demo <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">arrow_forward</span></button>
         <button class="btn-secondary h-10 px-5 rounded-xl font-display text-sm flex items-center gap-2" onclick="go('wallets')">View Treasury</button>
@@ -139,9 +139,9 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
 
-  <!-- Stats Bar — evenly spaced metrics -->
+  <!-- Stats Bar: evenly spaced metrics -->
   <div class="rounded-2xl px-6 py-5 mb-10 border border-primary-fixed/10 relative overflow-hidden" id="scheduler-card" style="background:linear-gradient(135deg, rgba(24,28,16,0.4) 0%, rgba(20,22,28,0.7) 100%)">
-    <div class="text-center mb-3"><span class="font-mono text-[8px] text-on-surface-variant/30 uppercase tracking-widest">Autonomous risk scoring, every 30 min. Counters reset when the Cloud Run instance restarts, so these show the current instance only. Scoring is off-chain by design &mdash; the scheduler moves no USDC; settlement is proven separately by the mainnet transactions below.</span></div>
+    <div class="text-center mb-3"><span class="font-mono text-[8px] text-on-surface-variant/30 uppercase tracking-widest">Autonomous risk scoring, every 30 min. Counters reset when the Cloud Run instance restarts, so these show the current instance only. Scoring is off-chain by design: the scheduler moves no USDC; settlement is proven separately by the mainnet transactions below.</span></div>
     <div class="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
       <div class="flex flex-col items-center">
         <span class="font-mono text-2xl font-bold text-on-surface" id="sched-runs">0</span>
@@ -176,7 +176,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <div class="hidden" id="sched-evidence-spend"></div>
   </div>
 
-  <!-- How It Works — 6-step causal chain -->
+  <!-- How It Works: 6-step causal chain -->
   <div class="mb-10">
     <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
       <div class="rounded-xl p-3 border border-white/[.04]" style="background:rgba(26,28,32,0.7)">
@@ -210,7 +210,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
 
-  <!-- Money Flow — visual diagram -->
+  <!-- Money Flow: visual diagram -->
   <div class="mb-8 rounded-xl p-6 border border-white/[.04]" style="background:rgba(255,255,255,0.015)">
     <!-- Flow 1: Enterprise -> Treasury -> Validator -->
     <div class="flex items-center justify-center gap-3 mb-4">
@@ -264,23 +264,23 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
   </div>
 
-  <!-- Treasury P&L — one line -->
+  <!-- Treasury P&L: one line -->
   <div class="flex items-center justify-center gap-6 mb-6 flex-wrap">
     <div class="flex items-center gap-1.5">
       <span class="font-mono text-[10px] text-on-surface-variant/40">Received (self-paid)</span>
-      <span class="font-mono text-sm text-primary-fixed font-bold" id="ov-earned">—</span>
+      <span class="font-mono text-sm text-primary-fixed font-bold" id="ov-earned">-</span>
     </div>
     <div class="flex items-center gap-1.5">
       <span class="font-mono text-[10px] text-on-surface-variant/40">Evidence spend</span>
-      <span class="font-mono text-sm text-[#ffaf00]" id="ov-spent">—</span>
+      <span class="font-mono text-sm text-[#ffaf00]" id="ov-spent">-</span>
     </div>
     <div class="flex items-center gap-1.5">
       <span class="font-mono text-[10px] text-on-surface-variant/40">Margin</span>
-      <span class="font-mono text-sm text-primary-fixed" id="ov-margin">—</span>
+      <span class="font-mono text-sm text-primary-fixed" id="ov-margin">-</span>
     </div>
   </div>
 
-  <!-- Gemini roles — compact pill row -->
+  <!-- Gemini roles: compact pill row -->
   <div class="flex items-center justify-center gap-2 mb-8 flex-wrap">
     <span class="font-mono text-[9px] text-on-surface-variant/30 mr-1">Gemini 2.5</span>
     <span class="font-mono text-[9px] px-2 py-0.5 rounded-full border border-[#4285f4]/20 text-[#4285f4]/70" style="background:rgba(66,133,244,0.05)">STEP_UP reasoning</span>
@@ -289,7 +289,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <span class="font-mono text-[9px] px-2 py-0.5 rounded-full border border-[#4285f4]/20 text-[#4285f4]/70" style="background:rgba(66,133,244,0.05)">Governance agents</span>
   </div>
 
-  <!-- Mainnet Proof — compact inline -->
+  <!-- Mainnet Proof: compact inline -->
   <div class="flex flex-wrap items-center justify-center gap-4 mb-8">
     <a href="https://basescan.org/tx/0x5db4466814dd16e56e35ee1aa60470c321dba6daff65cfca56ce5130e4249c58" target="_blank" class="font-mono text-[11px] text-primary-fixed/70 hover:text-primary-fixed transition-colors flex items-center gap-1 no-underline">Fee: $0.05 <span class="material-symbols-outlined" style="font-size:12px">open_in_new</span></a>
     <span class="text-on-surface-variant/20">|</span>
@@ -302,11 +302,11 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   </div>
 </div>
 
-<!-- VIEW: Live Demo — Three-Agent Loop Visualization -->
+<!-- VIEW: Live Demo: Three-Agent Loop Visualization -->
 <div class="view" id="v-livedemo">
   <div class="rounded-lg px-4 py-2 mb-4 flex items-center gap-2 border border-[#ffaf00]/20" style="background:rgba(255,175,0,0.05)">
     <span class="material-symbols-outlined text-[#ffaf00]" style="font-size:16px">info</span>
-    <span class="font-mono text-[10px] text-[#ffaf00]/80">Hackathon demo only — this visualization is for judges evaluating the Circle Agentic Economy Prize. In production, the API operates headlessly via <code class="text-on-surface-variant/60">POST /api/agent/handle</code>.</span>
+    <span class="font-mono text-[10px] text-[#ffaf00]/80">Hackathon demo only: this visualization is for judges evaluating the Circle Agentic Economy Prize. In production, the API operates headlessly via <code class="text-on-surface-variant/60">POST /api/agent/handle</code>.</span>
   </div>
   <div class="mb-6">
     <h2 class="font-display text-2xl md:text-3xl font-bold text-on-surface mb-2">Autonomous Agent Loop</h2>
@@ -334,13 +334,13 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <!-- Enforcement State -->
       <div class="rounded-lg p-3 mb-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
         <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Enforcement</div>
-        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-enforcement">—</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-enforcement">-</div>
       </div>
 
       <!-- Feedback -->
       <div class="rounded-lg p-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
         <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Carrier Feedback</div>
-        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-feedback">—</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ent-feedback">-</div>
       </div>
     </div>
 
@@ -356,9 +356,9 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <div class="rounded-lg p-3 mb-3 border border-white/[.04] transition-all duration-500" id="ld-vg-risk" style="background:rgba(255,255,255,0.02)">
         <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Risk Assessment</div>
         <div class="flex items-center gap-3">
-          <span class="font-mono text-2xl font-bold text-on-surface-variant/30" id="ld-vg-score">—</span>
+          <span class="font-mono text-2xl font-bold text-on-surface-variant/30" id="ld-vg-score">-</span>
           <div>
-            <div class="font-mono text-xs font-bold" id="ld-vg-decision" style="color:rgba(255,255,255,0.3)">—</div>
+            <div class="font-mono text-xs font-bold" id="ld-vg-decision" style="color:rgba(255,255,255,0.3)">-</div>
             <div class="font-mono text-[10px] text-on-surface-variant/40" id="ld-vg-band"></div>
           </div>
         </div>
@@ -372,15 +372,15 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
         <div class="font-mono text-[10px] text-on-surface-variant/60 leading-relaxed" id="ld-vg-gemini-text">Analyzing...</div>
         <div class="flex items-center gap-2 mt-2" id="ld-vg-gemini-meta" style="display:none">
-          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded" id="ld-vg-gemini-action" style="background:rgba(255,75,75,0.15);color:#ffb4ab">—</span>
-          <span class="font-mono text-[9px] text-on-surface-variant/40" id="ld-vg-gemini-conf">—</span>
+          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded" id="ld-vg-gemini-action" style="background:rgba(255,75,75,0.15);color:#ffb4ab">-</span>
+          <span class="font-mono text-[9px] text-on-surface-variant/40" id="ld-vg-gemini-conf">-</span>
         </div>
       </div>
 
       <!-- Breaker -->
       <div class="rounded-lg p-3 mb-3 border border-white/[.04] transition-all duration-500" id="ld-vg-breaker" style="background:rgba(255,255,255,0.02)">
         <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Circuit Breaker</div>
-        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-vg-breaker-status">—</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-vg-breaker-status">-</div>
         <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-vg-replays"></div>
       </div>
 
@@ -389,11 +389,11 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Settlement (self-paid demo)</div>
         <div class="flex justify-between">
           <span class="font-mono text-[11px] text-on-surface-variant/50">Checks:</span>
-          <span class="font-mono text-[11px] text-primary-fixed" id="ld-vg-rev-checks">—</span>
+          <span class="font-mono text-[11px] text-primary-fixed" id="ld-vg-rev-checks">-</span>
         </div>
         <div class="flex justify-between">
           <span class="font-mono text-[11px] text-on-surface-variant/50">Pulls:</span>
-          <span class="font-mono text-[11px] text-secondary" id="ld-vg-rev-pulls">—</span>
+          <span class="font-mono text-[11px] text-secondary" id="ld-vg-rev-pulls">-</span>
         </div>
       </div>
     </div>
@@ -415,18 +415,18 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <!-- Evidence Pull -->
       <div class="rounded-lg p-3 mb-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
         <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Evidence Pull</div>
-        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ca-pull">—</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ca-pull">-</div>
       </div>
 
       <!-- Assessment -->
       <div class="rounded-lg p-3 border border-white/[.04]" style="background:rgba(255,255,255,0.02)">
         <div class="font-mono text-[9px] text-on-surface-variant/40 uppercase mb-1">Assessment</div>
-        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ca-assessment">—</div>
+        <div class="font-mono text-[11px] text-on-surface-variant/50" id="ld-ca-assessment">-</div>
         <div class="font-mono text-[9px] text-on-surface-variant/30 mt-1" id="ld-ca-stub"></div>
       </div>
     </div>
 
-    <!-- Flow arrows (desktop) — positioned in the gap between cards -->
+    <!-- Flow arrows (desktop): positioned in the gap between cards -->
     <div class="hidden md:flex absolute z-30 flex-col items-center gap-0.5 pointer-events-none" id="ld-arrow-e2v" style="opacity:0;transition:opacity 0.5s;left:33.33%;top:40%;transform:translate(-50%,-50%)">
       <span class="font-mono text-[10px] text-primary-fixed bg-surface/90 px-2 py-1 rounded-md border border-primary-fixed/20 shadow-lg" id="ld-arrow-e2v-label">$0.05</span>
       <span class="text-primary-fixed/70 text-base">→</span>
@@ -469,7 +469,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   </div>
 </div>
 
-<!-- VIEW: Try It (removed — Live Demo replaces it) -->
+<!-- VIEW: Try It (removed: Live Demo replaces it) -->
 <!-- The interactive form was removed to avoid the "human checkout" disqualification risk.
      Judges can use the terminal: curl -X POST https://verigate.cloud/api/check -->
 <div class="view" id="v-tryit" style="display:none">
@@ -505,7 +505,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
         <div class="flex items-center gap-3 pt-2">
           <select id="tryit-scenario" onchange="updateTryItScenario()" class="bg-surface-container-lowest border border-white/[.08] rounded-lg px-3 py-2.5 font-mono text-xs text-on-surface focus:border-primary-fixed/40 focus:outline-none">
-            <option value="rogue" selected>Rogue attack (DENY) &mdash; $0 loss</option>
+            <option value="rogue" selected>Rogue attack (DENY): $0 loss</option>
             <option value="uncertain">Uncertain risk (STEP_UP)</option>
             <option value="safe">Safe payment (APPROVE)</option>
           </select>
@@ -593,7 +593,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
             <span class="material-symbols-outlined text-[#ffaf00]" style="font-size:16px;font-variation-settings:'FILL' 1">bolt</span>
             <span class="font-mono text-xs text-[#ffaf00] font-bold">STEP_UP: Evidence Purchase</span>
           </div>
-          <div class="text-xs text-on-surface-variant/70">Paid Evidence Validator $0.02 USDC for independent verification &mdash; a Circle Agent Wallet transfer, gas sponsored.</div>
+          <div class="text-xs text-on-surface-variant/70">Paid Evidence Validator $0.02 USDC for independent verification, via a Circle Agent Wallet transfer with gas sponsored.</div>
           <div id="tryit-stepup-tx" class="font-mono text-[10px] text-on-surface-variant/40 mt-2">tx 0xdfcd67…  BASE MAINNET</div>
         </div>
         <!-- Receipt -->
@@ -900,7 +900,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <div class="flex items-center justify-between mb-2">
     <div>
       <h1 class="font-display text-4xl font-extrabold text-on-surface">Proof Explorer</h1>
-      <p class="text-on-surface-variant text-sm mt-1">Every receipt Verigate received USDC for. All transfers to date are between Verigate’s own wallets — self-paid demo settlement, not third-party revenue. Tamper-evident, independently verifiable.</p>
+      <p class="text-on-surface-variant text-sm mt-1">Every receipt Verigate received USDC for. All transfers to date are between Verigate’s own wallets: self-paid demo settlement, not third-party revenue. Tamper-evident, independently verifiable.</p>
     </div>
     <div class="flex items-center gap-2 bg-surface-container/60 px-4 py-2 rounded-full border border-primary-fixed/20">
       <span class="w-2 h-2 rounded-full bg-primary-fixed status-glow animate-pulse"></span>
@@ -966,7 +966,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   </div>
 </div>
 
-<!-- VIEW: Evidence Vault — Carrier/Insurer Portal -->
+<!-- VIEW: Evidence Vault: Carrier/Insurer Portal -->
 <div class="view" id="v-evidence">
   <div class="mb-6">
     <h2 class="font-display text-2xl md:text-4xl font-bold text-on-surface mb-2">Evidence Vault</h2>
@@ -1261,7 +1261,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   <span class="key">"score"</span>: <span class="num">12</span>,
   <span class="key">"band"</span>: <span class="str">"LOW"</span>,
   <span class="key">"confidence"</span>: <span class="num">0.95</span>,
-  <span class="key">"rationale"</span>: <span class="str">"Low risk — known vendor, within cap"</span>,
+  <span class="key">"rationale"</span>: <span class="str">"Low risk: known vendor, within cap"</span>,
   <span class="key">"contributions"</span>: [
     {<span class="key">"category"</span>: <span class="str">"novel_counterparty"</span>, <span class="key">"weight"</span>: <span class="num">12</span>}
   ],
@@ -1287,7 +1287,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     <div>
       <div class="ds-code-block">
         <div class="ds-code-header"><span>x402 Payment Flow</span><div class="ds-code-actions"><button class="ds-code-btn" onclick="copyCode(this)"><span class="material-symbols-outlined" style="font-size:12px">content_copy</span></button></div></div>
-        <pre><span class="cm"># Step 1: Call endpoint — get 402 + payment requirements</span>
+        <pre><span class="cm"># Step 1: Call endpoint, get 402 + payment requirements</span>
 <span class="kw">curl</span> https://verigate.cloud/x402/security-check
 
 <span class="cm"># Step 2: Pay via Circle Agent Wallet (gas sponsored)</span>
@@ -1357,7 +1357,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
   }'</span></pre>
       </div>
       <div class="ds-code-block" style="margin-top:8px">
-        <div class="ds-code-header"><span>Response — DENY (governance tier)</span><div class="ds-code-actions"><button class="ds-code-btn" onclick="copyCode(this)"><span class="material-symbols-outlined" style="font-size:12px">content_copy</span></button></div><span style="font-size:10px;color:#ffb4ab">DENY</span></div>
+        <div class="ds-code-header"><span>Response: DENY (governance tier)</span><div class="ds-code-actions"><button class="ds-code-btn" onclick="copyCode(this)"><span class="material-symbols-outlined" style="font-size:12px">content_copy</span></button></div><span style="font-size:10px;color:#ffb4ab">DENY</span></div>
         <pre>{
   <span class="key">"decision"</span>: <span class="str">"DENY"</span>,
   <span class="key">"score"</span>: <span class="num">95</span>,
@@ -1612,7 +1612,7 @@ result = screen({
 <span class="kw">if</span> result[<span class="str">"verdict"</span>] == <span class="str">"APPROVE"</span>:
     execute_payment()
 <span class="kw">elif</span> result[<span class="str">"verdict"</span>] == <span class="str">"STEP_UP"</span>:
-    <span class="cm"># Verigate is buying evidence — wait</span>
+    <span class="cm"># Verigate is buying evidence, wait</span>
     wait_for_confirmation()
 <span class="kw">else</span>:
     log_blocked(result[<span class="str">"reasoning"</span>])</pre>
@@ -1793,7 +1793,7 @@ response = openai.chat.completions.create(
       </div>
       <div>
         <div class="font-mono text-[10px] font-bold uppercase tracking-wider text-tertiary-fixed-dim mb-2">Settlement</div>
-        <p class="leading-relaxed">Payments settle in USDC via Circle Agent Wallets &mdash; no gas fees, no minimums, no signup. The three proof transactions are on Base mainnet; the interactive demo settles on Base Sepolia to conserve mainnet funds. Every receipt is labelled with the chain it actually settled on.</p>
+        <p class="leading-relaxed">Payments settle in USDC via Circle Agent Wallets. No gas fees, no minimums, no signup. The three proof transactions are on Base mainnet; the interactive demo settles on Base Sepolia to conserve mainnet funds. Every receipt is labelled with the chain it actually settled on.</p>
       </div>
     </div>
   </div>
@@ -2683,7 +2683,7 @@ function loadData(){
         const tx=del.settlement_tx||'';
         at+='<div class="flex gap-4 pb-4"><div class="flex flex-col items-center"><div class="w-2.5 h-2.5 rounded-full '+dot+' shrink-0" style="box-shadow:0 0 12px '+glow+'"></div><div class="w-0.5 bg-white/5 flex-1 mt-1.5"></div></div>';
         at+='<div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="px-2 py-0.5 rounded-full '+labelBg+' font-mono text-[10px]">'+label+'</span><span class="font-mono text-[10px] text-on-surface-variant">seq '+b.seq+'</span></div>';
-        at+='<p class="text-xs text-on-surface">'+b.decision?.toUpperCase()+' — '+(r.receipt_hash||'').substring(0,24)+'...'+(tx?' tx: <span class="font-mono text-secondary">'+tx.substring(0,16)+'...</span>':'')+'</p></div></div>';
+        at+='<p class="text-xs text-on-surface">'+b.decision?.toUpperCase()+': '+(r.receipt_hash||'').substring(0,24)+'...'+(tx?' tx: <span class="font-mono text-secondary">'+tx.substring(0,16)+'...</span>':'')+'</p></div></div>';
       });
       if(d.isolations?.length){
         d.isolations.forEach(iso=>{
@@ -2841,9 +2841,9 @@ async function runTryIt(){
       'unknown_payee':'Payee not in known allowlist',
     };
     const factorsEl=document.getElementById('tryit-factors');
-    factorsEl.innerHTML=factors.length?factors.map(f=>'<span class="font-mono text-[10px] px-2 py-1 rounded-full border border-white/[.06] cursor-help" style="background:rgba(255,255,255,0.03);color:'+color+'" title="'+(signalExplain[f]||f)+'">'+f+'</span>').join(''):'<span class="text-xs text-on-surface-variant/50">No risk signals — clean baseline</span>';
+    factorsEl.innerHTML=factors.length?factors.map(f=>'<span class="font-mono text-[10px] px-2 py-1 rounded-full border border-white/[.06] cursor-help" style="background:rgba(255,255,255,0.03);color:'+color+'" title="'+(signalExplain[f]||f)+'">'+f+'</span>').join(''):'<span class="text-xs text-on-surface-variant/50">No risk signals, clean baseline</span>';
 
-    // Rationale — the honest "why this decision" sentence from the engine
+    // Rationale: the honest "why this decision" sentence from the engine
     const ratBox=document.getElementById('tryit-rationale-box');
     if(d.rationale){
       const ratEl=document.getElementById('tryit-rationale');
@@ -2852,7 +2852,7 @@ async function runTryIt(){
       ratBox.classList.remove('hidden');
     }else{ratBox.classList.add('hidden')}
 
-    // Score attribution — per-category contributions (fully auditable)
+    // Score attribution: per-category contributions (fully auditable)
     const contribBox=document.getElementById('tryit-contrib-box');
     const contribs=(d.contributions||[]).filter(c=>c.score_delta>0).sort((a,b)=>b.score_delta-a.score_delta);
     if(contribs.length){
@@ -2869,7 +2869,7 @@ async function runTryIt(){
       contribBox.classList.remove('hidden');
     }else{contribBox.classList.add('hidden')}
 
-    // Provenance — OFAC feed version + agent behavioral baseline
+    // Provenance: OFAC feed version + agent behavioral baseline
     const provBox=document.getElementById('tryit-provenance-box');
     const sf=d.sanctions_feed||{};
     const ab=d.agent_baseline||{};
@@ -2883,7 +2883,7 @@ async function runTryIt(){
       document.getElementById('tryit-baseline').innerHTML=
         '<div>'+obs+' prior obs · '+(ab.distinct_payees||0)+' payees</div>'+
         (ab.median_amount!==null&&ab.median_amount!==undefined?'<div class="text-on-surface-variant/50">median $'+ab.median_amount+'</div>':'')+
-        (obs===0?'<div class="text-on-surface-variant/40">cold start — no history yet</div>':'');
+        (obs===0?'<div class="text-on-surface-variant/40">cold start, no history yet</div>':'');
       provBox.classList.remove('hidden');
     }else{provBox.classList.add('hidden')}
 
@@ -2941,7 +2941,7 @@ async function runTryIt(){
     document.getElementById('tryit-score-num').style.color='#ffb4ab';
     document.getElementById('tryit-decision-badge').textContent='RETRY';
     document.getElementById('tryit-decision-badge').style.cssText='background:rgba(255,180,171,0.1);color:#ffb4ab;border:1px solid rgba(255,180,171,0.25)';
-    document.getElementById('tryit-confidence').textContent='Server cold start — click again';
+    document.getElementById('tryit-confidence').textContent='Server cold start, click again';
     document.getElementById('tryit-band').textContent=e.name==='AbortError'?'Timeout (retrying wakes server)':'Error';
     document.getElementById('tryit-factors').innerHTML='<span class="text-xs text-on-surface-variant/60">The server may be waking from sleep. Click Check Payment again.</span>';
     document.getElementById('tryit-hash').textContent='--';
@@ -3135,7 +3135,7 @@ async function loadSchedulerStatus(){
     document.getElementById('sched-evidence-spend').textContent='$'+evidenceSpend;
     // Treasury P&L
     const earned=((s.total_runs||0)*0.05).toFixed(2);
-    const margin=earned>0?((earned-evidenceSpend)/earned*100).toFixed(1):'—';
+    const margin=earned>0?((earned-evidenceSpend)/earned*100).toFixed(1):'-';
     const eEl=document.getElementById('ov-earned');
     const sEl=document.getElementById('ov-spent');
     const mEl=document.getElementById('ov-margin');
@@ -3174,23 +3174,23 @@ function ldReset(){
   ['ld-ent-payee','ld-ent-amount','ld-ent-reason'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.textContent='';
   });
-  document.getElementById('ld-ent-enforcement').textContent='—';
-  document.getElementById('ld-ent-feedback').textContent='—';
-  document.getElementById('ld-vg-score').textContent='—';
-  document.getElementById('ld-vg-decision').textContent='—';
+  document.getElementById('ld-ent-enforcement').textContent='-';
+  document.getElementById('ld-ent-feedback').textContent='-';
+  document.getElementById('ld-vg-score').textContent='-';
+  document.getElementById('ld-vg-decision').textContent='-';
   document.getElementById('ld-vg-decision').style.color='rgba(255,255,255,0.3)';
   document.getElementById('ld-vg-band').textContent='';
   document.getElementById('ld-vg-signals').textContent='';
-  document.getElementById('ld-vg-breaker-status').textContent='—';
+  document.getElementById('ld-vg-breaker-status').textContent='-';
   document.getElementById('ld-vg-replays').textContent='';
-  document.getElementById('ld-vg-rev-checks').textContent='—';
-  document.getElementById('ld-vg-rev-pulls').textContent='—';
+  document.getElementById('ld-vg-rev-checks').textContent='-';
+  document.getElementById('ld-vg-rev-pulls').textContent='-';
   document.getElementById('ld-vg-gemini').style.display='none';
   document.getElementById('ld-vg-gemini-text').textContent='Analyzing...';
   document.getElementById('ld-vg-gemini-meta').style.display='none';
   document.getElementById('ld-ca-events').textContent='Listening...';
-  document.getElementById('ld-ca-pull').textContent='—';
-  document.getElementById('ld-ca-assessment').textContent='—';
+  document.getElementById('ld-ca-pull').textContent='-';
+  document.getElementById('ld-ca-assessment').textContent='-';
   document.getElementById('ld-ca-stub').textContent='';
   // Reset dots
   ['ld-ent-dot','ld-vg-dot','ld-ca-dot'].forEach(id=>{
@@ -3318,7 +3318,7 @@ function handleLDStep(d){
     document.getElementById('ld-vg-signals').textContent=d.signals.join(', ');
     document.getElementById('ld-ent-enforcement').innerHTML='Decision: <span class="text-error font-bold">DENY</span>';
     document.getElementById('ld-vg-rev-checks').textContent='$0.05';
-    ldTimeline('DENY — score '+d.score+' ('+d.band+'). OFAC SDN match + '+d.signals.length+' signals','#ffb4ab');
+    ldTimeline('DENY: score '+d.score+' ('+d.band+'). OFAC SDN match + '+d.signals.length+' signals','#ffb4ab');
 
     // Show Gemini reasoning if available
     const gr=d.gemini_reasoning||{};
@@ -3332,7 +3332,7 @@ function handleLDStep(d){
       metaEl.style.display='flex';
       const actionColors={DENY:'#ffb4ab',CONFIRM:'#b8f600',INSUFFICIENT:'#ffaf00'};
       const actionEl=document.getElementById('ld-vg-gemini-action');
-      actionEl.textContent=gr.action||'—';
+      actionEl.textContent=gr.action||'-';
       actionEl.style.color=actionColors[gr.action]||'#ffb4ab';
       actionEl.style.background=(actionColors[gr.action]||'#ffb4ab')+'20';
       document.getElementById('ld-vg-gemini-conf').textContent='confidence: '+(gr.confidence||0).toFixed(2);
@@ -3351,7 +3351,7 @@ function handleLDStep(d){
     document.getElementById('ld-vg-replays').innerHTML=repText;
     document.getElementById('ld-vg-breaker-status').innerHTML='Breaker: <span class="text-[#ffaf00] font-bold">'+reps[reps.length-1].breaker_status.replace('session_','')+'</span>';
     document.getElementById('ld-ent-enforcement').innerHTML='Status: <span class="text-error font-bold">SUSPENDED</span>';
-    ldTimeline('Enterprise replays 6x — all detected, no re-scoring, no re-charge','#ffaf00');
+    ldTimeline('Enterprise replays 6x, all detected, no re-scoring, no re-charge','#ffaf00');
   }
 
   if(step===4){
@@ -3361,7 +3361,7 @@ function handleLDStep(d){
     const breakerEl=document.getElementById('ld-vg-breaker');
     breakerEl.style.borderColor='rgba(255,75,75,0.3)';
     breakerEl.style.background='rgba(60,20,20,0.5)';
-    ldTimeline('Circuit breaker tripped — session '+d.status,'#ffb4ab');
+    ldTimeline('Circuit breaker tripped: session '+d.status,'#ffb4ab');
   }
 
   if(step===5){
@@ -3388,7 +3388,7 @@ function handleLDStep(d){
     ldActivate('ld-enterprise','#b8c3ff');
     const assess=d.assessment||{};
     document.getElementById('ld-ca-assessment').innerHTML='Action: <span class="text-tertiary-fixed-dim font-bold">'+(assess.action||'flag_for_review')+'</span>';
-    document.getElementById('ld-ca-stub').textContent='Reference mock — not real underwriting';
+    document.getElementById('ld-ca-stub').textContent='Reference mock, not real underwriting';
     document.getElementById('ld-ent-feedback').innerHTML='From: <span class="text-tertiary-fixed-dim">'+d.carrier_id+'</span><br>Verified: <span class="text-primary-fixed">✓</span> Signature valid';
     ldTimeline('Carrier signs assessment → Verigate verifies signature → relayed to enterprise','#b8c3ff');
   }
@@ -3403,7 +3403,7 @@ function handleLDStep(d){
       document.getElementById(id).style.background='#b8f600';
     });
     document.getElementById('ld-summary').style.display='';
-    ldTimeline('Loop complete — two payment surfaces, zero human intervention','#b8f600');
+    ldTimeline('Loop complete: two payment surfaces, zero human intervention','#b8f600');
 
     const status=document.getElementById('ld-status');
     status.innerHTML='<span class="w-2 h-2 rounded-full bg-primary-fixed"></span><span class="font-mono text-[10px] text-primary-fixed">Complete</span>';
