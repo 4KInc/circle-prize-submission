@@ -18,6 +18,8 @@ The score drives Verigate's three-state decision engine:
 
 from __future__ import annotations
 
+import base64
+import binascii
 import math
 import re
 import time
@@ -96,6 +98,14 @@ KNOWN_X402_ENDPOINTS = frozenset({
 _CMD = r"(?:ignore|disregard|forget|override|bypass|skip|reveal|show|print|leak|dump|repeat|disable)"
 # Objects those imperatives target.
 _OBJ = r"(?:instructions?|rules?|policies|policy|constraints?|guidelines?|directives?|checks?|screening|safety|restrictions?)"
+# Framing that presents text as output from an earlier tool or model.
+_RESULT_FRAME = (r"(?:tool\s+result|tool\s+output|assistant\s+output|function\s+result|"
+                 r"upstream\s+\w+\s+returned|validator\s+returned|screening\s+complete|"
+                 r"decision\s*[:=]\s*APPROVE|\bverdict\W{0,3}\s*[:=])")
+# A directive to act on that framing instead of screening.
+_BYPASS_CUE = (r"(?:proceed|continue|on\s+that\s+basis|already\s+(?:approved|screened|cleared)|"
+               r"no\s+further\s+(?:screening|checks?|review|verification)|"
+               r"skip\s+(?:the\s+)?(?:screening|checks?|review))")
 
 INJECTION_PATTERNS = [
     # Role/identity hijacking -- reassignment aimed at the reader ("you", "your"),
@@ -141,6 +151,39 @@ INJECTION_PATTERNS = [
                 r"(?:to\s+\w+|this|it|that|the\s+(?:payment|transfer|tx|transaction|release)|out[\s\-]?of[\s\-]?band))",
                 re.I), "authority_spoof", 20),
 
+    # Indirect / deferred injection -- the payload does not name what it is
+    # overriding, it points at it positionally ("the above", "the preceding
+    # context") or addresses the reading model directly. Requires a positional
+    # or addressed target, so "ignore the sidebar when rendering" and
+    # "summarise the new instructions in the handbook" do not fire.
+    (re.compile(r"(?:ignore|disregard|forget)\s+(?:everything\s+)?(?:the\s+)?"
+                r"(?:above|below|preceding|foregoing|earlier\s+\w+|prior\s+context|previous\s+context)|"
+                r"(?:^|[\n.;])\s*new\s+instructions?\s*:|"
+                r"note\s+to\s+(?:the\s+)?(?:reviewing\s+)?(?:model|assistant|agent|ai|llm|reader)|"
+                r"(?:previous|prior|earlier)\s+(?:guidance|instructions?|rules?|policy|policies)\s+"
+                r"(?:no\s+longer\s+(?:applies|apply)|are\s+void|is\s+void|do(?:es)?\s*n[o']?t\s+apply)",
+                re.I), "indirect_injection", 25),
+
+    # Tool-result echo -- a payload dressed as upstream output, claiming this
+    # payment was already cleared. Requires BOTH a result frame and a directive
+    # to act on it, because the vocabulary alone is ordinary: "the tool returned
+    # 3 results", "upstream API returned status 200" and "validator returned
+    # CONFIRM for batch 7 - chart the pass rate" are all legitimate. What makes
+    # it an attack is the instruction to stop checking.
+    (re.compile(rf"{_RESULT_FRAME}[\s\S]{{0,120}}?{_BYPASS_CUE}|"
+                rf"{_BYPASS_CUE}[\s\S]{{0,120}}?{_RESULT_FRAME}", re.I), "tool_echo_inject", 25),
+
+    # Hypothetical-framing jailbreak -- "imagine you had no rules, now do it".
+    # Deliberately NOT in strong_injection: hypothetical language is ordinary
+    # ("hypothetically the model could refuse", "imagine a user with no
+    # account"), so this escalates to STEP_UP and never denies on its own. The
+    # tell is that the hypothetical is addressed to the reader AND removes its
+    # constraints; a hypothetical about a third party does not fire.
+    (re.compile(r"(?:hypothetical(?:ly)?|imagine|suppose|let'?s\s+say|what\s+if)[\s\S]{0,60}?"
+                r"you\s+(?:had|have|were|are)\s+(?:no|without\s+any)\s+"
+                r"(?:policy|policies|rules?|restrictions?|limits?|constraints?|guidelines?|filters?|safeguards?)",
+                re.I), "hypothetical_jailbreak", 20),
+
     # Delimiter smuggling -- see CORROBORATING_SIGNALS below. A fence or heading
     # on its own is formatting; it only counts when it wraps something else that
     # already looks like an injection.
@@ -157,6 +200,105 @@ CORROBORATING_SIGNALS = frozenset({"delimiter_inject", "high_entropy_payload"})
 # not read as an encoded payload.
 _STRUCTURED_TOKEN_RE = re.compile(
     r"\b(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-fA-F]{16,})\b")
+
+# ── Obfuscation normalization ───────────────────────────────────────────────
+# Attackers spell an imperative so the regex misses it while a language model
+# still reads it: Cyrillic lookalikes, spaced-out letters, digit substitution.
+# Normalizing and re-running the SAME detectors adds no new firing condition --
+# the recovered text must still contain an imperative aimed at the model. A
+# decoded or de-spaced grocery list is not an attack.
+#
+# The guard that matters is that normalization must not MANUFACTURE an
+# imperative: real Cyrillic and Greek prose, spelled-out tickers ("T E S L A")
+# and part numbers ("S-E-R-I-A-L-2024") must survive it as nonsense, not as
+# instructions. The benign corpus pins that.
+_CONFUSABLES = str.maketrans({
+    "\u0430": "a", "\u0435": "e", "\u043e": "o", "\u0440": "p", "\u0441": "c",
+    "\u0443": "y", "\u0445": "x", "\u0456": "i", "\u0433": "r",
+    "\u04bb": "h", "\u0458": "j", "\u0455": "s", "\u04cf": "i",
+    "\u03bf": "o", "\u03b1": "a", "\u03b5": "e", "\u03c1": "p", "\u03c5": "u",
+    "\u03ba": "k", "\u03bd": "v", "\u03c7": "x", "\u03b9": "i",
+    "\u0131": "i", "\u0130": "I", "\u04bd": "e",
+})
+_LEET = str.maketrans({"0": "o", "1": "l", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"})
+# Three or more single letters separated by spaces or hyphens: "i g n o r e",
+# and short filler like "a l l" which the imperative needs to stay intact.
+_SPACED_RUN_RE = re.compile(r"\b(?:[A-Za-z][ \-]){2,}[A-Za-z]\b")
+
+
+def _normalize_obfuscation(text: str) -> str:
+    """Undo homoglyph, spacing and digit-substitution obfuscation."""
+    out = text.translate(_CONFUSABLES)
+    out = _SPACED_RUN_RE.sub(lambda m: re.sub(r"[ \-]", "", m.group(0)), out)
+    return out.translate(_LEET)
+
+
+# ── Encoded-payload decoding ────────────────────────────────────────────────
+# An imperative can be hidden in base64, hex or unicode escapes. Decoding and
+# re-scanning recovers it -- but decoding is the single largest false-positive
+# risk in this file, because base64 and hex in a payment reason are USUALLY
+# data: artifact digests, webhook bodies, image fragments, commit SHAs, colour
+# values.
+#
+# So the rule is decode-then-detect, never decode-then-flag. Successfully
+# decoding something is not evidence of anything. The recovered text must
+# itself trip a structural detector -- an imperative aimed at the model -- or
+# nothing fires. A decoded shipping-status JSON stays APPROVE.
+_B64_RE = re.compile(r"\b[A-Za-z0-9+/]{20,}={0,2}")
+_HEX_RE = re.compile(r"\b(?:[0-9a-fA-F]{2}){12,}\b")
+_UESC_RE = re.compile(r"(?:\\u[0-9a-fA-F]{4}\s*){3,}")
+
+
+def _plausible_text(raw: bytes) -> str | None:
+    """Return decoded text only when it looks like prose, not binary."""
+    try:
+        text = raw.decode("utf-8")
+    except (UnicodeDecodeError, AttributeError):
+        return None
+    if len(text) < 8:
+        return None
+    printable = sum(c.isprintable() or c.isspace() for c in text)
+    if printable / len(text) < 0.9:
+        return None
+    # Needs enough letters to carry an instruction at all.
+    if sum(c.isalpha() for c in text) / len(text) < 0.5:
+        return None
+    return text
+
+
+def _decoded_variants(text: str) -> list[str]:
+    """Decode embedded base64 / hex / unicode-escape payloads."""
+    out: list[str] = []
+    for token in _B64_RE.findall(text):
+        try:
+            raw = base64.b64decode(token + "=" * (-len(token) % 4), validate=False)
+        except (binascii.Error, ValueError):
+            continue
+        got = _plausible_text(raw)
+        if got:
+            out.append(got)
+    for token in _HEX_RE.findall(text):
+        try:
+            raw = bytes.fromhex(token)
+        except ValueError:
+            continue
+        got = _plausible_text(raw)
+        if got:
+            out.append(got)
+    # Unicode escapes are decoded IN PLACE. Extracting just the escaped run
+    # would drop the plain-text tail, and the imperative is usually split
+    # across both: "\\u0069\\u0067\\u006e\\u006f\\u0072\\u0065 all previous instructions".
+    if _UESC_RE.search(text):
+        def _sub(m: re.Match) -> str:
+            try:
+                return m.group(0).encode().decode("unicode_escape")
+            except (UnicodeDecodeError, ValueError):
+                return m.group(0)
+        decoded = _UESC_RE.sub(_sub, text)
+        if decoded != text:
+            out.append(decoded)
+    return out
+
 
 # Quoted spans are content the agent is operating on, not instructions to it.
 _QUOTED_SPAN_RE = re.compile(r"'[^']{2,120}'|\"[^\"]{2,120}\"|\u2018[^\u2019]{2,120}\u2019|\u201c[^\u201d]{2,120}\u201d")
@@ -259,6 +401,30 @@ def _check_injection(reason: str) -> tuple[int, float, list[str], dict]:
             signals.append(signal_name)
             score += weight
             details[signal_name] = found[0] if len(found) == 1 else found[:3]
+
+    # Re-run the same detectors on de-obfuscated text. Only signals that were
+    # not already found are added, so this recovers hidden imperatives without
+    # inventing a new way to fire.
+    variants: list[tuple[str, str]] = []
+    normalized = _normalize_obfuscation(dequoted)
+    if normalized != dequoted:
+        variants.append((normalized, "de-obfuscation"))
+    variants += [(v, "decoded payload") for v in _decoded_variants(reason)]
+
+    for variant, how in variants:
+        for pattern, signal_name, weight in INJECTION_PATTERNS:
+            if signal_name in signals or signal_name in CORROBORATING_SIGNALS:
+                continue
+            if pattern.findall(variant):
+                matches += 1
+                signals.append(signal_name)
+                score += weight
+                details[signal_name] = f"found after {how}"
+                details["obfuscation" if how == "de-obfuscation" else "encoding"] = (
+                    "homoglyph/spacing/digit substitution normalized"
+                    if how == "de-obfuscation"
+                    else "an encoded payload decoded to an instruction"
+                )
 
     # Shannon entropy over prose only. UUIDs, hashes and hex digests are
     # legitimately high-entropy, so they are removed first -- otherwise a
@@ -639,7 +805,8 @@ def evaluate_risk(
     # to steer the agent. One signal floors the verdict to STEP_UP; a strong
     # pattern (override / system-prompt / role hijack) or two+ signals → DENY.
     if inj_signals:
-        strong_injection = {"instruction_override", "system_prompt_inject", "role_hijack"}
+        strong_injection = {"instruction_override", "system_prompt_inject", "role_hijack",
+                            "indirect_injection", "tool_echo_inject"}
         pre_esc = total_score
         total_score = max(total_score, APPROVE_CEILING + 1)   # >= 40 → STEP_UP
         if len(inj_signals) >= 2 or (strong_injection & set(inj_signals)):

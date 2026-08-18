@@ -52,7 +52,11 @@ def score(reason: str) -> tuple[str, int, list[str], float]:
 
 def main() -> int:
     verbose = "--verbose" in sys.argv
-    benign, attacks = load("benign.jsonl"), load("injection.jsonl")
+    if "--holdout" in sys.argv:
+        benign, attacks = load("holdout_benign.jsonl"), load("holdout_injection.jsonl")
+        print("  [HELD-OUT CORPUS — written after the detectors, never tuned against]")
+    else:
+        benign, attacks = load("benign.jsonl"), load("injection.jsonl")
 
     rows, timings = [], []
     for case, label in [(c, "benign") for c in benign] + [(c, "injection") for c in attacks]:
