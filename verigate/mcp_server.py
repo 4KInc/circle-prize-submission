@@ -31,11 +31,49 @@ import logging
 import os
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 logger = logging.getLogger("verigate.mcp")
 
+# MCP 1.23 ships DNS-rebinding protection that validates the Host header
+# against an allowlist which DEFAULTS TO EMPTY. Mounted behind a custom
+# domain that means every request is rejected with `421 Invalid Host header`
+# before it reaches a handler -- the server is up, serving nothing.
+#
+# The allowlist is configuration, not code: set VERIGATE_MCP_ALLOWED_HOSTS
+# to a comma-separated host list to add an origin without a redeploy.
+#
+# Deliberately NOT "*". This endpoint is public and unauthenticated, so a
+# wildcard would switch off the exact protection the middleware exists to
+# provide. Exact hostnames only; localhost keeps a port wildcard for dev.
+_DEFAULT_MCP_HOSTS = (
+    "verigate.cloud",
+    "www.verigate.cloud",
+    "verigate-dashboard-1031148889398.us-central1.run.app",
+    "localhost:*",
+    "127.0.0.1:*",
+)
+
+
+def _mcp_allowed_hosts() -> list[str]:
+    raw = os.environ.get("VERIGATE_MCP_ALLOWED_HOSTS", "")
+    hosts = [h.strip() for h in raw.split(",") if h.strip()]
+    return hosts or list(_DEFAULT_MCP_HOSTS)
+
+
+_ALLOWED_HOSTS = _mcp_allowed_hosts()
+_ALLOWED_ORIGINS = [
+    f"https://{h}" for h in _ALLOWED_HOSTS if not h.endswith(":*")
+] + ["http://localhost:*", "http://127.0.0.1:*"]
+
+logger.info("MCP transport allowlist: %s", ", ".join(_ALLOWED_HOSTS))
+
 mcp = FastMCP(
     "Verigate",
+    transport_security=TransportSecuritySettings(
+        allowed_hosts=_ALLOWED_HOSTS,
+        allowed_origins=_ALLOWED_ORIGINS,
+    ),
     instructions=(
         "Verigate is an autonomous transaction-security agent built on "
         "Circle Agent Stack. AI agents call these tools to check if a "

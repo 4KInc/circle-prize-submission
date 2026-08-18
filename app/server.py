@@ -897,7 +897,10 @@ async def gateway_status():
         treasury = os.environ.get("VERIGATE_TREASURY_WALLET", TREASURY_WALLET)
         balances = get_balances([treasury])
         return {
-            "status": "active",
+            # Not "active": the facilitator answers, but the treasury holds no
+            # balance on any domain, so nothing can settle. Reachability and
+            # readiness are different claims and this reports the weaker one.
+            "status": "reachable_unfunded",
             "facilitator": GATEWAY_URL,
             "treasury_wallet": treasury,
             "balances": balances,
