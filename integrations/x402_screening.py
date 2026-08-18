@@ -56,6 +56,7 @@ Install:
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -64,6 +65,22 @@ import requests
 logger = logging.getLogger("x402_screening")
 
 VERIGATE_URL = "https://verigate.cloud"
+
+# Screening is advisory on the default (fail-open) path, so the timeout is a
+# latency budget, not a correctness knob: when it expires the caller routes
+# anyway. It was 10s, which meant an unresponsive Verigate stalled the caller
+# for ten seconds before approving -- fail-open in verdict but not in latency,
+# which is the failure a sub-second router actually feels.
+#
+# 1.0s is ~7x the measured p95 (142ms warm), so it does not fire on a healthy
+# service, and it caps the worst case at one second. A cold or scaling
+# instance can exceed it; that call approves unscreened rather than blocking
+# the route, which is the intended trade.
+#
+# Raise it with VERIGATE_TIMEOUT_SECONDS when fail_closed=True, where the
+# timeout DENIES and a premature one is a false decline rather than a skipped
+# check.
+DEFAULT_TIMEOUT_SECONDS = float(os.environ.get("VERIGATE_TIMEOUT_SECONDS", "1.0"))
 
 # Fallback when live pricing is unavailable. Deliberately above a typical
 # per-call cost so an unpriced call is screened conservatively.
@@ -165,6 +182,7 @@ def screen_payment(
     service: str,
     reason: str = "",
     fail_closed: bool = False,
+    timeout: float | None = None,
 ) -> ScreeningResult:
     """Screen a payment through Verigate before executing.
 
@@ -177,6 +195,11 @@ def screen_payment(
             approves. Off by default so screening never becomes the
             caller's outage; on for deployments where the control must
             hold over availability.
+        timeout: Seconds to wait before giving up, defaulting to
+            DEFAULT_TIMEOUT_SECONDS (1.0s, ~7x the measured p95). On the
+            fail-open path this bounds how long a stalled Verigate can
+            delay the caller. Consider raising it with fail_closed=True,
+            where expiry denies the payment.
 
     Returns:
         ScreeningResult with the decision and rationale.
@@ -190,7 +213,7 @@ def screen_payment(
                 "service": service,
                 "reason": reason,
             },
-            timeout=10,
+            timeout=timeout if timeout is not None else DEFAULT_TIMEOUT_SECONDS,
         )
         if resp.status_code == 200:
             d = resp.json()

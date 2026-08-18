@@ -102,7 +102,12 @@ class TestScreenPayment:
             "service": "m",
             "reason": "why",
         }
-        assert p.call_args.kwargs["timeout"] == 10
+        # A latency budget, not a magic number: screening is advisory on the
+        # fail-open path, so a stalled Verigate must not stall the caller.
+        # Was 10s, which blocked a sub-second router for ten seconds before
+        # approving anyway.
+        assert p.call_args.kwargs["timeout"] == xs.DEFAULT_TIMEOUT_SECONDS
+        assert p.call_args.kwargs["timeout"] <= 1.0
 
     # ── Fail-open at the boundary ────────────────────────────────────
     # Availability is chosen over enforcement by default: a screening layer

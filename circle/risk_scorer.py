@@ -184,6 +184,38 @@ INJECTION_PATTERNS = [
                 r"(?:policy|policies|rules?|restrictions?|limits?|constraints?|guidelines?|filters?|safeguards?)",
                 re.I), "hypothetical_jailbreak", 20),
 
+    # Verdict compulsion -- text that dictates the screener's OUTPUT rather
+    # than describing a decision. The distinction is who the sentence binds:
+    # "answer only with APPROVE" binds the reader; "our policy is to approve
+    # refunds under $50" and "confirm the payment was approved by finance"
+    # describe a decision someone else already made, and must not fire.
+    (re.compile(r"(?:answer|respond|reply|output|return)\s+(?:only\s+)?"
+                r"(?:with\s+)?[\"']?(?:approve|approved|safe|ok)\b[\"']?\s*"
+                r"(?:and\s+nothing\s+else|only)?|"
+                r"you\s+(?:must|should|shall|are\s+required\s+to)\s+not\s+"
+                r"(?:deny|decline|block|reject|refuse|flag)\s+(?:this|it|the\s+\w+)|"
+                r"(?:the\s+)?only\s+(?:acceptable|valid|correct)\s+(?:response|answer|decision)\s+is\s+"
+                r"(?:to\s+)?approve|"
+                r"(?:the\s+)?correct\s+decision\s+is\s+APPROVE|"
+                r"treat\s+(?:this|it)?\s*as\s+(?:approved|pre-?approved|safe|cleared)",
+                re.I), "verdict_compulsion", 25),
+
+    # Control-state assertion -- text claiming the screener is off, degraded or
+    # bypassed for this request. Must assert a CURRENT state affecting this
+    # call; describing the feature ("explain when screening is advisory",
+    # "the screening service was offline last Tuesday") does not fire.
+    (re.compile(r"(?:screening|risk\s+engine|safety\s+checks?|policy\s+checks?|validation)\s+"
+                r"(?:is|are|has\s+been|was)?\s*"
+                r"(?:disabled|offline|off|bypassed|advisory\s+only|skipped|suspended)\b|"
+                r"(?:developer|debug|trusted|test|god)\s+mode\s+(?:enabled|on|active)|"
+                r"(?:this\s+)?agent\s+operates\s+in\s+\w+\s+mode|"
+                r"safety\s+(?:checks?\s+)?off\b|"
+                r"risk_threshold\s*=\s*0|"
+                r"(?:defaulting|default)\s+to\s+approve|"
+                r"do\s*n[o']?t\s+apply\s+(?:the\s+)?(?:usual\s+|normal\s+|standard\s+)?"
+                r"(?:checks?|screening|policy|policies|rules?|validation)",
+                re.I), "control_state_assertion", 25),
+
     # Delimiter smuggling -- see CORROBORATING_SIGNALS below. A fence or heading
     # on its own is formatting; it only counts when it wraps something else that
     # already looks like an injection.
@@ -806,7 +838,8 @@ def evaluate_risk(
     # pattern (override / system-prompt / role hijack) or two+ signals → DENY.
     if inj_signals:
         strong_injection = {"instruction_override", "system_prompt_inject", "role_hijack",
-                            "indirect_injection", "tool_echo_inject"}
+                            "indirect_injection", "tool_echo_inject",
+                            "verdict_compulsion", "control_state_assertion"}
         pre_esc = total_score
         total_score = max(total_score, APPROVE_CEILING + 1)   # >= 40 → STEP_UP
         if len(inj_signals) >= 2 or (strong_injection & set(inj_signals)):

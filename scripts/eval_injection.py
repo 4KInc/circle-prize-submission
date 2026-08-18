@@ -52,9 +52,12 @@ def score(reason: str) -> tuple[str, int, list[str], float]:
 
 def main() -> int:
     verbose = "--verbose" in sys.argv
-    if "--holdout" in sys.argv:
+    if "--holdout2" in sys.argv:
+        benign, attacks = load("holdout2_benign.jsonl"), load("holdout2_injection.jsonl")
+        print("  [FRESH HELD-OUT — written after increment 3, never tuned against]")
+    elif "--holdout" in sys.argv:
         benign, attacks = load("holdout_benign.jsonl"), load("holdout_injection.jsonl")
-        print("  [HELD-OUT CORPUS — written after the detectors, never tuned against]")
+        print("  [HELD-OUT v1 — BURNED, graduated into the dev corpus]")
     else:
         benign, attacks = load("benign.jsonl"), load("injection.jsonl")
 
