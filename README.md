@@ -401,7 +401,7 @@ AI agents discover and use Verigate through MCP (Model Context Protocol). 6 tool
 |------|-------------|
 | `check_payment` | Submit payee + amount + reason → risk score + APPROVE/STEP_UP/DENY + explanation |
 | `get_risk_score` | Quick pre-flight check. Score + band + signals. No execution. |
-| `check_payment_x402` | Check via the live x402 endpoint (HTTP 402 paywall; fee settles by Circle Agent Wallet transfer) |
+| `check_payment_x402` | Check via the paid x402 endpoint (HTTP 402 paywall). Not live: testnet, unfunded, nothing settled through it — `check_payment` is the working path |
 | `get_gateway_status` | Circle Gateway connectivity, supported networks, treasury balance |
 | `get_receipt` | Retrieve a signed receipt by hash |
 | `get_evidence_bundle` | Pull the full carrier audit trail |
