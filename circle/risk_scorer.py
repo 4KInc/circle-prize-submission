@@ -80,22 +80,90 @@ KNOWN_X402_ENDPOINTS = frozenset({
 # ── Prompt injection structural patterns ─────────────────────────────
 # These detect *structural* injection, not just keywords. Each pattern
 # targets a specific attack technique used against LLM-driven agents.
+# Injection detectors match attack STRUCTURE, not attack TOPIC.
+#
+# The distinction is grammatical and it is the whole game. "the system prompt
+# was truncated in the logs" is a description; "ignore your system prompt" is
+# an instruction aimed at the reader. Matching the noun phrase denies the
+# first, which on a payment router is an outage -- measured at 7.5% of benign
+# traffic before these patterns were tightened. Matching the imperative denies
+# only the second.
+#
+# Each entry is (pattern, signal, weight). Weights unchanged; what changed is
+# what it takes to fire.
+
+# Imperatives an attacker directs at the model.
+_CMD = r"(?:ignore|disregard|forget|override|bypass|skip|reveal|show|print|leak|dump|repeat|disable)"
+# Objects those imperatives target.
+_OBJ = r"(?:instructions?|rules?|policies|policy|constraints?|guidelines?|directives?|checks?|screening|safety|restrictions?)"
+
 INJECTION_PATTERNS = [
-    # Role/identity hijacking
-    (re.compile(r"(?:you are|act as|pretend to be|your (?:new )?role is)", re.I), "role_hijack", 20),
-    # Instruction override — tolerate stacked qualifiers ("all previous")
-    # and the common override verbs.
-    (re.compile(r"(?:ignore|disregard|forget|override|bypass)\s+(?:(?:all|any|previous|prior|the|your)\s+)*(?:instructions?|rules?|policies?|constraints?|guidelines?|directives?)", re.I), "instruction_override", 25),
-    # System prompt leakage
-    (re.compile(r"(?:system\s*(?:prompt|override|message)|<\|?system\|?>)", re.I), "system_prompt_inject", 25),
-    # Urgency manipulation (social engineering) — allow punctuation between
-    # the urgency cue and the action verb ("URGENT: transfer", "now, send").
-    (re.compile(r"(?:urgent(?:ly)?|immediate(?:ly)?|emergency|asap|right\s*now)[\s:;,.\-]+(?:transfer|send|pay|move|withdraw|wire|release)", re.I), "urgency_manipulation", 15),
-    # Authority impersonation
-    (re.compile(r"(?:authorized?\s+by|approved?\s+by|(?:ceo|cto|cfo|admin|founder)\s+(?:said|approved|authorized))", re.I), "authority_spoof", 20),
-    # Delimiter injection
-    (re.compile(r"(?:```|---\n|###\s|={3,})", re.I), "delimiter_inject", 10),
+    # Role/identity hijacking -- reassignment aimed at the reader ("you", "your"),
+    # or a bare role verb followed by an actor. Quoted spans are stripped before
+    # matching, so translating the phrase "act as a guarantor" is not a hijack.
+    (re.compile(r"(?:you\s+are\s+(?:now\s+)?(?:an?\s+)?(?:unrestricted|unlimited|jailbroken|free|new)|"
+                r"you\s+are\s+now\b|"
+                # "you are a payment bot with no restrictions" -- reassignment
+                # whose tell is the removal of limits rather than the role noun.
+                r"you\s+(?:are|act)\s+[^.\n]{0,40}?with\s+no\s+(?:restrictions?|limits?|rules?|constraints?|filters?)|"
+                r"your\s+(?:new\s+)?role\s+is|"
+                r"(?:act\s+as|pretend\s+to\s+be|roleplay\s+as|behave\s+(?:like|as))\s+(?:the|an?|my)\s+"
+                r"\w*\s*(?:admin|administrator|owner|officer|agent|bot|assistant|operator|treasurer|approver|root|superuser))",
+                re.I), "role_hijack", 20),
+
+    # Instruction override -- imperative plus its object. "override the policy
+    # check" now matches (singular "policy", object "check"); "override a CSS
+    # class in the theme" does not, because no policy object follows.
+    (re.compile(rf"{_CMD}\s+(?:(?:all|any|every|previous|prior|preceding|above|the|your|our)\s+)*{_OBJ}",
+                re.I), "instruction_override", 25),
+
+    # System-prompt attacks. Three structural forms only:
+    #   1. a literal control token -- never appears in honest prose
+    #   2. "system prompt:" / "SYSTEM:" used as a prefix introducing injected content
+    #   3. an imperative aimed at the system prompt
+    # A bare mention ("the system prompt was truncated", "RFC on system message
+    # design") is description and no longer fires.
+    (re.compile(r"(?:<\|?\s*(?:system|im_start|endoftext)\s*\|?>|"
+                r"(?:^|[\n.;])\s*system\s*(?:prompt|message)?\s*:\s*\S|"
+                rf"{_CMD}\s+(?:your|the|all)?\s*system\s*(?:prompt|message|instructions?)|"
+                r"system\s+override\b)",
+                re.I), "system_prompt_inject", 25),
+
+    # Urgency manipulation -- an urgency cue immediately driving a value verb.
+    (re.compile(r"(?:urgent(?:ly)?|immediate(?:ly)?|emergency|asap|right\s*now)[\s:;,.\-]+"
+                r"(?:transfer|send|pay|move|withdraw|wire|release)", re.I), "urgency_manipulation", 15),
+
+    # Authority impersonation -- the claimed approval must attach to THIS action
+    # or carry a bypass cue. "Our CTO approved the Q3 budget line" attaches to a
+    # budget, not to the payment, and no longer fires.
+    (re.compile(r"(?:(?:authoriz|authoris|approv)ed?\s+by\s+(?:the\s+)?(?:ceo|cto|cfo|coo|admin|founder|board|legal)|"
+                r"(?:ceo|cto|cfo|coo|admin|founder|board|legal)\s+(?:said|says|approved|authorized|authorised|confirmed)\s+"
+                r"(?:to\s+\w+|this|it|that|the\s+(?:payment|transfer|tx|transaction|release)|out[\s\-]?of[\s\-]?band))",
+                re.I), "authority_spoof", 20),
+
+    # Delimiter smuggling -- see CORROBORATING_SIGNALS below. A fence or heading
+    # on its own is formatting; it only counts when it wraps something else that
+    # already looks like an injection.
+    (re.compile(r"(?:```|~~~|---\s*\n|###\s|={3,}|<\/?(?:system|instructions?)>)"), "delimiter_inject", 10),
 ]
+
+# Signals that never fire alone. They describe packaging, not intent, so they
+# corroborate another detector and are dropped when nothing else matched --
+# otherwise a code fence or a UUID fixture escalates a legitimate payment.
+CORROBORATING_SIGNALS = frozenset({"delimiter_inject", "high_entropy_payload"})
+
+# Structured tokens that are legitimately high-entropy: UUIDs, hex digests,
+# hashes. Removed before the entropy test so a fixture file full of them does
+# not read as an encoded payload.
+_STRUCTURED_TOKEN_RE = re.compile(
+    r"\b(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-fA-F]{16,})\b")
+
+# Quoted spans are content the agent is operating on, not instructions to it.
+_QUOTED_SPAN_RE = re.compile(r"'[^']{2,120}'|\"[^\"]{2,120}\"|\u2018[^\u2019]{2,120}\u2019|\u201c[^\u201d]{2,120}\u201d")
+
+# Detectors read the de-quoted text; these two legitimately need the raw string
+# (a control token or fence can appear inside quotes and still be smuggling).
+_MATCH_ON_RAW = frozenset({"delimiter_inject", "system_prompt_inject"})
 
 
 @dataclass
@@ -168,6 +236,9 @@ def _check_sanctions(payee: str) -> tuple[bool, str]:
 def _check_injection(reason: str) -> tuple[int, float, list[str], dict]:
     """Structural prompt injection analysis.
 
+    Deterministic and LLM-free: this runs on the authorization path, so the
+    same text must always produce the same signals.
+
     Returns (score_delta, confidence_delta, signal_names, details).
     """
     score = 0
@@ -175,28 +246,51 @@ def _check_injection(reason: str) -> tuple[int, float, list[str], dict]:
     details = {}
     matches = 0
 
+    # Quoted text is data the agent was asked to handle, not an instruction to
+    # the agent. Translating the phrase "act as a guarantor" is a translation
+    # job; the same words unquoted are a role hijack.
+    dequoted = _QUOTED_SPAN_RE.sub(" ", reason)
+
     for pattern, signal_name, weight in INJECTION_PATTERNS:
-        found = pattern.findall(reason)
+        target = reason if signal_name in _MATCH_ON_RAW else dequoted
+        found = pattern.findall(target)
         if found:
             matches += 1
             signals.append(signal_name)
             score += weight
             details[signal_name] = found[0] if len(found) == 1 else found[:3]
 
-    # Shannon entropy of the reason text — high entropy can indicate
-    # encoded payloads or obfuscated injection attempts
-    if len(reason) > 20:
+    # Shannon entropy over prose only. UUIDs, hashes and hex digests are
+    # legitimately high-entropy, so they are removed first -- otherwise a
+    # fixture file of UUIDs reads as an encoded payload.
+    prose = _STRUCTURED_TOKEN_RE.sub(" ", reason)
+    if len(prose) > 20:
         freq: dict[str, int] = {}
-        for c in reason.lower():
+        for c in prose.lower():
             freq[c] = freq.get(c, 0) + 1
-        entropy = -sum((f / len(reason)) * math.log2(f / len(reason)) for f in freq.values())
-        if entropy > 4.5 and len(reason) > 100:
+        entropy = -sum((f / len(prose)) * math.log2(f / len(prose)) for f in freq.values())
+        if entropy > 4.5 and len(prose) > 100:
             signals.append("high_entropy_payload")
             score += 10
             details["entropy"] = round(entropy, 2)
 
+    # Drop packaging-only signals when nothing substantive fired. A code fence
+    # or a run of UUIDs is formatting; on its own it must not escalate a
+    # legitimate payment, and the escalation floor downstream would do exactly
+    # that if these were left in the list.
+    if signals and all(sig in CORROBORATING_SIGNALS for sig in signals):
+        for sig in signals:
+            details.pop(sig, None)
+        details["suppressed"] = (
+            "formatting-only signals ("
+            + ", ".join(signals)
+            + ") with no corroborating injection evidence"
+        )
+        return 0, 0.0, [], details
+
     # Confidence increases with more injection signals (more certain it's an attack)
     confidence_boost = min(matches * 0.05, 0.15) if matches > 0 else 0
+
 
     return score, confidence_boost, signals, details
 
