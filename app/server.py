@@ -22,7 +22,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, Query, Request
 from fastapi import BackgroundTasks
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import (HTMLResponse, JSONResponse, Response,
+                               StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 
 # Add project root and engine to path
@@ -196,13 +197,29 @@ for _slug, _view in _PAGE_ROUTES.items():
 
 @app.get("/api/openapi-spec")
 async def openapi_download():
-    """Serve the OpenAPI spec as a downloadable YAML file."""
-    from fastapi.responses import FileResponse
-    return FileResponse(
-        STATIC_DIR / "openapi.yaml",
-        media_type="application/x-yaml",
-        filename="verigate-openapi.yaml",
-        headers={"Content-Disposition": "attachment; filename=verigate-openapi.yaml"},
+    """Serve the OpenAPI spec as a downloadable YAML file.
+
+    The spec is authored as JSON (static/openapi.json) and rendered to YAML
+    here. A previous version served static/openapi.yaml directly, which does
+    not exist, so every request returned a 500.
+    """
+    src = STATIC_DIR / "openapi.json"
+    if not src.is_file():
+        return JSONResponse(
+            {"error": "OpenAPI spec not found", "expected": str(src.name)},
+            status_code=404,
+        )
+    try:
+        import yaml
+        body = yaml.safe_dump(json.loads(src.read_text()), sort_keys=False,
+                              default_flow_style=False, allow_unicode=True)
+        media, name = "application/x-yaml", "verigate-openapi.yaml"
+    except Exception:  # PyYAML unavailable — serve the JSON rather than fail
+        body = src.read_text()
+        media, name = "application/json", "verigate-openapi.json"
+    return Response(
+        content=body, media_type=media,
+        headers={"Content-Disposition": f"attachment; filename={name}"},
     )
 
 
