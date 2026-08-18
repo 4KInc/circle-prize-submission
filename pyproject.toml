@@ -44,9 +44,9 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/4KInc/circle-prize-submission"
-Repository = "https://github.com/4KInc/circle-prize-submission"
-Documentation = "https://github.com/4KInc/circle-prize-submission#readme"
+Homepage = "https://github.com/4KInc/verigate"
+Repository = "https://github.com/4KInc/verigate"
+Documentation = "https://github.com/4KInc/verigate#readme"
 
 # ── Tooling ──────────────────────────────────────────────────────────
 # Lint + type-check are enforced in CI, but scoped to the security-critical
