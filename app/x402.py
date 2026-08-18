@@ -1,10 +1,14 @@
-"""x402-paywalled endpoint — services behind Circle Gateway nanopayments.
+"""x402-paywalled endpoints.
 
-This endpoint serves market data and Verigate security checks behind
-Circle Gateway's x402 nanopayment protocol. Payments are settled via
-Gateway's batched settlement (gas-free for both buyer and seller).
+The paid path is wired to Circle's testnet Gateway facilitator on Base
+Sepolia and is unfunded, so no payment has ever settled through it. These
+handlers therefore advertise the price and the x402 requirements but do not
+assert a settlement rail. /api/check returns the same verdict, free.
 
-The x402 + Gateway nanopayment flow:
+These endpoints serve market data and Verigate security checks behind the
+x402 protocol, quoting Circle Gateway as the facilitator.
+
+The intended x402 flow:
 1. Client sends GET to /x402/market-data
 2. Server returns 402 with payment requirements (Gateway-compatible)
 3. Client signs EIP-3009 authorization offchain (zero gas)
@@ -36,7 +40,7 @@ logger = logging.getLogger("app.x402")
 
 router = APIRouter(prefix="/x402")
 
-# Payee address — Verigate Treasury wallet receives nanopayments
+# Payee address — Verigate Treasury wallet
 PAYEE_ADDRESS = os.environ.get(
     "X402_PAYEE_ADDRESS",
     "0x0c744ecb3949b3582cdd2dbc70dc876405eec44d",  # Verigate Treasury
@@ -59,7 +63,7 @@ GATEWAY_TESTNET_URL = "https://gateway-api-testnet.circle.com"
 
 
 def _build_payment_required() -> dict:
-    """Build x402 v2 payment requirements for Gateway nanopayments."""
+    """Build x402 v2 payment requirements quoting the Gateway facilitator."""
     return {
         "x402Version": 2,
         "accepts": [
@@ -190,13 +194,14 @@ async def market_data(request: Request):
     requirements = _build_payment_required()
     requirements_b64 = base64.b64encode(json.dumps(requirements).encode()).decode()
 
-    logger.info(f"x402 payment required for market-data (Gateway nanopayment)")
+    logger.info("x402 payment required for market-data")
     return Response(
         content=json.dumps({
             "error": "Payment Required",
-            "message": "This endpoint requires USDC payment via Circle Gateway nanopayments.",
+            "message": "This endpoint requires a $0.01 USDC x402 payment.",
             "price": f"${int(SERVICE_PRICE) / 1_000_000:.2f} USDC",
-            "settlement": "Circle Gateway (gas-free, batched)",
+            "settlement": "not live — the paid x402 path targets Base Sepolia against Circle's testnet facilitator and holds no balance, so nothing has settled through it",
+            "paid_path_live": False,
             "facilitator": GATEWAY_TESTNET_URL,
             "accepts": requirements["accepts"],
         }),
@@ -208,11 +213,12 @@ async def market_data(request: Request):
 
 @router.post("/security-check")
 async def security_check(request: Request):
-    """Verigate security check endpoint — $0.05 via Circle Gateway nanopayments.
+    """Verigate security check endpoint — the paid, receipted variant of /api/check.
 
-    This is the core product: an AI agent pays $0.05 to Verigate to check
-    a payment intent before executing it. The fee is settled via Circle
-    Gateway nanopayments (gas-free, batched).
+    An agent pays $0.05 to screen a payment intent before executing it. The
+    paid path is not live: it targets Base Sepolia against Circle's testnet
+    facilitator and is unfunded, so no fee has settled through it. The same
+    verdict is available free and unreceipted at POST /api/check.
 
     Flow:
     1. Agent POST /x402/security-check with payment intent in body
@@ -273,7 +279,7 @@ async def security_check(request: Request):
             },
             "settlement": gateway_result,
             "fee_paid": f"${int(SERVICE_PRICE) / 1_000_000:.2f} USDC",
-            "fee_method": "Circle Gateway nanopayment",
+            "fee_method": "x402 payment quoted against the Circle Gateway facilitator",
         }
 
         payment_response = base64.b64encode(json.dumps({
@@ -295,9 +301,10 @@ async def security_check(request: Request):
     return Response(
         content=json.dumps({
             "error": "Payment Required",
-            "message": "Verigate security check requires $0.05 USDC via Circle Gateway nanopayments.",
+            "message": "Verigate security check requires a $0.05 USDC x402 payment. The free equivalent is POST /api/check.",
             "price": f"${int(SERVICE_PRICE) / 1_000_000:.2f} USDC",
-            "settlement": "Circle Gateway (gas-free, batched)",
+            "settlement": "not live — the paid x402 path targets Base Sepolia against Circle's testnet facilitator and holds no balance, so nothing has settled through it",
+            "paid_path_live": False,
             "facilitator": GATEWAY_TESTNET_URL,
             "accepts": requirements["accepts"],
         }),
@@ -309,7 +316,7 @@ async def security_check(request: Request):
 
 @router.get("/gateway/balances")
 async def gateway_balances():
-    """Check Gateway nanopayment balances for Verigate wallets."""
+    """Check Circle Gateway balances for Verigate wallets (currently zero)."""
     try:
         from circle.gateway import get_balances
         balances = get_balances([PAYEE_ADDRESS])
@@ -320,7 +327,7 @@ async def gateway_balances():
 
 @router.get("/gateway/transfers")
 async def gateway_transfers(limit: int = 10):
-    """List recent Gateway nanopayment transfers to Verigate."""
+    """List recent Circle Gateway transfers to Verigate (none to date)."""
     try:
         from circle.gateway import search_transfers
         transfers = search_transfers(seller=PAYEE_ADDRESS, limit=limit)
@@ -337,6 +344,9 @@ async def x402_health():
         "network": NETWORK,
         "payee": PAYEE_ADDRESS,
         "price_usdc": f"${int(SERVICE_PRICE) / 1_000_000:.2f}",
-        "settlement": "Circle Gateway nanopayments",
+        "paid_path_live": False,
+        "settlement": "not live — the paid x402 path targets Base Sepolia against Circle's testnet facilitator and holds no balance, so nothing has settled through it",
+        "settlement_when_live": "USDC transfer from a Circle Agent Wallet",
         "facilitator": GATEWAY_TESTNET_URL,
+        "free_alternative": "POST /api/check — same verdict, no payment, no receipt",
     }

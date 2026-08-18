@@ -886,7 +886,11 @@ async def carrier_evidence_bundle():
 
 @app.get("/api/gateway")
 async def gateway_status():
-    """Circle Gateway nanopayments integration status."""
+    """Circle Gateway connectivity — reachability and balance, not settlement.
+
+    The treasury holds no Gateway balance on any domain, so this reports what
+    the facilitator says rather than claiming a working settlement rail.
+    """
     try:
         from circle.gateway import get_supported_networks, get_balances, GATEWAY_URL
         supported = get_supported_networks()
@@ -899,7 +903,8 @@ async def gateway_status():
             "balances": balances,
             "supported_networks": supported,
             "fee_per_check": "$0.05 USDC",
-            "settlement": "gas-free batched via Circle Gateway",
+            "funded": False,
+            "settlement": "not live — the paid x402 path targets Base Sepolia against Circle's testnet facilitator and holds no balance, so nothing has settled through it",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -1093,6 +1098,62 @@ async def api_check(request: Request, background: BackgroundTasks):
     reason = body.get("reason", "")
     session_id = body.get("session_id", "default")
     tier = body.get("tier", "screening")  # screening ($0.05) | governance ($0.15)
+    deterministic = bool(body.get("deterministic", False))
+
+    # Deterministic mode: score against a pinned, empty baseline.
+    #
+    # The scorer is already a pure function of (intent, baseline). What makes
+    # /api/check non-repeatable is that the baseline is live state which every
+    # call mutates -- the first request for a payee scores +10 for
+    # new_counterparty, later ones can add velocity_spike, so the same intent
+    # yields different integers minutes apart. That is correct for production
+    # screening and useless for an integrator writing a threshold test.
+    #
+    # Passing behavioral=None drops the history-dependent signals, and this
+    # branch touches no state: no baseline record, no replay cache, no breaker
+    # counter, no RAG write, no governance pipeline. Identical input therefore
+    # returns an identical verdict, indefinitely.
+    #
+    # Skipping the breaker is safe here precisely because the branch is cheap:
+    # the breaker exists to cap Gemini spend on repeated denials, and this path
+    # never reaches Gemini. It is a scoring benchmark, not a screening -- no
+    # receipt, no governance output, no enforcement state.
+    if deterministic:
+        risk = evaluate_risk(
+            payee=payee, amount=amount, service=service, reason=reason,
+            source_wallet=CUSTOMER_WALLET, chain=state["chain"],
+            behavioral=None,
+        )
+        return {
+            "decision": risk.decision,
+            "score": risk.score,
+            "band": risk.band,
+            "confidence": risk.confidence,
+            "signals": risk.signals,
+            "signal_details": risk.signal_details,
+            "contributions": risk.contributions,
+            "rationale": risk.rationale,
+            "model_version": risk.model_version,
+            "feature_version": risk.feature_version,
+            "evaluated_at": risk.evaluated_at,
+            "sanctions_feed": risk.sanctions_feed,
+            "deterministic": True,
+            "replay": False,
+            "thresholds": {
+                "approve_ceiling": 39,
+                "step_up_range": "40-74",
+                "deny_floor": 75,
+                "confidence_floor": 0.60,
+            },
+            "note": (
+                "Deterministic mode: scored against a pinned empty baseline. "
+                "Behavioral signals (new_counterparty, velocity_spike) are not "
+                "evaluated and no state was recorded, so this verdict is "
+                "reproducible. Everything except evaluated_at is stable. "
+                "Production screening omits this flag."
+            ),
+        }
+
 
     enforcement = get_enforcement()
 
@@ -3023,9 +3084,9 @@ async def _dry_run_stream():
             step_up = del_ctx.get("step_up")
             eval_decision = "STEP_UP" if step_up else "APPROVE"
 
-            yield _sse("step", {"id": "payment", "title": "Risk Assessment + Gateway Settlement", "status": "running",
+            yield _sse("step", {"id": "payment", "title": "Risk Assessment + Settlement", "status": "running",
                                 "desc": f"Deterministic policy → BlockIntel risk score → settlement.",
-                                "subtitle": "Policy check → risk scoring → Gateway nanopayment..."})
+                                "subtitle": "Policy check → risk scoring → settlement..."})
             await asyncio.sleep(1.0)
 
             payment_data = {
@@ -3044,7 +3105,7 @@ async def _dry_run_stream():
             if step_up:
                 payment_data["step_up"] = step_up
 
-            yield _sse("step", {"id": "payment", "title": "Risk Assessment + Gateway Settlement", "status": "complete",
+            yield _sse("step", {"id": "payment", "title": "Risk Assessment + Settlement", "status": "complete",
                                 "desc": f"{eval_decision}: Risk score {risk.get('risk_score', 0)}. Settlement replayed from GCS.",
                                 "details": payment_data})
             yield _sse("payment", payment_data)
@@ -3200,7 +3261,7 @@ async def _golden_path_stream():
         state["agents"]["Gateway"] = {"kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"}
         yield _sse("agent_info", {"name": "Gateway", "kid": executor._kid, "status": "Active", "artifacts": 0, "role": "Deterministic policy eval + signed receipts"})
 
-        # Step 2: USDC Payment via Circle Gateway nanopayments
+        # Step 2: USDC payment
         x402_url = None
         from circle.golden_path import SERVICE_CATALOG
         for svc in SERVICE_CATALOG:
@@ -3208,10 +3269,10 @@ async def _golden_path_stream():
                 x402_url = svc.get("endpoint")
                 break
 
-        method_desc = "Circle Gateway nanopayment (gas-free, batched)" if x402_url else "Circle wallet transfer"
-        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Gateway Settlement", "status": "running",
+        method_desc = "x402 payment request" if x402_url else "Circle Agent Wallet USDC transfer"
+        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Settlement", "status": "running",
                             "desc": f"Deterministic policy → BlockIntel risk score → {method_desc}.",
-                            "subtitle": "Policy check → risk scoring → Gateway nanopayment..."})
+                            "subtitle": "Policy check → risk scoring → settlement..."})
 
         intent = PaymentIntent(
             payee=payee, amount=amount,
@@ -3257,13 +3318,13 @@ async def _golden_path_stream():
             desc = (f"APPROVE: Risk score {risk.get('risk_score')} ({risk.get('risk_band')}). "
                     f"Settled in {hot_elapsed:.1f}s via {method_desc}.")
 
-        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Gateway Settlement", "status": "complete",
+        yield _sse("step", {"id": "payment", "title": "Risk Assessment + Settlement", "status": "complete",
                             "desc": desc, "details": payment_data})
         yield _sse("payment", payment_data)
 
         # ── PHASE DIVIDER ─────────────────────────────────────────────────
-        yield _sse("phase", {"name": "Gateway Settlement Complete", "elapsed": f"{hot_elapsed:.1f}s",
-                             "desc": f"Decision: {eval_decision}. USDC settled via Circle Gateway nanopayment. Async security processing below."})
+        yield _sse("phase", {"name": "Decision Complete", "elapsed": f"{hot_elapsed:.1f}s",
+                             "desc": f"Decision: {eval_decision}. Async security processing below."})
 
         # ── ASYNC PATH: Security, forensics, compliance ───────────────────
 

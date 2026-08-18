@@ -42,7 +42,7 @@ mcp = FastMCP(
         "USDC payment against policy, sanctions, and anomaly signals. Verigate scores risk,"
         "buys independent evidence when uncertain (STEP_UP), and returns "
         "a signed receipt. Fees are $0.05 USDC per check, settled via "
-        "Circle Gateway nanopayments (gas-free, batched). "
+        "x402 payment quoted against the Circle Gateway facilitator. "
         "Circle Skill: payment-security"
     ),
 )
@@ -215,10 +215,10 @@ def check_payment_x402(
     service: str,
     reason: str,
 ) -> dict:
-    """Check a payment via Verigate's x402 endpoint (Circle Gateway nanopayment).
+    """Check a payment via Verigate's paid x402 endpoint (not live: testnet, unfunded).
 
     This calls the live x402-paywalled security check endpoint on Cloud Run.
-    The $0.05 fee is settled via Circle Gateway nanopayments.
+    The $0.05 fee is quoted via x402. The paid path is not live (testnet, unfunded); POST /api/check returns the same verdict free.
 
     Use this when you want the full production flow including Gateway settlement.
     For a quick local check without payment, use check_payment instead.
@@ -247,7 +247,7 @@ def check_payment_x402(
             "endpoint": f"{base_url}/x402/security-check",
             "method": "POST",
             "price": health.get("price_usdc", "$0.05"),
-            "settlement": "Circle Gateway nanopayments",
+            "settlement": "not live — paid x402 path is testnet and unfunded",
             "facilitator": health.get("facilitator", "https://gateway-api-testnet.circle.com"),
             "network": health.get("network", "eip155:84532"),
             "payee_wallet": health.get("payee", ""),
@@ -264,7 +264,7 @@ def check_payment_x402(
 
 @mcp.tool()
 def get_gateway_status() -> dict:
-    """Get Circle Gateway nanopayments status for Verigate.
+    """Get Circle Gateway connectivity status for Verigate (balance is zero).
 
     Returns Gateway facilitator connectivity, supported networks,
     and Verigate treasury balance information.
@@ -314,7 +314,7 @@ def get_pricing() -> str:
         "verification_fee": "$0.05 per transaction",
         "evidence_cost": "$0.02 per STEP_UP case",
         "daily_cap": "$1.00 maximum autonomous spend",
-        "payment_method": "USDC via Circle Gateway nanopayments",
+        "payment_method": "USDC via x402; paid path not live",
         "settlement": "Circle Gateway (gas-free, batched)",
         "x402_endpoint": "https://verigate-dashboard-1031148889398.us-central1.run.app/x402/security-check",
     })
@@ -341,13 +341,13 @@ def get_circle_skill() -> str:
         "version": "1.0.0",
         "circle_stack": {
             "agent_wallets": True,
-            "gateway_nanopayments": True,
+            "gateway_nanopayments": False,
             "circle_cli": True,
             "x402_protocol": True,
         },
         "pricing": {
             "fee": "$0.05 USDC",
-            "settlement": "Circle Gateway nanopayments",
+            "settlement": "not live — paid x402 path is testnet and unfunded",
             "network": "eip155:84532",
         },
         "endpoints": {
