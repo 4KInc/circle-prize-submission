@@ -11,11 +11,44 @@
   },
   "servers": [
     {
+      "url": "https://verigate.cloud",
+      "description": "Production"
+    },
+    {
       "url": "https://verigate-dashboard-1031148889398.us-central1.run.app",
-      "description": "Production (Cloud Run)"
+      "description": "Production (direct Cloud Run origin)"
     }
   ],
   "paths": {
+    "/api/check": {
+      "post": {
+        "operationId": "checkPayment",
+        "summary": "Screen a USDC payment intent",
+        "description": "The primary screening endpoint, and the one to integrate against. Submit a payment intent before executing it; returns APPROVE (0-39), STEP_UP (40-74) or DENY (75+).\n\nScoring is deterministic — OFAC SDN matching, six prompt-injection detectors, behavioral z-score deviation, and payee classification. No LLM sits in the scoring path, so the same intent always yields the same score and `contributions` lets you re-derive it. Gemini runs after the fact, on the STEP_UP validator and the DENY governance agents.\n\nUnauthenticated and unpriced on this deployment. The paid, receipted equivalent is `/x402/security-check` at $0.05 USDC, which returns the same verdict plus an Ed25519-signed receipt.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A verdict. Also the response for a replayed or suspended session — a blocked call is a successful screening, not an HTTP error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/x402/security-check": {
       "post": {
         "operationId": "securityCheck",
@@ -93,13 +126,27 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "service": { "type": "string" },
-                    "x402": { "type": "boolean" },
-                    "network": { "type": "string" },
-                    "payee": { "type": "string" },
-                    "price_usdc": { "type": "string" },
-                    "settlement": { "type": "string" },
-                    "facilitator": { "type": "string" }
+                    "service": {
+                      "type": "string"
+                    },
+                    "x402": {
+                      "type": "boolean"
+                    },
+                    "network": {
+                      "type": "string"
+                    },
+                    "payee": {
+                      "type": "string"
+                    },
+                    "price_usdc": {
+                      "type": "string"
+                    },
+                    "settlement": {
+                      "type": "string"
+                    },
+                    "facilitator": {
+                      "type": "string"
+                    }
                   }
                 }
               }
@@ -124,7 +171,12 @@
     "schemas": {
       "PaymentIntent": {
         "type": "object",
-        "required": ["payee", "amount", "service", "reason"],
+        "required": [
+          "payee",
+          "amount",
+          "service",
+          "reason"
+        ],
         "properties": {
           "payee": {
             "type": "string",
@@ -151,31 +203,338 @@
       "SecurityVerdict": {
         "type": "object",
         "properties": {
-          "service": { "type": "string" },
-          "timestamp": { "type": "string", "format": "date-time" },
+          "service": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
           "risk_assessment": {
             "type": "object",
             "properties": {
-              "score": { "type": "integer", "minimum": 0, "maximum": 100 },
-              "confidence": { "type": "number" },
-              "decision": { "type": "string", "enum": ["APPROVE", "STEP_UP", "DENY"] },
-              "factors": { "type": "array", "items": { "type": "string" } }
+              "score": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "confidence": {
+                "type": "number"
+              },
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "APPROVE",
+                  "STEP_UP",
+                  "DENY"
+                ]
+              },
+              "factors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           },
-          "settlement": { "type": "object" },
-          "fee_paid": { "type": "string" },
-          "fee_method": { "type": "string" }
+          "settlement": {
+            "type": "object"
+          },
+          "fee_paid": {
+            "type": "string"
+          },
+          "fee_method": {
+            "type": "string"
+          }
         }
       },
       "PaymentRequired": {
         "type": "object",
         "properties": {
-          "error": { "type": "string" },
-          "message": { "type": "string" },
-          "price": { "type": "string" },
-          "settlement": { "type": "string" },
-          "facilitator": { "type": "string" },
-          "accepts": { "type": "array" }
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string"
+          },
+          "settlement": {
+            "type": "string"
+          },
+          "facilitator": {
+            "type": "string"
+          },
+          "accepts": {
+            "type": "array"
+          }
+        }
+      },
+      "CheckRequest": {
+        "type": "object",
+        "description": "Every field has a server-side default, so a malformed body will not error. The defaults are placeholders, not sensible values — always send at least `payee` and `amount`, or you will be scoring the zero address for $0.",
+        "properties": {
+          "payee": {
+            "type": "string",
+            "description": "Destination. Either an EVM wallet address or an x402 service endpoint — Verigate classifies which and screens it on the appropriate terms.",
+            "default": "0x0000000000000000000000000000000000000000",
+            "examples": [
+              "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD28",
+              "https://api.example.com/x402/quote"
+            ]
+          },
+          "amount": {
+            "type": "string",
+            "description": "USDC amount, decimal string.",
+            "default": "0",
+            "examples": [
+              "0.50"
+            ]
+          },
+          "service": {
+            "type": "string",
+            "description": "Service being paid for. Feeds the behavioral baseline.",
+            "default": "unknown",
+            "examples": [
+              "market-data-api"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Free-text justification. Screened for prompt injection — this is the field most attacks arrive in.",
+            "default": "",
+            "examples": [
+              "Fetch latest BTC/USDC price data"
+            ]
+          },
+          "session_id": {
+            "type": "string",
+            "description": "Groups intents for replay detection and the circuit breaker. Distinct callers should send distinct values; the shared default pools their denial counts.",
+            "default": "default"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "screening",
+              "governance"
+            ],
+            "default": "screening",
+            "description": "`governance` ($0.15) returns the full forensic narrative and policy recommendations on DENY. `screening` ($0.05) returns a summary."
+          }
+        }
+      },
+      "CheckVerdict": {
+        "type": "object",
+        "description": "Returned in three shapes. A normal verdict carries every field below. A replay (`replay: true`) or a suspended session returns the cached decision with only decision/score/band/confidence/signals/rationale/enforcement — the scorer is not re-run, so scoring metadata is absent. Branch on `replay` before reading `contributions` or `agent_baseline`.",
+        "required": [
+          "decision",
+          "score",
+          "band",
+          "confidence",
+          "signals",
+          "rationale",
+          "replay",
+          "enforcement"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "STEP_UP",
+              "DENY"
+            ]
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Deterministic risk score. APPROVE 0-39, STEP_UP 40-74, DENY 75+."
+          },
+          "band": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ],
+            "description": "Severity label: LOW 0-25, MEDIUM 26-50, HIGH 51-75, CRITICAL 76+. These cut points are NOT the decision thresholds — a score of 45 is band MEDIUM but decision STEP_UP, and 75 is band HIGH but decision DENY. Branch on `decision`, display `band`."
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Reduced when a signal could not be evaluated — notably `settlement_address_unavailable`, emitted for endpoint payees whose settlement wallet is not visible for OFAC matching."
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Signal identifiers that fired.",
+            "examples": [
+              [
+                "prompt_injection",
+                "new_counterparty"
+              ]
+            ]
+          },
+          "signal_details": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Per-signal evidence: what matched and where."
+          },
+          "contributions": {
+            "type": "array",
+            "description": "Per-category score breakdown. `score_delta` sums exactly to `score`, so any verdict can be re-derived by hand. A category may fire with no named signals — `injection_escalation` is a floor applied to the verdict rather than a detector.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string",
+                  "examples": [
+                    "injection",
+                    "amount",
+                    "injection_escalation"
+                  ]
+                },
+                "score_delta": {
+                  "type": "integer",
+                  "description": "Points this category added."
+                },
+                "confidence_delta": {
+                  "type": "number",
+                  "description": "Confidence subtracted by this category."
+                },
+                "signals": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Signal identifiers within this category. May be empty."
+                },
+                "detail": {
+                  "description": "Evidence for the category. An object keyed by signal, or a plain string for categories with no per-signal breakdown.",
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Human-readable explanation of the verdict."
+          },
+          "thresholds": {
+            "type": "object",
+            "description": "The bands in force for this decision, returned so a caller never has to hardcode them.",
+            "properties": {
+              "approve_ceiling": {
+                "type": "integer",
+                "examples": [
+                  39
+                ]
+              },
+              "step_up_range": {
+                "type": "string",
+                "examples": [
+                  "40-74"
+                ]
+              },
+              "deny_floor": {
+                "type": "integer",
+                "examples": [
+                  75
+                ]
+              },
+              "confidence_floor": {
+                "type": "number",
+                "examples": [
+                  0.6
+                ]
+              }
+            }
+          },
+          "enforcement": {
+            "type": "object",
+            "description": "Circuit-breaker state for this `session_id`, returned on every call. Thresholds are included so a caller never hardcodes them.",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "session_throttled",
+                  "session_suspended"
+                ],
+                "description": "`active` is the healthy state. Counts reset once the window expires."
+              },
+              "denial_count": {
+                "type": "integer",
+                "description": "Denials for this session inside the window. Note the key: `denial_count`, not `denials_in_window`."
+              },
+              "breaker_threshold": {
+                "type": "integer",
+                "description": "Denials before the session is throttled.",
+                "examples": [
+                  5
+                ]
+              },
+              "suspend_threshold": {
+                "type": "integer",
+                "description": "Denials before the session is suspended.",
+                "examples": [
+                  10
+                ]
+              },
+              "window_seconds": {
+                "type": "integer",
+                "description": "Rolling window the counts apply to."
+              }
+            }
+          },
+          "replay": {
+            "type": "boolean",
+            "description": "True when this exact intent was already denied. Replays are free: no re-scoring, no evidence purchase, no Gemini spend."
+          },
+          "replay_count": {
+            "type": "integer",
+            "description": "Times this intent has been seen. Present only when `replay` is true."
+          },
+          "agent_baseline": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "The spending baseline this intent was compared against. Empty for an agent with no history."
+          },
+          "sanctions_feed": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Provenance of the OFAC SDN data used: source, entry count, and refresh time."
+          },
+          "model_version": {
+            "type": "string",
+            "description": "Scorer version. Pin it if you replay verdicts."
+          },
+          "feature_version": {
+            "type": "string"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "governance": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Forensic analysis and policy recommendations. Present on DENY only; depth depends on `tier`."
+          }
         }
       }
     }
